@@ -1,6 +1,6 @@
 // brightness.frag
 uniform sampler2D imageTexture;
-uniform sampler2D imageOneTexture;
+// uniform sampler2D imageOneTexture;
 varying vec2 vUv;
 
 // Function to convert RGB to luminance (perceived brightness)
@@ -17,13 +17,13 @@ vec4 blendPixels(vec4 pixel1, vec4 pixel2, float blend) {
 void main() {
     vec2 uv = vUv;
     vec4 color = texture2D(imageTexture, uv);
-    vec4 color2 = texture2D(imageOneTexture, uv);
+    vec4 color2 = vec4(255, 255, 255, 1.0);
     
     // Method 1: Using luminance (perceived brightness)
     float luminance = getLuminance(color.rgb);
     if(luminance < .75) { // 70%
     if(luminance > .65){
-        color = blendPixels(color, color2, 1.0-luminance);
+        color = blendPixels(color,color2, 1.0-luminance);
     }
     else {
         color = color2;

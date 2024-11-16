@@ -4,10 +4,10 @@ varying vec2 vUv;
 
 // Sample neighboring pixels in a 9-tap pattern
 vec4 blur9(sampler2D image, vec2 uv, vec2 resolution) {
-    vec2 pixel = 40.0 / resolution;  // size of one pixel
+    vec2 pixel = 3.0 / resolution;  // size of one pixel
     
     // Gaussian weights for 9 samples
-    float offset = 1.0;  // Adjust this to control blur strength
+    float offset = 3.5;  // Adjust this to control blur strength
     
     vec4 color = vec4(0.0);
     

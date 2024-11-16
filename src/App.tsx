@@ -1,10 +1,10 @@
 import './App.css'
-import ImageScene from './ImageScreen'
+import { ClientApp } from './ClientApp'
 
 function App() {
   return (
     <div className="App">
-      <ImageScene/>
+      <ClientApp />
     </div>
   )
 }
