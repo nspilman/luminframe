@@ -1,36 +1,29 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
+import { shaderEffects } from "@/hooks/useShader"
+import { registeredShaders, ShaderType } from "@/types/shader"
 
 interface ShaderControlsProps {
-  selectedShader: string
-  onShaderSelect: (shader: string) => void
+  selectedShader: ShaderType
+  onShaderSelect: (shader: ShaderType) => void
 }
 
 export function ShaderControls({ selectedShader, onShaderSelect }: ShaderControlsProps) {
   return (
     <div className="flex gap-2">
-      <Button
-        variant={selectedShader === 'fragment' ? 'default' : 'outline'}
-        onClick={() => onShaderSelect('fragment')}
-        className="font-medium"
-      >
-        Wave Effect
-      </Button>
-      <Button
-        variant={selectedShader === 'whiteout' ? 'default' : 'outline'}
-        onClick={() => onShaderSelect('whiteout')}
-        className="font-medium"
-      >
-        White Out
-      </Button>
-      <Button
-        variant={selectedShader === 'blur' ? 'default' : 'outline'}
-        onClick={() => onShaderSelect('blur')}
-        className="font-medium"
-      >
-        Blur
-      </Button>
+      {
+        registeredShaders.map(shader => (
+        <Button
+          key={shader}
+          variant={shader === selectedShader ? 'default' : 'outline'}
+          onClick={() => onShaderSelect(shader)}
+          className="font-medium"
+        >
+          {shaderEffects[shader].name}
+        </Button>
+        ))
+      }
     </div>
   )
 } 

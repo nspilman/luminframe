@@ -10,11 +10,15 @@ import { useShader } from '@/hooks/useShader'
 import { ImageUpload } from './image-upload'
 import { ShaderControls } from './shader-controls'
 import { Texture } from 'three'
+import { ShaderType } from '@/types/shader'
 
 export function ClientApp(): JSX.Element {
   const [image, setImage] = useState<Texture | null>(null)
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
-  const [selectedShader, setSelectedShader] = useState<string>('fragment')
+  const [selectedShader, setSelectedShader] = useState<ShaderType>("wave")
+
+
+  console.log(selectedShader)
 
   const handleImageUpload = useCallback((imageData: Texture, dimensions: { width: number; height: number }) => {
     setImage(imageData)
@@ -39,9 +43,8 @@ export function ClientApp(): JSX.Element {
     document.body.removeChild(link)
   }, [selectedShader])
 
-  const { shader, varValues } = useShader(image)
+  const { shader, varValues } = useShader(image, selectedShader)
   const imageLoaded = !!varValues.imageTexture
-  console.log({varValues, imageLoaded, image})
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F0F2F8] to-white flex items-center justify-center p-8">
