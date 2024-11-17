@@ -21,8 +21,8 @@ void main() {
     
     // Method 1: Using luminance (perceived brightness)
     float luminance = getLuminance(color.rgb);
-    if(luminance < .75) { // 70%
-    if(luminance > .65){
+    if(luminance > .75) { // 70%
+    if(luminance > .95){
         color = blendPixels(color,color2, 1.0-luminance);
     }
     else {

@@ -1,11 +1,7 @@
 // ImageScene.tsx
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useMemo } from "react";
 import * as THREE from "three";
-import fragmentShader from "./shaders/fragment.frag"
-import whiteout from "./shaders/white-out.frag"
-import blur from "./shaders/blur.frag"
 
 const vertexShader = `
   varying vec2 vUv;
@@ -17,80 +13,113 @@ const vertexShader = `
 `;
 
 interface ImageSceneProps {
-  uploadedImage: string;
-  selectedShader: string;
+  shader: string;
+  inputVars: Record<string, string | number | number[] | THREE.Texture>;
+  dimensions: [number, number];
 }
 
-function ImagePlane({ uploadedImage, shader }: { uploadedImage: string, shader: string }) {
-  const texture = useTexture(uploadedImage);
+// Separate component for the plane where we use Three.js hooks
+function ImagePlane({
+  shader,
+  inputVars,
+  dimensions
+}: {
+  shader: string;
+  inputVars: Record<string, string | number | number[] | THREE.Texture>;
+  dimensions: [number, number];
+}) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  // Get image dimensions and calculate aspect ratio
-  const [aspectRatio, setAspectRatio] = useState(16/9); // default fallback
-  
-  useEffect(() => {
-    const img = new Image();
-    img.src = uploadedImage;
-    img.onload = () => {
-      setAspectRatio(img.width / img.height);
-    };
-  }, [uploadedImage]);
-
-  // Maintain consistent width and adjust height based on aspect ratio
-  const width = 16;
-  const height = width / aspectRatio;
-
-  // Animation loop
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
     }
   });
 
+  const uniforms = useMemo(() => {
+    // First, create base uniforms with time and image texture
+    const baseUniforms = {
+      time: { value: 0 },
+    };
+
+    // Then process additional uniforms from inputVars
+    const additionalUniforms = Object.entries(inputVars).reduce((acc, [key, value]) => {
+      // Handle different types of values
+      if (Array.isArray(value)) {
+        if (value.length === 2) {
+          acc[key] = { value: new THREE.Vector2(...value) };
+        } else if (value.length === 3) {
+          acc[key] = { value: new THREE.Vector3(...value) };
+        } else if (value.length === 4) {
+          acc[key] = { value: new THREE.Vector4(...value) };
+        }
+      } else if (typeof value === 'number') {
+        acc[key] = { value: value };
+      } else if (typeof value === 'string') {
+        acc[key] = { value: value };
+      }
+      else if (typeof value === 'object'){
+        acc[key] = { value: value };
+      }
+      return acc;
+    }, {} as Record<string, { value: any }>);
+
+    return { ...baseUniforms, ...additionalUniforms };
+  }, [inputVars]);
+
   return (
     <mesh>
-      <planeGeometry args={[width, height]} />
+      <planeGeometry 
+        args={[(dimensions[0] / dimensions[1]) * 10, (dimensions[1] / dimensions[1]) * 10]} 
+      />
       <shaderMaterial
         key={shader}
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={shader}
-        uniforms={{
-          resolution: { value: [window.innerWidth, window.innerHeight] },
-          imageTexture: { value: texture },
-          time: { value: 0 },
-          colorValue: { value: .5 }
-        }}
+        uniforms={uniforms}
+        transparent={true}
       />
     </mesh>
   );
 }
 
-export function ImageScene({ uploadedImage, selectedShader }: ImageSceneProps) {
-  // Get the correct shader based on selection
-  const shader = useMemo(() => {
-    switch (selectedShader) {
-      case 'fragment':
-        return fragmentShader;
-      case 'whiteout':
-        return whiteout;
-      case 'blur':
-        return blur;
-      default:
-        return fragmentShader;
-    }
-  }, [selectedShader]);
-
+// Main component that sets up the Canvas
+export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
+  
   return (
     <div style={{ width: "100%", height: "600px" }}>
-      <Canvas 
+      <Canvas
         camera={{ position: [0, 0, 10], fov: 50 }}
         dpr={1}
         style={{ width: "100%", height: "100%" }}
         gl={{ preserveDrawingBuffer: true }}
+        key={shader}
       >
-        <ImagePlane uploadedImage={uploadedImage} shader={shader} />
+        <ImagePlane 
+          shader={shader}
+          dimensions={dimensions}
+          inputVars={inputVars}
+        />
       </Canvas>
     </div>
   );
 }
+
+// Example usage:
+/*
+import fragmentShader from "./shaders/fragment.frag";
+
+const props = {
+  shader: fragmentShader,
+  inputVars: {
+    imageTexture: "/path/to/image.jpg",
+    resolution: [800, 600],
+    pixelSize: 1.0,
+    offset: 2.0
+  },
+  dimensions: [1920, 1080] as [number, number]
+};
+
+<ImageScene {...props} />
+*/
