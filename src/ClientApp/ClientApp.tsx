@@ -8,9 +8,10 @@ import { X, Download } from 'lucide-react'
 import { ImageScene } from '../ImageScene'
 import { useShader } from '@/hooks/useShader'
 import { ImageUpload } from './image-upload'
-import { ShaderControls } from './shader-controls'
 import { Texture } from 'three'
 import { ShaderType } from '@/types/shader'
+import { ShaderControls } from './shader-controls'
+import { EffectPicker } from '@/components/effect-picker'
 
 export function ClientApp(): JSX.Element {
   const [image, setImage] = useState<Texture | null>(null)
@@ -43,7 +44,7 @@ export function ClientApp(): JSX.Element {
     document.body.removeChild(link)
   }, [selectedShader])
 
-  const { shader, varValues } = useShader(image, selectedShader)
+  const { shader, varValues, updateVarValue, inputs } = useShader(image, selectedShader)
   const imageLoaded = !!varValues.imageTexture
 
   return (
@@ -55,11 +56,15 @@ export function ClientApp(): JSX.Element {
           </h2>
 
           {image && (
-            <div className="mb-4">
+            <div>
+            <EffectPicker selectedShader={selectedShader} onShaderSelect={setSelectedShader} />
+            <div className="space-y-4 mb-4">
               <ShaderControls 
-                selectedShader={selectedShader}
-                onShaderSelect={setSelectedShader}
+                inputs={inputs}
+                values={varValues}
+                onChange={updateVarValue}
               />
+            </div>
             </div>
           )}
 

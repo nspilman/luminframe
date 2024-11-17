@@ -2,6 +2,7 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useRef, useMemo } from "react";
 import * as THREE from "three";
+import { ShaderInputVars } from '@/types/shader'
 
 const vertexShader = `
   varying vec2 vUv;
@@ -14,7 +15,7 @@ const vertexShader = `
 
 interface ImageSceneProps {
   shader: string;
-  inputVars: Record<string, string | number | number[] | THREE.Texture>;
+  inputVars: ShaderInputVars;
   dimensions: [number, number];
 }
 
@@ -25,7 +26,7 @@ function ImagePlane({
   dimensions
 }: {
   shader: string;
-  inputVars: Record<string, string | number | number[] | THREE.Texture>;
+  inputVars: ShaderInputVars;
   dimensions: [number, number];
 }) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -73,7 +74,7 @@ function ImagePlane({
         args={[(dimensions[0] / dimensions[1]) * 10, (dimensions[1] / dimensions[1]) * 10]} 
       />
       <shaderMaterial
-        key={shader}
+        key={shader+JSON.stringify(inputVars)}
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={shader}

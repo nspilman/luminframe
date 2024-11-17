@@ -17,6 +17,22 @@ export const shaderEffects: Record<ShaderType, ShaderEffect> = {
       pixelSize: 3.2,
       offset: 5.0
     },
+    inputs: {
+      pixelSize: {
+        type: 'range',
+        min: 0,
+        max: 10,
+        step: 0.1,
+        label: 'Pixel Size'
+      },
+      offset: {
+        type: 'range',
+        min: 0,
+        max: 20,
+        step: 0.5,
+        label: 'Blur Offset'
+      }
+    },
     getBody: () => `
       vec4 blur9(sampler2D image, vec2 uv, vec2 resolution) {
         vec2 pixel = pixelSize / resolution;
@@ -52,6 +68,15 @@ export const shaderEffects: Record<ShaderType, ShaderEffect> = {
     defaultValues: {
       threshold: 0.75
     },
+    inputs: {
+      threshold: {
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        label: 'Threshold'
+      }
+    },
     getBody: () => `
       void main() {
           vec2 uv = vUv;
@@ -78,6 +103,22 @@ export const shaderEffects: Record<ShaderType, ShaderEffect> = {
       amplitude: 0.1,
       frequency: 5.0
     },
+    inputs: {
+      amplitude: {
+        type: 'range',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        label: 'Wave Height'
+      },
+      frequency: {
+        type: 'range',
+        min: 0,
+        max: 20,
+        step: 0.5,
+        label: 'Wave Frequency'
+      }
+    },
     getBody: () => `
       void main() {
           vec2 uv = vUv;
@@ -88,7 +129,7 @@ export const shaderEffects: Record<ShaderType, ShaderEffect> = {
   }
 }
 
-export function useShader(texture: Texture | null, effectType: 'blur' | 'whiteout' | 'wave') {
+export function useShader(texture: Texture | null, effectType: ShaderType) {
   const { width, height } = useWindowSize()
   
   const effect = shaderEffects[effectType]
@@ -107,8 +148,8 @@ export function useShader(texture: Texture | null, effectType: 'blur' | 'whiteou
 
   const shader = useMemo(() => shaderBuilder({
     vars: effect.declarationVars,
-    getBody: effect.getBody
-  }), [effect])
+    getBody: effect.getBody,
+  }), [effect, varValues])
 
   const updateVarValue = (key: keyof ShaderInputVars, value: number) => {
     setVarValues(prev => ({
@@ -122,6 +163,7 @@ export function useShader(texture: Texture | null, effectType: 'blur' | 'whiteou
     varValues: { ...varValues, imageTexture: texture, resolution: [width, height] }, 
     updateVarValue,
     effectName: effect.name,
-    availableEffects: Object.keys(shaderEffects) as ShaderType[]
+    availableEffects: Object.keys(shaderEffects) as ShaderType[],
+    inputs: effect.inputs
   }
 } 
