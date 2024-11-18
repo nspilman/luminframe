@@ -8,6 +8,7 @@ export const kaleidoscope = createShaderRecord({
     createShaderVariable('rotation').asRange('Rotation', 0.0, 0.0, Math.PI * 2, 0.01)
   ],
   body: `
+  #define PI 3.1415926535897932384626433832795
     void main() {
       vec2 uv = vUv - 0.5;
       

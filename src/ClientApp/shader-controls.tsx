@@ -1,8 +1,10 @@
 'use client'
 
-import { ShaderInputVars } from '@/types/shader'
+import { ShaderInputDefinition, ShaderInputVars } from '@/types/shader'
 import { ImageUpload } from './image-upload'
 import { ColorPicker } from '@/components/ColorPicker'
+import { Texture } from 'three'
+import { Switch } from '@/components/ui/switch'
 
 type ShaderControlsProps = {
   inputs: Record<string, ShaderInputDefinition>
@@ -11,6 +13,7 @@ type ShaderControlsProps = {
 }
 
 export function ShaderControls({ inputs, values, onChange }: ShaderControlsProps) {
+  console.log({inputs, values})
   return (
     <div className="space-y-4">
       {Object.entries(inputs).map(([key, input]) => (
@@ -20,12 +23,18 @@ export function ShaderControls({ inputs, values, onChange }: ShaderControlsProps
           </label>
           {input.type === 'image' ? (
             <ImageUpload 
-              onChange={(texture) => onChange(key, texture)} 
+              onChange={(texture) => onChange(key, texture)}
+              hasImage={Boolean(values[key] instanceof Texture)}
             />
           ) : input.type === 'vec3' ? (
             <ColorPicker
-            setColor={(e) => onChange(key, e)}
-            color={values.tintColor as Float32Array}
+              setColor={(e) => onChange(key, e)}
+              color={values[key] as Float32Array}
+            />
+          ) : input.type === 'boolean' ? (
+            <Switch
+              checked={true}
+              onCheckedChange={(checked) => onChange(key, checked)}
             />
           ) : (
             <input

@@ -280,4 +280,36 @@ describe('shaderRecordBuilder', () => {
       expect(arrayValues[2]).toBeCloseTo(0.9, 6);
     });
   });
+
+  describe('createShaderRecord with boolean variables', () => {
+    it('should correctly create a shader record with boolean input', () => {
+      const shaderRecord = createShaderRecord({
+        name: 'Test Boolean Shader',
+        variables: [
+          createShaderVariable('invertColors').asBoolean('Invert Colors', true)
+        ],
+        body: 'void main() {}'
+      });
+
+      expect(shaderRecord).toEqual({
+        name: 'Test Boolean Shader',
+        declarationVars: {
+          invertColors: 'bool',
+          resolution: 'vec2'
+        },
+        defaultValues: {
+          invertColors: true
+        },
+        inputs: {
+          invertColors: {
+            type: 'boolean',
+            label: 'Invert Colors'
+          }
+        },
+        getBody: expect.any(Function)
+      });
+
+      expect(shaderRecord.getBody()).toBe('void main() {}');
+    });
+  });
 }); 

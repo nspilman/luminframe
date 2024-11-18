@@ -23,6 +23,7 @@ export function useShader(effectType: ShaderType) {
   }), [effect, varValues])
 
   const updateVarValue = (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => {
+    console.log({key, value })
     setVarValues(prev => ({
       ...prev,
       [key]: value

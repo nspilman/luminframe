@@ -1,9 +1,9 @@
 import { Texture } from 'three'
 
-export type ShaderInputVars = Record<string, string | number | number[] | Texture | null>
+export type ShaderInputVars = Record<string, string | number | number[] | Texture | null | Float32Array | boolean>
 
 export type ShaderInputDefinition = {
-    type: 'range' | 'number' | 'vec2' | 'vec3' | 'image'
+    type: 'range' | 'number' | 'vec2' | 'vec3' | 'image' | 'boolean'
     min?: number
     max?: number
     step?: number
@@ -28,6 +28,8 @@ export const registeredShaders = [
      'glitch',
      'neonGlowEffect',
      'dream',
+     'blend',
+     'lightThresholdSwap'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

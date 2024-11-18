@@ -24,7 +24,12 @@ interface Vec3Input {
   normalize?: boolean;
 }
 
-type ShaderInput = RangeInput | ImageInput | Vec2Input | Vec3Input;
+interface BooleanInput {
+  type: 'boolean';
+  label: string;
+}
+
+type ShaderInput = RangeInput | ImageInput | Vec2Input | Vec3Input | BooleanInput;
 
 interface ShaderVariable {
   name: string;
@@ -165,7 +170,9 @@ export const createShaderVariable = (name: string) => ({
       'vec3', 
       new Float32Array([defaultX, defaultY, defaultZ]),
       { type: 'vec3', label }
-    )
+    ),
+  asBoolean: (label: string, defaultValue = false) =>
+    createVariable(name, 'bool', defaultValue, { type: 'boolean', label }),
 });
 
 // Which would let you write it even more concisely:
@@ -176,4 +183,13 @@ const whiteoutAlt = createShaderRecord({
     createShaderVariable('threshold').asRange('Threshold', 0.75, 0, 1, 0.01)
   ],
   body: `...` // shader body here
+});
+
+// Example usage:
+const shaderWithBoolean = createShaderRecord({
+  name: 'Example Shader',
+  variables: [
+    createShaderVariable('invertColors').asBoolean('Invert Colors', false)
+  ],
+  body: `...`
 });

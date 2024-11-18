@@ -8,6 +8,8 @@ import { kaleidoscope } from '@/lib/shaders/effects/kaleidoscope';
 import { neonGlow } from '@/lib/shaders/effects/neon-glow';
 import { glitch } from '@/lib/shaders/effects/glitch';
 import { dream } from '@/lib/shaders/effects/dream';
+import { blend } from './effects/blend';
+import { lightThresholdSwap } from './effects/light-threshold-swap';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   test: colorTint,
@@ -18,5 +20,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   kaleidoscopeEffect: kaleidoscope,
   neonGlowEffect: neonGlow,
   glitch,
-  dream
+  dream,
+  blend,
+  lightThresholdSwap
 };
