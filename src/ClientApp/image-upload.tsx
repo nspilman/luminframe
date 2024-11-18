@@ -25,7 +25,6 @@ export function ImageUpload({ onChange }: ImageUploadProps) {
         img.onload = () => {
           const texture = textureLoader.load(img.src)
           texture.userData = { width: img.width, height: img.height }
-          console.log({texture})
           onChange(texture)
           resolve(null)
         }

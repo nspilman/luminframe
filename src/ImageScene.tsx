@@ -85,7 +85,6 @@ function ImagePlane({
 // Main component that sets up the Canvas
 export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
   
-  console.log({inputVars})
   return (
     <div style={{ width: "100%", height: "600px" }}>
       <Canvas

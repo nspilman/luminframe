@@ -61,9 +61,6 @@ export const createShaderRecord = (config: ShaderConfig) => {
   );
 
   declarationVars.resolution = "vec2"
-  console.log({declarationVars})
-
-//   declarationVars.push({"resolution": ""})
 
   const defaultValues = Object.fromEntries(
     config.variables.map(v => [
@@ -73,6 +70,8 @@ export const createShaderRecord = (config: ShaderConfig) => {
         : v.defaultValue
     ])
   );
+
+  console.log({defaultValues, vars: config.variables})
 
   const inputs = Object.fromEntries(
     config.variables.map(v => [v.name, v.input])
