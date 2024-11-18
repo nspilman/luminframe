@@ -38,14 +38,11 @@ function ImagePlane({
   });
 
   const uniforms = useMemo(() => {
-    // First, create base uniforms with time and image texture
     const baseUniforms = {
       time: { value: 0 },
     };
 
-    // Then process additional uniforms from inputVars
     const additionalUniforms = Object.entries(inputVars).reduce((acc, [key, value]) => {
-      // Handle different types of values
       if (Array.isArray(value)) {
         if (value.length === 2) {
           acc[key] = { value: new THREE.Vector2(...value) };
@@ -88,6 +85,7 @@ function ImagePlane({
 // Main component that sets up the Canvas
 export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
   
+  console.log({inputVars})
   return (
     <div style={{ width: "100%", height: "600px" }}>
       <Canvas
