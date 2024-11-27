@@ -2,9 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/src/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/src/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <meta name="description" content="Browser-based image editor powered by Three.js and GLSL shaders" />
+    <meta name="keywords" content="image editor, WebGL, Three.js, shader effects, browser image processing" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Luminframe - Browser Image Editor" />
+    <meta property="og:description" content="Edit images with real-time shader effects" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Performance -->
+    <link rel="preload" href="/src/main.tsx" as="script" type="module" />
+    <title>Luminframe | Browser Image Editor</title>
   </head>
   <body>
     <div id="root"></div>

@@ -106,7 +106,7 @@ export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
 
   return (
     <div className="w-full relative" style={{ paddingBottom: `${aspectRatio}%` }}>
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-black">
         <Canvas
           camera={{ position: [0, 0, 10], fov: 50 }}
           dpr={1}
