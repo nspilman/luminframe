@@ -83,7 +83,7 @@ export function ClientApp(): JSX.Element {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="text-center space-y-2">
                       <Upload className="w-10 h-10 mx-auto text-zinc-500" />
-                      <p className="text-lg text-zinc-400">Drop an image to begin editing</p>
+                      <p className="text-lg text-zinc-400">Add an image to the left to begin</p>
                     </div>
                   </div>
                 ) : (
