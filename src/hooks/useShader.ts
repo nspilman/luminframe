@@ -46,7 +46,7 @@ export function useShader(effectType: ShaderType) {
 
   return { 
     shader, 
-    varValues: { ...varValues, resolution: [width, height] as [number, number] }, 
+    varValues: { imageTexture: null, ...varValues, resolution: [width, height] as [number, number] }, 
     updateVarValue,
     effect,
     availableEffects: Object.keys(shaderLibrary) as ShaderType[],
