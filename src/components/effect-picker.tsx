@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { registeredShaders, ShaderType } from '@/types/shader'
 import { Button } from './ui/button'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, PaintBucketIcon } from 'lucide-react'
+import { Card, CardContent } from './ui/card'
 
 const shaderIcons: Record<ShaderType, React.ReactNode> = {
-  test: <Wand2 className="h-6 w-6" />,
+  tint: <Wand2 className="h-6 w-6" />,
   pixelateEffect: <Grid className="h-6 w-6" />,
   rgbSplit: <SplitSquareHorizontal className="h-6 w-6" />,
   vignette: <Circle className="h-6 w-6" />,
@@ -15,7 +16,10 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   glitch: <Zap className="h-6 w-6" />,
   neonGlowEffect: <Sparkles className="h-6 w-6" />,
   dream: <Cloud className="h-6 w-6" />,
-  blend: <PaintBucket className='h-6 w-6'/>
+  blend: <PaintBucket className='h-6 w-6'/>,
+  lightThresholdSwap: <ImagePlus className='h-6 w-6'/>,
+  gaussianBlur: <Move className='h-6 w-6'/>,
+  hueSwap: <PaintBucketIcon className='h-6 w6'/>
 }
 
 type EffectPickerProps = {
@@ -25,23 +29,29 @@ type EffectPickerProps = {
 
 export function EffectPicker({ selectedShader, onShaderSelect }: EffectPickerProps) {
   return (
-    <div className="w-full space-y-2">
-      <div className="flex items-center">
-        <h3 className="text-sm font-medium">Effects</h3>
-      </div>
-      <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2">
-        {registeredShaders.map((shader) => (
-          <Button
-            key={shader}
-            variant={selectedShader === shader ? "default" : "outline"}
-            className="w-full h-9 flex items-center justify-start gap-2 px-3"
-            onClick={() => onShaderSelect(shader)}
-          >
-            {shaderIcons[shader]}
-            <span className="capitalize">{shader}</span>
-          </Button>
-        ))}
-      </div>
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-zinc-400">Effects</h3>
+      <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
+        <CardContent className="p-3">
+          <div className="max-h-[280px] overflow-y-auto space-y-1">
+            {registeredShaders.map((shader) => (
+              <Button
+                key={shader}
+                variant={selectedShader === shader ? "default" : "ghost"}
+                className={`w-full justify-start gap-2 h-9 px-2 ${
+                  selectedShader === shader 
+                    ? 'bg-violet-600 hover:bg-violet-700 text-white' 
+                    : 'hover:bg-white/5 text-zinc-400'
+                }`}
+                onClick={() => onShaderSelect(shader)}
+              >
+                {shaderIcons[shader]}
+                <span className="capitalize text-sm">{shader}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

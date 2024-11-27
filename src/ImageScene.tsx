@@ -9,7 +9,7 @@ const vertexShader = `
 
   void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.5);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 2);
   }
 `;
 
@@ -52,12 +52,15 @@ function ImagePlane({
           acc[key] = { value: new THREE.Vector4(...value) };
         }
       } else if (typeof value === 'number') {
-        acc[key] = { value: value };
+        acc[key] = { value };
       } else if (typeof value === 'string') {
-        acc[key] = { value: value };
+        acc[key] = { value };
       }
       else if (typeof value === 'object'){
-        acc[key] = { value: value };
+        acc[key] = { value };
+      }
+      else if(typeof value === 'boolean'){
+        acc[key] = {value}
       }
       return acc;
     }, {} as Record<string, { value: any }>);
@@ -65,10 +68,27 @@ function ImagePlane({
     return { ...baseUniforms, ...additionalUniforms };
   }, [inputVars]);
 
+  console.log({dimensions})
+
+  function calculateAspectRatio(dimensions: [number, number]): [number, number] {
+    const [width, height] = dimensions;
+    const maxAllowed = 20;
+    const scale = maxAllowed / Math.max(width, height);
+    
+    return [
+        Math.round(width * scale),
+        Math.round(height * scale)
+    ];
+}
+
+
+const dims = calculateAspectRatio(dimensions)
+console.log({dims, dimensions})
+
   return (
     <mesh>
       <planeGeometry 
-        args={[(dimensions[0] / dimensions[1]) * 10, (dimensions[1] / dimensions[1]) * 10]} 
+        args={dims} 
       />
       <shaderMaterial
         key={shader+JSON.stringify(inputVars)}
@@ -84,7 +104,6 @@ function ImagePlane({
 
 // Main component that sets up the Canvas
 export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
-  
   return (
     <div style={{ width: "100%", height: "600px" }}>
       <Canvas

@@ -8,6 +8,7 @@ export type ShaderInputDefinition = {
     max?: number
     step?: number
     label: string
+    isOn?:boolean
   }
 
 export interface ShaderEffect {
@@ -19,7 +20,7 @@ export interface ShaderEffect {
 }
 
 export const registeredShaders = [
-     'test',
+     'tint',
      'pixelateEffect',
      'rgbSplit',
      'vignette',
@@ -27,9 +28,11 @@ export const registeredShaders = [
      "kaleidoscopeEffect",
      'glitch',
      'neonGlowEffect',
+     'gaussianBlur',
      'dream',
      'blend',
-     'lightThresholdSwap'
+     'lightThresholdSwap',
+     'hueSwap'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

@@ -37,16 +37,16 @@ export function ImageUpload({ onChange, hasImage = false }: ImageUploadProps) {
   return (
     <div
       {...getRootProps()}
-      className={`w-full h-10 px-3 py-2 border rounded-md cursor-pointer transition-colors flex items-center justify-between
+      className={`w-full h-10 px-3 py-2 rounded-md border transition-all cursor-pointer flex items-center justify-between
         ${hasImage 
-          ? 'bg-primary/10 border-primary hover:bg-primary/20' 
-          : 'bg-white border-input hover:bg-accent hover:text-accent-foreground'
+          ? 'bg-indigo-500/10 border-indigo-500/50 hover:bg-indigo-500/20 text-indigo-400' 
+          : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800/50 text-zinc-400'
         }`}
     >
       <input {...getInputProps()} />
       <span className="text-sm">Choose file or drag and drop</span>
       {hasImage ? (
-        <Check className="h-4 w-4 text-primary" />
+        <Check className="h-4 w-4 text-indigo-400" />
       ) : (
         <Upload className="h-4 w-4" />
       )}

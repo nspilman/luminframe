@@ -10,7 +10,7 @@ export const lightThresholdSwap = createShaderRecord({
   ],
   body: `
     float getLightValue(vec4 color) {
-      return (color.r * 255.0 + color.g * 255.0 + color.b * 255.0);
+      return (color.r + color.g + color.b) * 255.0;
     }
 
     void main() {
@@ -24,7 +24,7 @@ export const lightThresholdSwap = createShaderRecord({
       // High pass: use image2 if lightness > threshold
       // Low pass: use image2 if lightness < threshold
       
-      bool shouldUseImageTwo = isHighPass ? lightness > threshold : lightness < threshold;
+      bool shouldUseImageTwo = isHighPass ? lightness < threshold : lightness > threshold;
       
       gl_FragColor = shouldUseImageTwo ? color2 : color1;
     }

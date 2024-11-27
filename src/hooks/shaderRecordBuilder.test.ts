@@ -223,7 +223,6 @@ describe('shaderRecordBuilder', () => {
     it('should handle vec3 variable with incomplete array and pad with zeros', () => {
       const variable = createShaderVariable('color')
         .asVec3('Color', ...[0.5, 0.7]);  // Missing third value
-      console.log({variable})
       expect(variable.defaultValue).toBeInstanceOf(Float32Array);
       
       // Use toBeCloseTo for each value to handle floating point precision
@@ -278,6 +277,35 @@ describe('shaderRecordBuilder', () => {
       expect(arrayValues[0]).toBeCloseTo(0.5, 6);
       expect(arrayValues[1]).toBeCloseTo(0.7, 6);
       expect(arrayValues[2]).toBeCloseTo(0.9, 6);
+    });
+
+    it('should create boolean variable correctly', () => {
+      const variable = createShaderVariable('useEffect')
+        .asBoolean('Enable Effect', true);
+
+      expect(variable).toEqual({
+        name: 'useEffect',
+        type: 'bool',
+        defaultValue: true,
+        input: {
+          type: 'boolean',
+          label: 'Enable Effect'
+        }
+      });
+
+      // Test with default value (false)
+      const defaultVariable = createShaderVariable('showOverlay')
+        .asBoolean('Show Overlay');
+
+      expect(defaultVariable).toEqual({
+        name: 'showOverlay',
+        type: 'bool',
+        defaultValue: false,
+        input: {
+          type: 'boolean',
+          label: 'Show Overlay'
+        }
+      });
     });
   });
 

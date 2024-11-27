@@ -10,9 +10,11 @@ import { glitch } from '@/lib/shaders/effects/glitch';
 import { dream } from '@/lib/shaders/effects/dream';
 import { blend } from './effects/blend';
 import { lightThresholdSwap } from './effects/light-threshold-swap';
+import { gaussianBlur } from './effects/gaussian-blur';
+import { hueSwap } from './effects/hue-swap';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
-  test: colorTint,
+  tint: colorTint,
   pixelateEffect: pixelate,
   rgbSplit,
   vignette,
@@ -22,5 +24,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   glitch,
   dream,
   blend,
-  lightThresholdSwap
+  lightThresholdSwap,
+  gaussianBlur,
+  hueSwap
 };

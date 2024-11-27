@@ -65,6 +65,8 @@ export const createShaderRecord = (config: ShaderConfig) => {
     config.variables.map(v => [v.name, v.type])
   );
 
+  console.log({config})
+
   declarationVars.resolution = "vec2"
 
   const defaultValues = Object.fromEntries(
@@ -76,13 +78,13 @@ export const createShaderRecord = (config: ShaderConfig) => {
     ])
   );
 
-  console.log({defaultValues, vars: config.variables})
+  console.log({config, defaultValues})
 
   const inputs = Object.fromEntries(
     config.variables.map(v => [v.name, v.input])
   );
 
-
+  console.log({defaultValues})
 
   return {
     name: config.name,
@@ -124,38 +126,6 @@ const createImageInput = (label: string): ImageInput => ({
   label
 });
 
-// Example usage for your whiteout shader:
-const whiteout = createShaderRecord({
-  name: 'White Out',
-  variables: [
-    createVariable(
-      'imageTexture',
-      'sampler2D',
-      null,
-      createImageInput('Upload Image')
-    ),
-    createVariable(
-      'threshold',
-      'float',
-      0.75,
-      createRangeInput('Threshold', 0, 1, 0.01)
-    )
-  ],
-  body: `
-    void main() {
-      vec2 uv = vUv;
-      vec4 color = texture2D(imageTexture, uv);
-      float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-      
-      if(luminance > threshold) {
-        color = vec4(1.0);
-      }
-      
-      gl_FragColor = color;
-    }
-  `
-});
-
 // You could also create more specific helpers for your common use cases:
 export const createShaderVariable = (name: string) => ({
   asImage: (label: string) => 
@@ -175,21 +145,3 @@ export const createShaderVariable = (name: string) => ({
     createVariable(name, 'bool', defaultValue, { type: 'boolean', label }),
 });
 
-// Which would let you write it even more concisely:
-const whiteoutAlt = createShaderRecord({
-  name: 'White Out',
-  variables: [
-    createShaderVariable('imageTexture').asImage('Upload Image'),
-    createShaderVariable('threshold').asRange('Threshold', 0.75, 0, 1, 0.01)
-  ],
-  body: `...` // shader body here
-});
-
-// Example usage:
-const shaderWithBoolean = createShaderRecord({
-  name: 'Example Shader',
-  variables: [
-    createShaderVariable('invertColors').asBoolean('Invert Colors', false)
-  ],
-  body: `...`
-});
