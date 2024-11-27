@@ -68,8 +68,6 @@ function ImagePlane({
     return { ...baseUniforms, ...additionalUniforms };
   }, [inputVars]);
 
-  console.log({dimensions})
-
   function calculateAspectRatio(dimensions: [number, number]): [number, number] {
     const [width, height] = dimensions;
     const maxAllowed = 20;
@@ -83,8 +81,6 @@ function ImagePlane({
 
 
 const dims = calculateAspectRatio(dimensions)
-console.log({dims, dimensions})
-
   return (
     <mesh>
       <planeGeometry 
@@ -104,21 +100,27 @@ console.log({dims, dimensions})
 
 // Main component that sets up the Canvas
 export function ImageScene({ shader, inputVars, dimensions }: ImageSceneProps) {
+  // Calculate aspect ratio for the container
+  const [width, height] = dimensions
+  const aspectRatio = (height / width) * 100
+
   return (
-    <div style={{ width: "100%", height: "600px" }}>
-      <Canvas
-        camera={{ position: [0, 0, 10], fov: 50 }}
-        dpr={1}
-        style={{ width: "100%", height: "100%" }}
-        gl={{ preserveDrawingBuffer: true }}
-        key={shader}
-      >
-        <ImagePlane 
-          shader={shader}
-          dimensions={dimensions}
-          inputVars={inputVars}
-        />
-      </Canvas>
+    <div className="w-full relative" style={{ paddingBottom: `${aspectRatio}%` }}>
+      <div className="absolute inset-0">
+        <Canvas
+          camera={{ position: [0, 0, 10], fov: 50 }}
+          dpr={1}
+          style={{ width: "100%", height: "100%" }}
+          gl={{ preserveDrawingBuffer: true }}
+          key={shader}
+        >
+          <ImagePlane 
+            shader={shader}
+            dimensions={dimensions}
+            inputVars={inputVars}
+          />
+        </Canvas>
+      </div>
     </div>
   );
 }

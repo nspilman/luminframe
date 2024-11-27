@@ -20,6 +20,7 @@ export interface ShaderEffect {
 }
 
 export const registeredShaders = [
+  'blackAndWhite',
      'tint',
      'pixelateEffect',
      'rgbSplit',
@@ -32,7 +33,7 @@ export const registeredShaders = [
      'dream',
      'blend',
      'lightThresholdSwap',
-     'hueSwap'
+     'hueSwap',
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

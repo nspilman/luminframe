@@ -9,7 +9,6 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ color, setColor }: ColorPickerProps) {
-  console.log({color})
   // Convert RGB float values to hex for the color input
   const rgbToHex = (rgb: Float32Array): string => {
     const r = Math.round(rgb[0] * 255).toString(16).padStart(2, '0')

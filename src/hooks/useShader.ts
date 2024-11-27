@@ -32,8 +32,6 @@ export function useShader(effectType: ShaderType) {
     })
   }, [effectType])
 
-console.log({varValues})
-
   const shader = useMemo(() => shaderBuilder({
     vars: effect.declarationVars,
     getBody: effect.getBody,

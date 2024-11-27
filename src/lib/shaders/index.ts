@@ -12,8 +12,10 @@ import { blend } from './effects/blend';
 import { lightThresholdSwap } from './effects/light-threshold-swap';
 import { gaussianBlur } from './effects/gaussian-blur';
 import { hueSwap } from './effects/hue-swap';
+import { blackAndWhite } from './effects/black-and-white';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
+  blackAndWhite,
   tint: colorTint,
   pixelateEffect: pixelate,
   rgbSplit,
@@ -26,5 +28,5 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blend,
   lightThresholdSwap,
   gaussianBlur,
-  hueSwap
+  hueSwap,
 };

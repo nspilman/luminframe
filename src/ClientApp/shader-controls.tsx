@@ -16,7 +16,6 @@ values: ShaderInputVars,
 }
 
 export function ShaderControls({ effect, values, onChange }: ShaderControlsProps) {
-  // console.log({inputs, values})
   return (
     <div className="space-y-6">
       {Object.entries(effect.inputs).map(([key, input]) => (

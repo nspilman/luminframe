@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { registeredShaders, ShaderType } from '@/types/shader'
 import { Button } from './ui/button'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, PaintBucketIcon } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, PaintBucketIcon, Lightbulb } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
+import { shaderLibrary } from '@/lib/shaders'
 
 const shaderIcons: Record<ShaderType, React.ReactNode> = {
   tint: <Wand2 className="h-6 w-6" />,
@@ -19,7 +19,8 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   blend: <PaintBucket className='h-6 w-6'/>,
   lightThresholdSwap: <ImagePlus className='h-6 w-6'/>,
   gaussianBlur: <Move className='h-6 w-6'/>,
-  hueSwap: <PaintBucketIcon className='h-6 w6'/>
+  hueSwap: <PaintBucketIcon className='h-6 w6'/>,
+  blackAndWhite: <Lightbulb className="h-6 w-6"/>
 }
 
 type EffectPickerProps = {
@@ -46,7 +47,8 @@ export function EffectPicker({ selectedShader, onShaderSelect }: EffectPickerPro
                 onClick={() => onShaderSelect(shader)}
               >
                 {shaderIcons[shader]}
-                <span className="capitalize text-sm">{shader}</span>
+                <span className="capitalize text-sm">{
+                shaderLibrary[shader].name}</span>
               </Button>
             ))}
           </div>

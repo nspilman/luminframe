@@ -5,8 +5,8 @@ export const neonGlow = createShaderRecord({
   variables: [
     createShaderVariable('imageTexture').asImage('Source Image'),
     createShaderVariable('glowColor').asVec3('Glow Color', 0.0, 1.0, 1.0),
-    createShaderVariable('glowStrength').asRange('Glow Strength', 2.0, 0.0, 5.0, 0.1),
-    createShaderVariable('glowRadius').asRange('Glow Radius', 2.0, 0.0, 10.0, 0.1)
+    createShaderVariable('glowStrength').asRange('Glow Strength', 0.1, 0.0, 1.0, 0.002),
+    createShaderVariable('glowRadius').asRange('Glow Radius', 0.2, 0.0, 1.0, 0.01)
   ],
   body: `
     float gaussian(float x, float sigma) {
