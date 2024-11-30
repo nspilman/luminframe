@@ -18,6 +18,8 @@ import { luminanceQuantize } from './effects/luminance-quantize';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
+  colorQuantize,
+  luminanceQuantize,
   tint: colorTint,
   pixelateEffect: pixelate,
   rgbSplit,
@@ -31,6 +33,4 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   lightThresholdSwap,
   gaussianBlur,
   hueSwap,
-  colorQuantize,
-  luminanceQuantize
 };
