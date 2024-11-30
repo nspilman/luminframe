@@ -2,7 +2,7 @@
 
 import { registeredShaders, ShaderType } from '@/types/shader'
 import { Button } from './ui/button'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, PaintBucketIcon, Lightbulb } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, PaintBucketIcon, Lightbulb, PaintRollerIcon } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
 
@@ -20,7 +20,9 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   lightThresholdSwap: <ImagePlus className='h-6 w-6'/>,
   gaussianBlur: <Move className='h-6 w-6'/>,
   hueSwap: <PaintBucketIcon className='h-6 w6'/>,
-  blackAndWhite: <Lightbulb className="h-6 w-6"/>
+  blackAndWhite: <Lightbulb className="h-6 w-6"/>,
+  colorQuantize: <PaintRollerIcon className="h-6 w-6"/>,
+  luminanceQuantize: <Lightbulb className="h-6 w-6"/>
 }
 
 type EffectPickerProps = {

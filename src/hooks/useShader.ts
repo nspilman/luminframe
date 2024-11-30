@@ -37,6 +37,8 @@ export function useShader(effectType: ShaderType) {
     getBody: effect.getBody,
   }), [effect, varValues])
 
+  console.log({varValues})
+
   const updateVarValue = (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => {
     setVarValues(prev => ({
       ...prev,
@@ -44,9 +46,12 @@ export function useShader(effectType: ShaderType) {
     }))
   }
 
+  const imageOne = varValues["imageTexture"];
+
   return { 
     shader, 
-    varValues: { imageTexture: null, ...varValues, resolution: [width, height] as [number, number] }, 
+    //@ts-ignore
+    varValues: { imageTexture: null, ...varValues, resolution: [imageOne?.userData?.width || width, imageOne?.userData?.height || height] as [number, number] }, 
     updateVarValue,
     effect,
     availableEffects: Object.keys(shaderLibrary) as ShaderType[],

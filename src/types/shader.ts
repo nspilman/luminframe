@@ -34,6 +34,8 @@ export const registeredShaders = [
      'blend',
      'lightThresholdSwap',
      'hueSwap',
+     'colorQuantize',
+     "luminanceQuantize"
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

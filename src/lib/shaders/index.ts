@@ -13,6 +13,8 @@ import { lightThresholdSwap } from './effects/light-threshold-swap';
 import { gaussianBlur } from './effects/gaussian-blur';
 import { hueSwap } from './effects/hue-swap';
 import { blackAndWhite } from './effects/black-and-white';
+import { colorQuantize } from './effects/color-quantize';
+import { luminanceQuantize } from './effects/luminance-quantize';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -29,4 +31,6 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   lightThresholdSwap,
   gaussianBlur,
   hueSwap,
+  colorQuantize,
+  luminanceQuantize
 };
