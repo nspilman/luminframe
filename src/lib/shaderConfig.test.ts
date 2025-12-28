@@ -1,4 +1,4 @@
-import { createShaderRecord, createShaderVariable } from './shaderRecordBuilder';
+import { createShaderRecord, createShaderVariable } from './shaderConfig';
 
 describe('shaderRecordBuilder', () => {
   describe('createShaderRecord', () => {

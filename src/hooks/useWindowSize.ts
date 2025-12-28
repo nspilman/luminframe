@@ -1,6 +1,14 @@
 'use client'
 
-export const useWindowSize = () => ({
-  width: typeof window !== 'undefined' ? window.innerWidth : 1920,
-  height: typeof window !== 'undefined' ? window.innerHeight : 1080
-}) 
+import { Dimensions } from '@/domain/value-objects/Dimensions';
+
+/**
+ * Hook that returns the current window dimensions.
+ * Returns default dimensions in SSR environment.
+ */
+export const useWindowSize = (): Dimensions => {
+  if (typeof window !== 'undefined') {
+    return new Dimensions(window.innerWidth, window.innerHeight);
+  }
+  return new Dimensions(1920, 1080);
+} 

@@ -1,4 +1,4 @@
-import { createShaderRecord, createShaderVariable } from '@/hooks/shaderRecordBuilder';
+import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
 
 export const lightThresholdSwap = createShaderRecord({
   name: "Light Threshold Swap",

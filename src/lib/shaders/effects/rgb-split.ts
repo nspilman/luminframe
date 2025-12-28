@@ -1,4 +1,4 @@
-import { createShaderRecord, createShaderVariable } from '@/hooks/shaderRecordBuilder';
+import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
 
 export const rgbSplit = createShaderRecord({
   name: "RGB Split",

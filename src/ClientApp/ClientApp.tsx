@@ -1,47 +1,52 @@
 'use client'
 
-import { useState } from 'react'
-import { ImageScene } from '../ImageScene'
+import { useState, useRef, useCallback } from 'react'
+import { ImageSceneHandle } from '../ImageScene'
 import { useShader } from '@/hooks/useShader'
+import { useCanvasExport } from '@/hooks/useCanvasExport'
 import { ShaderType } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
-import { Upload } from 'lucide-react'
 import { AspectRatioPicker } from '@/components/aspect-ratio-picker'
-import { Button } from '@/components/ui/button'
-import { Save } from 'lucide-react'
-import { TextureLoader } from 'three'
 import { HeaderBar } from '@/components/header-bar'
+import { CanvasWorkspace } from '@/components/CanvasWorkspace'
+import { Dimensions } from '@/domain/value-objects/Dimensions'
+import { Image } from '@/domain/models/Image'
 
 export function ClientApp(): JSX.Element {
   const [selectedShader, setSelectedShader] = useState<ShaderType>("lightThresholdSwap")
   const { shader, varValues, updateVarValue, effect } = useShader(selectedShader)
+  const { exportCanvasAsImage } = useCanvasExport()
 
-  const imageTexture = "imageTexture" in varValues ? varValues.imageTexture : null
+  const hasImage = "imageTexture" in varValues && varValues.imageTexture instanceof Image
 
-  const [aspectRatio, setAspectRatio] = useState<[width: number, height: number]>([1,1])
+  const [aspectRatio, setAspectRatio] = useState<Dimensions>(new Dimensions(1, 1))
+  const imageSceneRef = useRef<ImageSceneHandle>(null)
 
-  const handleSaveImage = async (inputImage: "one" | "two" = "one") => {
-    // Get the canvas element from the ImageScene
-    const canvas = document.querySelector('canvas')
-    if (!canvas) return
+  const handleSaveImage = useCallback(async (inputImage: "one" | "two" = "one") => {
+    if (!imageSceneRef.current) {
+      console.error('ImageScene ref not available')
+      return
+    }
 
-    // Convert the canvas to a data URL
-    const dataURL = canvas.toDataURL('image/png')
-    
-    // Create a temporary image to load the data URL
-    const img = new Image()
-    img.src = dataURL
-    
-    // Create a new texture from the image
-    const textureLoader = new TextureLoader()
-    const texture = textureLoader.load(img.src)
-    const varKey = `imageTexture${inputImage === "two" ? "Two" : ""}`
-    console.log({texture, varKey})
-    // Update the imageTexture value
-    updateVarValue(varKey, texture)
-  }
+    try {
+      const canvas = imageSceneRef.current.getCanvas()
+      if (!canvas) {
+        throw new Error('Canvas not available')
+      }
+
+      // Export canvas as Image domain object
+      const image = await exportCanvasAsImage(canvas)
+
+      // Update the appropriate image input
+      const varKey = `imageTexture${inputImage === "two" ? "Two" : ""}`
+      updateVarValue(varKey, image)
+    } catch (error) {
+      console.error('Failed to save canvas as image:', error)
+      // TODO: Show error notification to user
+    }
+  }, [exportCanvasAsImage, updateVarValue])
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">
@@ -71,42 +76,14 @@ export function ClientApp(): JSX.Element {
         <div className="relative flex-1 before:absolute before:inset-0 before:bg-gradient-to-r before:from-violet-500/20 before:via-indigo-500/20 before:to-purple-500/20 before:-z-10">
           <div className="relative h-full rounded-lg border border-zinc-800/50 bg-black/20 backdrop-blur-xl before:absolute before:inset-0 before:rounded-lg  before:bg-gradient-to-r before:from-violet-500/20 before:via-indigo-500/20 before:to-purple-500/20 before:-z-10">
             <div className="h-[50vh] md:h-full">
-              <div className="relative h-full rounded-xl border border-zinc-800/50 bg-black/20 backdrop-blur-sm shadow-2xl overflow-hidden">
-                <div className="absolute inset-0">
-                  <ImageScene 
-                    dimensions={aspectRatio}
-                    inputVars={varValues}
-                    shader={shader}
-                  />
-                </div>
-                {!imageTexture ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="text-center space-y-2">
-                      <Upload className="w-10 h-10 mx-auto text-zinc-500" />
-                      <p className="text-lg text-zinc-400">Add an image to the left to begin</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="absolute top-4 right-4">
-                    <Button
-                      onClick={() => handleSaveImage()}
-                      variant="secondary"
-                      className="bg-zinc-900/50 hover:bg-zinc-900/70"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      Save as Input
-                    </Button>
-                    <Button
-                     onClick={() => handleSaveImage("two")}
-                     variant="secondary"
-                     className="bg-zinc-900/50 hover:bg-zinc-900/70"
-                   >
-                     <Save className="w-4 h-4 mr-2" />
-                     Save as Second Input
-                   </Button>
-                  </div>              
-                )}
-              </div>
+              <CanvasWorkspace
+                ref={imageSceneRef}
+                dimensions={aspectRatio.toArray()}
+                inputVars={varValues}
+                shader={shader}
+                hasImage={hasImage}
+                onSaveImage={handleSaveImage}
+              />
               <AspectRatioPicker 
                 value={aspectRatio}
                 onChange={setAspectRatio}

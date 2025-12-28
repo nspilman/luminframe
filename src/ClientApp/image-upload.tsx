@@ -1,11 +1,11 @@
 'use client'
 
 import { useDropzone } from 'react-dropzone'
-import { Texture, TextureLoader } from "three"
+import { Image } from '@/domain/models/Image'
 import { Check, Upload } from 'lucide-react'
 
 interface ImageUploadProps {
-  onChange: (texture: Texture) => void
+  onChange: (image: Image) => void
   hasImage?: boolean
 }
 
@@ -19,18 +19,13 @@ export function ImageUpload({ onChange, hasImage = false }: ImageUploadProps) {
       const file = acceptedFiles[0]
       if (!file) return
 
-      const textureLoader = new TextureLoader()
-      const img = new Image()
-      img.src = URL.createObjectURL(file)
-      
-      await new Promise((resolve) => {
-        img.onload = () => {
-          const texture = textureLoader.load(img.src)
-          texture.userData = { width: img.width, height: img.height }
-          onChange(texture)
-          resolve(null)
-        }
-      })
+      try {
+        const image = await Image.fromFile(file)
+        onChange(image)
+      } catch (error) {
+        console.error('Failed to load image:', error)
+        // TODO: Show error notification to user
+      }
     }
   })
 

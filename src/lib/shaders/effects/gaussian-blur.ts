@@ -1,4 +1,4 @@
-import { createShaderRecord, createShaderVariable } from '@/hooks/shaderRecordBuilder';
+import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
 
 export const gaussianBlur = createShaderRecord({
   name: "Gaussian Blur",

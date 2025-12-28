@@ -3,8 +3,8 @@
 import { ShaderEffect, ShaderInputDefinition, ShaderInputVars } from '@/types/shader'
 import { ImageUpload } from './image-upload'
 import { ColorPicker } from '@/components/ColorPicker'
-import { Texture } from 'three'
-// import { Switch } from '@/components/ui/switch'
+import { Image } from '@/domain/models/Image'
+import { Color } from '@/domain/value-objects/Color'
 import { Label } from "@/components/ui/label"
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
@@ -32,14 +32,18 @@ export function ShaderControls({ effect, values, onChange }: ShaderControlsProps
           </div>
           
           {input.type === 'image' ? (
-            <ImageUpload 
-              onChange={(texture) => onChange(key, texture)}
-              hasImage={Boolean(values[key] instanceof Texture)}
+            <ImageUpload
+              onChange={(image) => onChange(key, image)}
+              hasImage={Boolean(values[key] instanceof Image)}
             />
           ) : input.type === 'vec3' ? (
             <ColorPicker
-              setColor={(e) => onChange(key, e)}
-              color={(values[key] || effect.defaultValues[key]) as Float32Array}
+              setColor={(color) => onChange(key, color)}
+              color={
+                values[key] instanceof Color
+                  ? (values[key] as Color)
+                  : Color.fromFloat32Array(effect.defaultValues[key] as Float32Array)
+              }
             />
           ) : input.type === 'boolean' ? (
             <Switch

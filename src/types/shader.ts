@@ -1,6 +1,8 @@
 import { Texture } from 'three'
+import { Image } from '@/domain/models/Image'
+import { Color } from '@/domain/value-objects/Color'
 
-export type ShaderInputVars = Record<string, string | number | number[] | Texture | null | Float32Array | boolean>
+export type ShaderInputVars = Record<string, string | number | number[] | Texture | Image | Color | null | Float32Array | boolean>
 
 export type ShaderInputDefinition = {
     type: 'range' | 'number' | 'vec2' | 'vec3' | 'image' | 'boolean'

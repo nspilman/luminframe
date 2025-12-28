@@ -3,25 +3,26 @@
 import { Button } from "@/components/ui/button"
 import { RectangleHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Dimensions } from "@/domain/value-objects/Dimensions"
 
 type AspectRatioOption = {
   label: string
-  value: [width: number, height: number] // width/height
+  value: Dimensions
 }
 
 const aspectRatios: AspectRatioOption[] = [
-    { label: "Square (1:1)", value: [1, 1] },
-    { label: "Landscape (4:3)", value: [4, 3] },
-    { label: "Portrait (3:4)", value: [3, 4] },
-    { label: "Widescreen (16:9)", value: [16, 9] },
-    { label: "Portrait (9:16)", value: [9, 16] },
-    { label: "Cinematic (2:1)", value: [2, 1] },
-    { label: "Portrait (1:2)", value: [1, 2] },
+    { label: "Square (1:1)", value: new Dimensions(1, 1) },
+    { label: "Landscape (4:3)", value: new Dimensions(4, 3) },
+    { label: "Portrait (3:4)", value: new Dimensions(3, 4) },
+    { label: "Widescreen (16:9)", value: new Dimensions(16, 9) },
+    { label: "Portrait (9:16)", value: new Dimensions(9, 16) },
+    { label: "Cinematic (2:1)", value: new Dimensions(2, 1) },
+    { label: "Portrait (1:2)", value: new Dimensions(1, 2) },
   ];
 
 interface AspectRatioPickerProps {
-  value: [width: number, height: number]
-  onChange: (ratio: [width: number, height: number]) => void
+  value: Dimensions
+  onChange: (ratio: Dimensions) => void
 }
 
 export function AspectRatioPicker({ value, onChange }: AspectRatioPickerProps) {
@@ -40,7 +41,7 @@ export function AspectRatioPicker({ value, onChange }: AspectRatioPickerProps) {
               size="sm"
               className={cn(
                 "border-zinc-800/50 bg-zinc-900/20",
-                value[0] === ratio.value[0] && value[1] === ratio.value[1] && "border-violet-500 bg-violet-500/10"
+                value.equals(ratio.value) && "border-violet-500 bg-violet-500/10"
               )}
               onClick={() => onChange(ratio.value)}
             >

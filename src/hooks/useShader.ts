@@ -3,16 +3,17 @@ import { shaderBuilder } from '@/shaders/shaderBuilder'
 import { ShaderInputVars, ShaderType } from '@/types/shader'
 import { shaderLibrary } from '@/lib/shaders'
 import { useWindowSize } from './useWindowSize'
+import { Image } from '@/domain/models/Image'
 
 export function useShader(effectType: ShaderType) {
-  const { width, height } = useWindowSize()
-  
+  const windowSize = useWindowSize()
+
   const effect = shaderLibrary[effectType]
-  
+
   if (!effect) {
     throw new Error(`Invalid shader effect type: ${effectType}`)
   }
-  
+
   const [varValues, setVarValues] = useState<ShaderInputVars>({
     ...effect.defaultValues,
   })
@@ -37,8 +38,6 @@ export function useShader(effectType: ShaderType) {
     getBody: effect.getBody,
   }), [effect, varValues])
 
-  console.log({varValues})
-
   const updateVarValue = (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => {
     setVarValues(prev => ({
       ...prev,
@@ -46,12 +45,18 @@ export function useShader(effectType: ShaderType) {
     }))
   }
 
-  const imageOne = varValues["imageTexture"];
+  // Calculate resolution from image dimensions or fallback to window size
+  const imageOne = varValues["imageTexture"]
+  const resolution: [number, number] = imageOne instanceof Image
+    ? imageOne.getDimensions().toArray()
+    : windowSize.toArray()
 
-  return { 
-    shader, 
-    //@ts-ignore
-    varValues: { imageTexture: null, ...varValues, resolution: [imageOne?.userData?.width || width, imageOne?.userData?.height || height] as [number, number] }, 
+  return {
+    shader,
+    varValues: {
+      ...varValues,
+      resolution
+    },
     updateVarValue,
     effect,
     availableEffects: Object.keys(shaderLibrary) as ShaderType[],
