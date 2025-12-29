@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRenderingEngine } from '@/hooks/useRenderingEngine'
-import { useCanvasExport } from '@/hooks/useCanvasExport'
 import { useWindowSize } from '@/hooks/useWindowSize'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
@@ -14,6 +13,7 @@ import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { shaderLibrary } from '@/lib/shaders'
+import { ApplicationContext } from '@/application/ApplicationContext'
 
 export function ClientApp(): JSX.Element {
   const [selectedShader, setSelectedShader] = useState<ShaderType>("lightThresholdSwap")
@@ -23,8 +23,8 @@ export function ClientApp(): JSX.Element {
   })
 
   const { canvasRef, render, getCanvas, updateDimensions, isInitialized } = useRenderingEngine()
-  const { exportCanvasAsImage } = useCanvasExport()
   const windowSize = useWindowSize()
+  const contextRef = useRef<ApplicationContext>()
 
   const hasImage = "imageTexture" in varValues && varValues.imageTexture instanceof Image
 
@@ -32,6 +32,13 @@ export function ClientApp(): JSX.Element {
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
   const effect = shaderLibrary[selectedShader]
+
+  // Initialize application context
+  useEffect(() => {
+    if (!contextRef.current) {
+      contextRef.current = ApplicationContext.getInstance();
+    }
+  }, []);
 
   // Calculate resolution from image dimensions or fallback to window size
   const resolution: [number, number] = hasImage
@@ -86,23 +93,24 @@ export function ClientApp(): JSX.Element {
   }, [])
 
   const handleSaveImage = useCallback(async (inputImage: "one" | "two" = "one") => {
-    try {
-      const canvas = getCanvas()
-      if (!canvas) {
-        throw new Error('Canvas not available')
-      }
+    if (!contextRef.current) {
+      console.error('ApplicationContext not initialized');
+      return;
+    }
 
-      // Export canvas as Image domain object
-      const image = await exportCanvasAsImage(canvas)
+    try {
+      // Use the SaveCanvasAsInput use case
+      const useCase = contextRef.current.getSaveCanvasAsInputUseCase();
+      const image = await useCase.execute();
 
       // Update the appropriate image input
-      const varKey = `imageTexture${inputImage === "two" ? "Two" : ""}`
-      updateVarValue(varKey, image)
+      const varKey = `imageTexture${inputImage === "two" ? "Two" : ""}`;
+      updateVarValue(varKey, image);
     } catch (error) {
-      console.error('Failed to save canvas as image:', error)
+      console.error('Failed to save canvas as image:', error);
       // TODO: Show error notification to user
     }
-  }, [exportCanvasAsImage, updateVarValue, getCanvas])
+  }, [updateVarValue]);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">

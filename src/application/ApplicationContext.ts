@@ -7,6 +7,8 @@ import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMem
 import { BrowserFileSystemAdapter } from '@/infrastructure/adapters/BrowserFileSystemAdapter';
 import { ApplyShaderEffectUseCase } from '@/application/usecases/ApplyShaderEffectUseCase';
 import { LoadImageUseCase } from '@/application/usecases/LoadImageUseCase';
+import { ExportCanvasUseCase } from '@/application/usecases/ExportCanvasUseCase';
+import { SaveCanvasAsInputUseCase } from '@/application/usecases/SaveCanvasAsInputUseCase';
 
 /**
  * Application context that holds all dependencies and provides them to use cases.
@@ -32,6 +34,8 @@ export class ApplicationContext {
   // Use cases (application layer)
   private applyShaderEffectUseCase: ApplyShaderEffectUseCase;
   private loadImageUseCase: LoadImageUseCase;
+  private exportCanvasUseCase: ExportCanvasUseCase;
+  private saveCanvasAsInputUseCase: SaveCanvasAsInputUseCase;
 
   private constructor() {
     // Initialize adapters
@@ -45,6 +49,14 @@ export class ApplicationContext {
       this.shaderRepository
     );
     this.loadImageUseCase = new LoadImageUseCase(
+      this.fileSystemAdapter
+    );
+    this.exportCanvasUseCase = new ExportCanvasUseCase(
+      this.renderingAdapter,
+      this.fileSystemAdapter
+    );
+    this.saveCanvasAsInputUseCase = new SaveCanvasAsInputUseCase(
+      this.renderingAdapter,
       this.fileSystemAdapter
     );
   }
@@ -102,6 +114,20 @@ export class ApplicationContext {
    */
   getLoadImageUseCase(): LoadImageUseCase {
     return this.loadImageUseCase;
+  }
+
+  /**
+   * Get the ExportCanvas use case
+   */
+  getExportCanvasUseCase(): ExportCanvasUseCase {
+    return this.exportCanvasUseCase;
+  }
+
+  /**
+   * Get the SaveCanvasAsInput use case
+   */
+  getSaveCanvasAsInputUseCase(): SaveCanvasAsInputUseCase {
+    return this.saveCanvasAsInputUseCase;
   }
 
   /**
