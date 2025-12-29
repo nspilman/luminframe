@@ -1,10 +1,13 @@
 import { ClientApp } from './ClientApp'
+import { ParameterRegistryProvider } from '@/parameters'
 
 function App() {
   return (
-    <div className="App">
-      <ClientApp />
-    </div>
+    <ParameterRegistryProvider>
+      <div className="App">
+        <ClientApp />
+      </div>
+    </ParameterRegistryProvider>
   )
 }
 
