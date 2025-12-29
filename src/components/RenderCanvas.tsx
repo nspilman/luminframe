@@ -17,8 +17,16 @@ interface RenderCanvasProps {
 export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
   ({ dimensions, className = '', onCanvasResize }, ref) => {
     const [width, height] = dimensions;
+    console.log('[RenderCanvas] Received dimensions:', width, 'x', height, 'aspect:', width/height);
     const aspectRatio = (height / width) * 100;
     const containerRef = useRef<HTMLDivElement>(null);
+    const lastDimensionsRef = useRef<{ width: number; height: number } | null>(null);
+    const onCanvasResizeRef = useRef(onCanvasResize);
+
+    // Keep callback ref up to date
+    useEffect(() => {
+      onCanvasResizeRef.current = onCanvasResize;
+    }, [onCanvasResize]);
 
     // Update canvas size when container size changes
     useEffect(() => {
@@ -28,18 +36,52 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
       const canvas = ref.current;
       if (!canvas) return;
 
-      // Set canvas pixel dimensions to match container
+      console.log('[RenderCanvas] Effect triggered, container rect:', container.getBoundingClientRect());
+
+      // Set canvas pixel dimensions to match container while preserving aspect ratio
       const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
 
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      // Calculate target aspect ratio from input dimensions
+      const targetAspect = width / height;
+      const containerAspect = rect.width / rect.height;
+
+      let newWidth: number;
+      let newHeight: number;
+
+      console.log('[RenderCanvas] Target aspect:', targetAspect, 'Container aspect:', containerAspect);
+
+      // Check if aspects are close enough (within 0.1%)
+      if (Math.abs(targetAspect - containerAspect) < 0.001) {
+        // Aspects match, use container size directly
+        newWidth = Math.round(rect.width * dpr);
+        newHeight = Math.round(rect.height * dpr);
+      } else {
+        // Aspects don't match, calculate size that preserves target aspect
+        newWidth = Math.round(rect.width * dpr);
+        newHeight = Math.round(newWidth / targetAspect);
+      }
+
+      console.log('[RenderCanvas] Calculated canvas size:', newWidth, 'x', newHeight, 'aspect:', newWidth/newHeight);
+
+      // Check if dimensions actually changed
+      if (lastDimensionsRef.current?.width === newWidth && lastDimensionsRef.current?.height === newHeight) {
+        console.log('[RenderCanvas] Dimensions unchanged, skipping resize');
+        return;
+      }
+
+      lastDimensionsRef.current = { width: newWidth, height: newHeight };
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      console.log('[RenderCanvas] Canvas resized to:', canvas.width, 'x', canvas.height);
 
       // Notify parent of actual canvas dimensions
-      if (onCanvasResize) {
-        onCanvasResize(new Dimensions(canvas.width, canvas.height));
+      if (onCanvasResizeRef.current) {
+        onCanvasResizeRef.current(new Dimensions(canvas.width, canvas.height));
       }
-    }, [ref, dimensions, onCanvasResize]);
+    }, [ref, width, height]);
 
     return (
       <div className="w-full relative" style={{ paddingBottom: `${aspectRatio}%` }}>

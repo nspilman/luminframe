@@ -17,6 +17,14 @@ export interface TextureHandle {
 export class TextureAdapter {
   private textureLoader = new TextureLoader();
   private textureCache = new Map<string, TextureHandle>();
+  private onTextureLoadCallback?: () => void;
+
+  /**
+   * Set a callback to be called when a texture finishes loading
+   */
+  setOnTextureLoad(callback: () => void): void {
+    this.onTextureLoadCallback = callback;
+  }
 
   /**
    * Create a Three.js texture from a domain Image
@@ -26,11 +34,31 @@ export class TextureAdapter {
     // Check cache first
     const cached = this.textureCache.get(image.id);
     if (cached) {
+      console.log('[TextureAdapter] Using cached texture for:', image.id);
       return cached;
     }
 
-    // Create new texture
-    const texture = this.textureLoader.load(image.data.url);
+    console.log('[TextureAdapter] Loading new texture from:', image.data.url);
+
+    // Create new texture with callbacks
+    const texture = this.textureLoader.load(
+      image.data.url,
+      // onLoad
+      (loadedTexture) => {
+        console.log('[TextureAdapter] Texture loaded successfully:', image.id, 'size:', loadedTexture.image?.width, 'x', loadedTexture.image?.height);
+        // Trigger re-render callback
+        if (this.onTextureLoadCallback) {
+          console.log('[TextureAdapter] Calling onTextureLoad callback');
+          this.onTextureLoadCallback();
+        }
+      },
+      // onProgress
+      undefined,
+      // onError
+      (error) => {
+        console.error('[TextureAdapter] Failed to load texture:', image.id, error);
+      }
+    );
 
     const handle: TextureHandle = {
       id: image.id,

@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRenderingEngine } from '@/hooks/useRenderingEngine'
 import { useWindowSize } from '@/hooks/useWindowSize'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
-import { AspectRatioPicker } from '@/components/aspect-ratio-picker'
 import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
@@ -27,11 +26,27 @@ export function ClientApp(): JSX.Element {
   const contextRef = useRef<ApplicationContext>()
 
   const hasImage = "imageTexture" in varValues && varValues.imageTexture instanceof Image
-
-  const [aspectRatio, setAspectRatio] = useState<Dimensions>(new Dimensions(1, 1))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
   const effect = shaderLibrary[selectedShader]
+
+  // Derive aspect ratio from image dimensions (or 1:1 if no image)
+  const aspectRatio = useMemo(() => {
+    if (hasImage) {
+      const dims = (varValues.imageTexture as Image).getDimensions()
+      console.log('[ClientApp] Aspect ratio from image:', dims.toString(), 'ratio:', dims.getAspectRatio())
+      return dims
+    }
+    console.log('[ClientApp] No image, using 1:1 aspect ratio')
+    return new Dimensions(1, 1)
+  }, [hasImage, varValues.imageTexture])
+
+  // Memoize the array to prevent unnecessary re-renders
+  const aspectRatioArray = useMemo(() => {
+    const arr = aspectRatio.toArray()
+    console.log('[ClientApp] Aspect ratio array:', arr)
+    return arr
+  }, [aspectRatio])
 
   // Initialize application context
   useEffect(() => {
@@ -62,10 +77,14 @@ export function ClientApp(): JSX.Element {
 
   // Trigger render when parameters or shader changes
   useEffect(() => {
+    console.log('[ClientApp] Render effect triggered:', { isInitialized, hasImage, canvasDimensions: canvasDimensions?.toString() });
+
     if (!isInitialized || !hasImage || !canvasDimensions) {
+      console.log('[ClientApp] Render skipped - not ready');
       return;
     }
 
+    console.log('[ClientApp] Executing render');
     const image = varValues.imageTexture as Image
     const paramsWithResolution = {
       ...varValues,
@@ -74,13 +93,13 @@ export function ClientApp(): JSX.Element {
     render(image, selectedShader, paramsWithResolution)
   }, [isInitialized, selectedShader, varValues, hasImage, render, resolution, canvasDimensions])
 
-  // Update dimensions based on aspect ratio (for shader calculations)
-  useEffect(() => {
-    updateDimensions(aspectRatio)
-  }, [aspectRatio, updateDimensions])
+  // Note: We don't need to call updateDimensions with aspectRatio here
+  // because handleCanvasResize already calls updateDimensions with the actual canvas size
+  // The aspectRatio is just used for the CSS container sizing
 
   // Handle canvas resize - update renderer to match actual canvas size
   const handleCanvasResize = useCallback((dims: Dimensions) => {
+    console.log('[ClientApp] Canvas resized to:', dims.toString());
     updateDimensions(dims);
     setCanvasDimensions(dims); // This triggers the render effect
   }, [updateDimensions]);
@@ -142,14 +161,10 @@ export function ClientApp(): JSX.Element {
             <div className="h-[50vh] md:h-full">
               <CanvasWorkspace
                 ref={canvasRef}
-                dimensions={aspectRatio.toArray()}
+                dimensions={aspectRatioArray}
                 hasImage={hasImage}
                 onSaveImage={handleSaveImage}
                 onCanvasResize={handleCanvasResize}
-              />
-              <AspectRatioPicker 
-                value={aspectRatio}
-                onChange={setAspectRatio}
               />
             </div>
           </div>

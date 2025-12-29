@@ -24,6 +24,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   private mesh: THREE.Mesh | null = null;
   private textureAdapter: TextureAdapter;
   private currentDimensions: Dimensions;
+  private lastRenderParams: { image: Image; effect: ShaderEffect; params: ShaderInputVars } | null = null;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -31,6 +32,18 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   ) {
     this.textureAdapter = new TextureAdapter();
     this.currentDimensions = initialDimensions;
+
+    // Set up texture load callback to trigger re-render
+    this.textureAdapter.setOnTextureLoad(() => {
+      console.log('[ThreeJSRenderingAdapter] Texture loaded, triggering re-render');
+      if (this.lastRenderParams) {
+        this.renderScene(
+          this.lastRenderParams.image,
+          this.lastRenderParams.effect,
+          this.lastRenderParams.params
+        );
+      }
+    });
 
     if (canvas) {
       this.initializeRenderer(canvas);
@@ -58,13 +71,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // Create scene
     this.scene = new THREE.Scene();
 
-    // Create orthographic camera
-    const aspect = this.currentDimensions.getAspectRatio();
+    // Create orthographic camera with 1:1 aspect (full-screen quad approach)
+    // The canvas aspect ratio will handle the stretching
     this.camera = new THREE.OrthographicCamera(
-      -aspect,
-      aspect,
-      1,
-      -1,
+      -1,  // left
+      1,   // right
+      1,   // top
+      -1,  // bottom
       0.1,
       1000
     );
@@ -150,6 +163,15 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     effect: ShaderEffect,
     params: ShaderInputVars
   ): RenderResult {
+    console.log('[ThreeJSRenderingAdapter] renderScene called', {
+      image: image.toString(),
+      effect: effect.name,
+      dimensions: this.currentDimensions.toString()
+    });
+
+    // Store params for potential re-render when texture loads
+    this.lastRenderParams = { image, effect, params };
+
     if (!this.renderer || !this.scene || !this.camera) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
     }
@@ -160,8 +182,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       imageTexture: params.imageTexture || image,
     };
 
+    console.log('[ThreeJSRenderingAdapter] All params:', Object.keys(allParams));
+
     // Convert parameters to uniforms
     const uniforms = this.convertToUniforms(allParams);
+    console.log('[ThreeJSRenderingAdapter] Uniforms:', Object.keys(uniforms));
 
     // Build complete fragment shader with declarations
     const fragmentShader = shaderBuilder({
@@ -196,7 +221,28 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     }
 
     // Render
+    console.log('[ThreeJSRenderingAdapter] Rendering to canvas...');
+    console.log('[ThreeJSRenderingAdapter] Canvas element dimensions:', {
+      width: this.renderer.domElement.width,
+      height: this.renderer.domElement.height,
+      clientWidth: this.renderer.domElement.clientWidth,
+      clientHeight: this.renderer.domElement.clientHeight,
+      aspect: this.renderer.domElement.width / this.renderer.domElement.height
+    });
+    console.log('[ThreeJSRenderingAdapter] Renderer size:', {
+      width: this.currentDimensions.width,
+      height: this.currentDimensions.height,
+      aspect: this.currentDimensions.getAspectRatio()
+    });
+    console.log('[ThreeJSRenderingAdapter] Camera settings:', {
+      left: this.camera.left,
+      right: this.camera.right,
+      top: this.camera.top,
+      bottom: this.camera.bottom,
+      aspect: (this.camera.right - this.camera.left) / (this.camera.top - this.camera.bottom)
+    });
     this.renderer.render(this.scene, this.camera);
+    console.log('[ThreeJSRenderingAdapter] Render complete');
 
     // Read pixels from WebGL context
     const gl = this.renderer.getContext();
@@ -259,21 +305,20 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * Update canvas dimensions
    */
   updateDimensions(dimensions: Dimensions): void {
+    console.log('[ThreeJSRenderingAdapter] updateDimensions called:', dimensions.toString());
     this.currentDimensions = dimensions;
 
     if (this.renderer) {
       // Set size with updateStyle=false to prevent Three.js from overriding our CSS
       this.renderer.setSize(dimensions.width, dimensions.height, false);
+      console.log('[ThreeJSRenderingAdapter] Renderer size updated to:', dimensions.toString());
+    } else {
+      console.warn('[ThreeJSRenderingAdapter] Renderer not initialized, cannot update size');
     }
 
-    if (this.camera) {
-      const aspect = dimensions.getAspectRatio();
-      this.camera.left = -aspect;
-      this.camera.right = aspect;
-      this.camera.top = 1;
-      this.camera.bottom = -1;
-      this.camera.updateProjectionMatrix();
-    }
+    // Camera stays fixed at -1 to 1 in both directions (full-screen quad)
+    // The canvas aspect ratio handles the stretching
+    // No need to update camera frustum
   }
 
   /**

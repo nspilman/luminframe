@@ -1,3 +1,5 @@
+import { Color } from '@/domain/value-objects/Color';
+
 type InputType = 'image' | 'range' | 'color' | 'number';
 
 interface RangeInput {
@@ -44,20 +46,24 @@ interface ShaderConfig {
   body: string;
 }
 
-// Enhance the utility function with validation
-const ensureFloat32Array = (value: number[] | Float32Array | null | undefined): Float32Array => {
+// Convert vec3 values to Color objects
+const ensureColor = (value: number[] | Float32Array | Color | null | undefined): Color => {
   if (value === null || value === undefined) {
-    return new Float32Array([0, 0, 0]); // Safe default
+    return Color.fromRGB(0, 0, 0); // Safe default
   }
-  if (value instanceof Float32Array) {
+  if (value instanceof Color) {
     return value;
   }
-  // Ensure we always have exactly 3 components
-  const safeArray = Array.from(value).slice(0, 3);
-  while (safeArray.length < 3) {
-    safeArray.push(0);
+  if (value instanceof Float32Array) {
+    return Color.fromFloat32Array(value);
   }
-  return new Float32Array(safeArray);
+  // Handle array
+  const arr = Array.from(value);
+  if (arr.length < 3) {
+    // Pad with zeros
+    while (arr.length < 3) arr.push(0);
+  }
+  return Color.fromRGB(arr[0], arr[1], arr[2]);
 };
 
 export const createShaderRecord = (config: ShaderConfig) => {
@@ -69,8 +75,8 @@ export const createShaderRecord = (config: ShaderConfig) => {
   const defaultValues = Object.fromEntries(
     config.variables.map(v => [
       v.name,
-      v.type === 'vec3' 
-        ? ensureFloat32Array(v.defaultValue)
+      v.type === 'vec3'
+        ? ensureColor(v.defaultValue)
         : v.defaultValue
     ])
   );
@@ -129,9 +135,9 @@ export const createShaderVariable = (name: string) => ({
     createVariable(name, 'vec2', [defaultX, defaultY], { type: 'vec2', label }),
   asVec3: (label: string, defaultX = 0, defaultY = 0, defaultZ = 0) =>
     createVariable(
-      name, 
-      'vec3', 
-      new Float32Array([defaultX, defaultY, defaultZ]),
+      name,
+      'vec3',
+      Color.fromRGB(defaultX, defaultY, defaultZ),
       { type: 'vec3', label }
     ),
   asBoolean: (label: string, defaultValue = false) =>
