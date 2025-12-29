@@ -1,8 +1,13 @@
-import { Texture } from 'three'
 import { Image } from '@/domain/models/Image'
 import { Color } from '@/domain/value-objects/Color'
 
-export type ShaderInputVars = Record<string, string | number | number[] | Texture | Image | Color | null | Float32Array | boolean>
+/**
+ * Shader input variables containing parameter values.
+ * All values are domain types - no infrastructure dependencies.
+ *
+ * Note: Image domain objects will be converted to textures by the rendering adapter.
+ */
+export type ShaderInputVars = Record<string, string | number | number[] | Image | Color | null | Float32Array | boolean>
 
 export type ShaderInputDefinition = {
     type: 'range' | 'number' | 'vec2' | 'vec3' | 'image' | 'boolean'
