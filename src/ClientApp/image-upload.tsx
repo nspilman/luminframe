@@ -3,6 +3,8 @@
 import { useDropzone } from 'react-dropzone'
 import { Image } from '@/domain/models/Image'
 import { Check, Upload } from 'lucide-react'
+import { ApplicationContext } from '@/application/ApplicationContext'
+import { useRef, useEffect } from 'react'
 
 interface ImageUploadProps {
   onChange: (image: Image) => void
@@ -10,6 +12,15 @@ interface ImageUploadProps {
 }
 
 export function ImageUpload({ onChange, hasImage = false }: ImageUploadProps) {
+  const contextRef = useRef<ApplicationContext>();
+
+  // Initialize application context
+  useEffect(() => {
+    if (!contextRef.current) {
+      contextRef.current = ApplicationContext.getInstance();
+    }
+  }, []);
+
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.webp']
@@ -19,8 +30,14 @@ export function ImageUpload({ onChange, hasImage = false }: ImageUploadProps) {
       const file = acceptedFiles[0]
       if (!file) return
 
+      if (!contextRef.current) {
+        console.error('ApplicationContext not initialized');
+        return;
+      }
+
       try {
-        const image = await Image.fromFile(file)
+        const loadImageUseCase = contextRef.current.getLoadImageUseCase();
+        const image = await loadImageUseCase.loadFromFile(file);
         onChange(image)
       } catch (error) {
         console.error('Failed to load image:', error)

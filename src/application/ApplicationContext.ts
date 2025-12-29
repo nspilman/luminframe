@@ -6,6 +6,7 @@ import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRender
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter';
 import { BrowserFileSystemAdapter } from '@/infrastructure/adapters/BrowserFileSystemAdapter';
 import { ApplyShaderEffectUseCase } from '@/application/usecases/ApplyShaderEffectUseCase';
+import { LoadImageUseCase } from '@/application/usecases/LoadImageUseCase';
 
 /**
  * Application context that holds all dependencies and provides them to use cases.
@@ -30,6 +31,7 @@ export class ApplicationContext {
 
   // Use cases (application layer)
   private applyShaderEffectUseCase: ApplyShaderEffectUseCase;
+  private loadImageUseCase: LoadImageUseCase;
 
   private constructor() {
     // Initialize adapters
@@ -41,6 +43,9 @@ export class ApplicationContext {
     this.applyShaderEffectUseCase = new ApplyShaderEffectUseCase(
       this.renderingAdapter,
       this.shaderRepository
+    );
+    this.loadImageUseCase = new LoadImageUseCase(
+      this.fileSystemAdapter
     );
   }
 
@@ -90,6 +95,13 @@ export class ApplicationContext {
    */
   getApplyShaderEffectUseCase(): ApplyShaderEffectUseCase {
     return this.applyShaderEffectUseCase;
+  }
+
+  /**
+   * Get the LoadImage use case
+   */
+  getLoadImageUseCase(): LoadImageUseCase {
+    return this.loadImageUseCase;
   }
 
   /**
