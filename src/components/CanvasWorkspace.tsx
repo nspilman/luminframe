@@ -1,34 +1,32 @@
 'use client'
 
 import { forwardRef } from 'react'
-import { ImageScene, ImageSceneHandle } from '../ImageScene'
-import { ShaderInputVars } from '@/types/shader'
+import { RenderCanvas } from './RenderCanvas'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Save } from 'lucide-react'
+import { Dimensions } from '@/domain/value-objects/Dimensions'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
-  inputVars: ShaderInputVars
-  shader: string
   hasImage: boolean
   onSaveImage: (target: "one" | "two") => void
+  onCanvasResize?: (dimensions: Dimensions) => void
 }
 
 /**
  * Canvas workspace component that displays the shader output.
  * Handles the rendering area and save controls.
  */
-export const CanvasWorkspace = forwardRef<ImageSceneHandle, CanvasWorkspaceProps>(
-  ({ dimensions, inputVars, shader, hasImage, onSaveImage }, ref) => {
+export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
+  ({ dimensions, hasImage, onSaveImage, onCanvasResize }, ref) => {
     return (
       <div className="relative h-full rounded-xl border border-zinc-800/50 bg-black/20 backdrop-blur-sm shadow-2xl overflow-hidden">
         <div className="absolute inset-0">
-          <ImageScene
+          <RenderCanvas
             ref={ref}
             dimensions={dimensions}
-            inputVars={inputVars}
-            shader={shader}
+            onCanvasResize={onCanvasResize}
           />
         </div>
         {!hasImage ? (

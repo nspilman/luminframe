@@ -8,6 +8,7 @@ import { ShaderEffect } from '@/types/shader';
 import { ShaderInputVars } from '@/types/shader';
 import { Color } from '@/domain/value-objects/Color';
 import { TextureAdapter } from '@/adapters/TextureAdapter';
+import { shaderBuilder } from '@/shaders/shaderBuilder';
 
 /**
  * Three.js implementation of the RenderingPort.
@@ -47,9 +48,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       preserveDrawingBuffer: true, // Required for canvas export
     });
 
+    // Set size with updateStyle=false to prevent Three.js from overriding our CSS
     this.renderer.setSize(
       this.currentDimensions.width,
-      this.currentDimensions.height
+      this.currentDimensions.height,
+      false // Don't update CSS styles - let Tailwind handle it
     );
 
     // Create scene
@@ -160,10 +163,16 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // Convert parameters to uniforms
     const uniforms = this.convertToUniforms(allParams);
 
+    // Build complete fragment shader with declarations
+    const fragmentShader = shaderBuilder({
+      vars: effect.declarationVars,
+      getBody: effect.getBody,
+    });
+
     // Create shader material
     const material = new THREE.ShaderMaterial({
       vertexShader: this.getVertexShader(),
-      fragmentShader: effect.getBody(), // This should be the complete GLSL shader
+      fragmentShader,
       uniforms,
       transparent: true,
     });
@@ -189,19 +198,24 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // Render
     this.renderer.render(this.scene, this.camera);
 
-    // Get rendered result
-    const canvas = this.renderer.domElement;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Failed to get 2D context from canvas');
+    // Read pixels from WebGL context
+    const gl = this.renderer.getContext();
+    const width = this.currentDimensions.width;
+    const height = this.currentDimensions.height;
+    const pixels = new Uint8Array(width * height * 4);
+
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+    // WebGL has origin at bottom-left, but ImageData expects top-left
+    // So we need to flip vertically
+    const flippedPixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      const srcRow = (height - 1 - y) * width * 4;
+      const dstRow = y * width * 4;
+      flippedPixels.set(pixels.subarray(srcRow, srcRow + width * 4), dstRow);
     }
 
-    const imageData = ctx.getImageData(
-      0,
-      0,
-      this.currentDimensions.width,
-      this.currentDimensions.height
-    );
+    const imageData = new ImageData(flippedPixels, width, height);
 
     return new RenderResult(imageData, this.currentDimensions);
   }
@@ -248,7 +262,8 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     this.currentDimensions = dimensions;
 
     if (this.renderer) {
-      this.renderer.setSize(dimensions.width, dimensions.height);
+      // Set size with updateStyle=false to prevent Three.js from overriding our CSS
+      this.renderer.setSize(dimensions.width, dimensions.height, false);
     }
 
     if (this.camera) {
