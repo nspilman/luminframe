@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRenderingEngine } from '@/hooks/useRenderingEngine'
+import { useImageLoader } from '@/hooks/useImageLoader'
 import { useWindowSize } from '@/hooks/useWindowSize'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
@@ -43,6 +44,7 @@ export function useShaderEditor() {
 
   const { canvasRef, render, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
     useRenderingEngine()
+  const { loadFromFile } = useImageLoader()
   const windowSize = useWindowSize()
 
   const effect = shaderLibrary[selectedShader]
@@ -113,6 +115,17 @@ export function useShaderEditor() {
     }
   }, [downloadImage, selectedShader])
 
+  // Dropping a file onto the canvas loads it as the source image, the same
+  // slot the sidebar's upload fills — one loader (the door), two entry points.
+  const handleImageDrop = useCallback(async (file: File) => {
+    try {
+      const image = await loadFromFile(file)
+      updateVarValue('imageTexture', image)
+    } catch (error) {
+      console.error('Failed to load image:', error)
+    }
+  }, [loadFromFile, updateVarValue])
+
   return {
     canvasRef,
     selectedShader,
@@ -125,6 +138,7 @@ export function useShaderEditor() {
     hasImage,
     handleSaveImage,
     handleDownload,
+    handleImageDrop,
     handleCanvasResize,
   }
 }

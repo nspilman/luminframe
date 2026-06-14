@@ -1,6 +1,7 @@
 'use client'
 
 import { forwardRef } from 'react'
+import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
 import { Upload, Save, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ interface CanvasWorkspaceProps {
   hasImage: boolean
   onSaveImage: (target: "one" | "two") => void
   onDownload: () => void
+  onImageDrop: (file: File) => void
   onCanvasResize?: (dimensions: Dimensions) => void
 }
 
@@ -19,9 +21,26 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, onSaveImage, onDownload, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+    // The whole workspace is a drop target. noClick keeps clicks free for the
+    // action buttons; the empty state opens the file dialog via open().
+    const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
+      accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+      maxFiles: 1,
+      noClick: true,
+      noKeyboard: true,
+      onDrop: (files) => {
+        const file = files[0]
+        if (file) onImageDrop(file)
+      },
+    })
+
     return (
-      <div className="relative h-full rounded-xl border border-zinc-800/50 bg-black/20 backdrop-blur-sm shadow-2xl overflow-hidden">
+      <div
+        {...getRootProps()}
+        className="relative h-full rounded-xl border border-zinc-800/50 bg-black/20 backdrop-blur-sm shadow-2xl overflow-hidden"
+      >
+        <input {...getInputProps()} />
         <div className="absolute inset-0">
           <RenderCanvas
             ref={ref}
@@ -29,11 +48,19 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             onCanvasResize={onCanvasResize}
           />
         </div>
+        {isDragActive && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl ring-2 ring-inset ring-violet-500 bg-violet-500/10 backdrop-blur-sm pointer-events-none">
+            <p className="text-lg font-medium text-violet-200">Drop to load image</p>
+          </div>
+        )}
         {!hasImage ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div
+            onClick={open}
+            className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer"
+          >
             <div className="text-center space-y-2">
               <Upload className="w-10 h-10 mx-auto text-zinc-500" />
-              <p className="text-lg text-zinc-400">Add an image to begin</p>
+              <p className="text-lg text-zinc-400">Drop an image here or click to choose</p>
             </div>
           </div>
         ) : (

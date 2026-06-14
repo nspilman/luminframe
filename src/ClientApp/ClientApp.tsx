@@ -18,6 +18,7 @@ export function ClientApp(): JSX.Element {
     hasImage,
     handleSaveImage,
     handleDownload,
+    handleImageDrop,
     handleCanvasResize,
   } = useShaderEditor()
 
@@ -42,6 +43,7 @@ export function ClientApp(): JSX.Element {
               hasImage={hasImage}
               onSaveImage={handleSaveImage}
               onDownload={handleDownload}
+              onImageDrop={handleImageDrop}
               onCanvasResize={handleCanvasResize}
             />
           </div>
