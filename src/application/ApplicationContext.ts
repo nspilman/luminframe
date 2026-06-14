@@ -6,6 +6,7 @@ import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRender
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter';
 import { BrowserFileSystemAdapter } from '@/infrastructure/adapters/BrowserFileSystemAdapter';
 import { ApplyShaderEffectUseCase } from '@/application/usecases/ApplyShaderEffectUseCase';
+import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase';
 import { LoadImageUseCase } from '@/application/usecases/LoadImageUseCase';
 import { ExportCanvasUseCase } from '@/application/usecases/ExportCanvasUseCase';
 import { SaveCanvasAsInputUseCase } from '@/application/usecases/SaveCanvasAsInputUseCase';
@@ -33,6 +34,7 @@ export class ApplicationContext {
 
   // Use cases (application layer)
   private applyShaderEffectUseCase: ApplyShaderEffectUseCase;
+  private renderEditUseCase: RenderEditUseCase;
   private loadImageUseCase: LoadImageUseCase;
   private exportCanvasUseCase: ExportCanvasUseCase;
   private saveCanvasAsInputUseCase: SaveCanvasAsInputUseCase;
@@ -47,6 +49,11 @@ export class ApplicationContext {
     this.applyShaderEffectUseCase = new ApplyShaderEffectUseCase(
       this.renderingAdapter,
       this.shaderRepository
+    );
+    this.renderEditUseCase = new RenderEditUseCase(
+      this.applyShaderEffectUseCase,
+      this.renderingAdapter,
+      this.fileSystemAdapter
     );
     this.loadImageUseCase = new LoadImageUseCase(
       this.fileSystemAdapter
@@ -107,6 +114,13 @@ export class ApplicationContext {
    */
   getApplyShaderEffectUseCase(): ApplyShaderEffectUseCase {
     return this.applyShaderEffectUseCase;
+  }
+
+  /**
+   * Get the RenderEdit use case (folds the committed pipeline + live draft)
+   */
+  getRenderEditUseCase(): RenderEditUseCase {
+    return this.renderEditUseCase;
   }
 
   /**

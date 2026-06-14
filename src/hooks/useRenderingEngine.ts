@@ -1,8 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { ApplicationContext } from '@/application/ApplicationContext';
-import { ShaderInputVars, ShaderType } from '@/types/shader';
+import { ShaderType } from '@/types/shader';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
+import { EditPipeline } from '@/domain/models/EditPipeline';
+import { DraftEffect } from '@/application/usecases/RenderEditUseCase';
 
 /**
  * React hook that provides access to the rendering engine.
@@ -51,22 +53,21 @@ export function useRenderingEngine() {
   }, []);
 
   /**
-   * Render a shader effect to the canvas
+   * Render an edit: the committed pipeline folded, then the live draft on top.
+   * With an empty committed pipeline this is a single render on the source.
    */
-  const render = useCallback(
-    (image: Image, shaderType: ShaderType, parameters: ShaderInputVars) => {
+  const renderEdit = useCallback(
+    (pipeline: EditPipeline, draft: DraftEffect, resolution: [number, number]) => {
       if (!contextRef.current || !isInitialized) {
         console.warn('Rendering engine not initialized yet');
         return;
       }
-
-      try {
-        const useCase = contextRef.current.getApplyShaderEffectUseCase();
-        useCase.execute(image, shaderType, parameters);
-      } catch (error) {
-        console.error('Failed to render shader effect:', error);
-        throw error;
-      }
+      contextRef.current
+        .getRenderEditUseCase()
+        .execute(pipeline, draft, resolution)
+        .catch((error) => {
+          console.error('Failed to render edit:', error);
+        });
     },
     [isInitialized]
   );
@@ -126,7 +127,7 @@ export function useRenderingEngine() {
 
   return {
     canvasRef,
-    render,
+    renderEdit,
     getCanvas,
     saveCanvasAsInput,
     downloadImage,

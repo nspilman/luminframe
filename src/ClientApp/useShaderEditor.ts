@@ -5,6 +5,7 @@ import { useWindowSize } from '@/hooks/useWindowSize'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
+import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 
 /**
@@ -42,7 +43,7 @@ export function useShaderEditor() {
   )
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
-  const { canvasRef, render, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
+  const { canvasRef, renderEdit, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
     useRenderingEngine()
   const { loadFromFile } = useImageLoader()
   const windowSize = useWindowSize()
@@ -72,13 +73,17 @@ export function useShaderEditor() {
   }, [selectedShader])
 
   // Render whenever the effect, its parameters, or the canvas size change.
+  // Phase 0: the committed pipeline is always empty, so the selected effect is a
+  // single draft rendered directly on the source — identical to the prior
+  // single-pass path. Apply (Phase 1) will start committing effects onto it.
   useEffect(() => {
     if (!isInitialized || !hasImage || !canvasDimensions) {
       return
     }
-    const image = varValues.imageTexture as Image
-    render(image, selectedShader, { ...varValues, resolution })
-  }, [isInitialized, selectedShader, varValues, hasImage, render, resolution, canvasDimensions])
+    const source = varValues.imageTexture as Image
+    const pipeline = EditPipeline.empty().withSource(source)
+    renderEdit(pipeline, { type: selectedShader, params: varValues }, resolution)
+  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
