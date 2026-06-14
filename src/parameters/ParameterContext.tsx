@@ -1,19 +1,6 @@
 import React, { createContext, useContext, ReactNode, useRef } from 'react';
 import { ParameterRegistry } from './ParameterRegistry';
-import {
-  RangeRenderer,
-  ImageRenderer,
-  ColorRenderer,
-  BooleanRenderer,
-  Vec2Renderer,
-} from './renderers';
-import {
-  NumberConverter,
-  BooleanConverter,
-  ColorConverter,
-  ImageConverter,
-  ArrayConverter,
-} from './converters';
+import { createDefaultParameterRegistry } from './defaultRegistry';
 
 const ParameterRegistryContext = createContext<ParameterRegistry | null>(null);
 
@@ -30,24 +17,7 @@ export function ParameterRegistryProvider({
   const registryRef = useRef<ParameterRegistry | null>(null);
 
   if (!registryRef.current) {
-    const registry = new ParameterRegistry();
-
-    // Register built-in renderers
-    registry.registerRenderer('range', new RangeRenderer());
-    registry.registerRenderer('image', new ImageRenderer());
-    registry.registerRenderer('color', new ColorRenderer());
-    registry.registerRenderer('boolean', new BooleanRenderer());
-    registry.registerRenderer('vec2', new Vec2Renderer());
-
-    // Register built-in converters
-    // Order matters: more specific converters first
-    registry.registerConverter(new ImageConverter());
-    registry.registerConverter(new ColorConverter());
-    registry.registerConverter(new BooleanConverter());
-    registry.registerConverter(new ArrayConverter());
-    registry.registerConverter(new NumberConverter());
-
-    registryRef.current = registry;
+    registryRef.current = createDefaultParameterRegistry();
   }
 
   return (

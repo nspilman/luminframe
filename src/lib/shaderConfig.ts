@@ -20,8 +20,10 @@ interface Vec2Input {
       label: string;
   }
 
-interface Vec3Input {
-  type: 'vec3';
+// A vec3 uniform is edited in the UI as a color, so the input type is 'color'
+// while the GLSL declaration type stays 'vec3' (see asVec3 below).
+interface ColorInput {
+  type: 'color';
   label: string;
   normalize?: boolean;
 }
@@ -31,7 +33,7 @@ interface BooleanInput {
   label: string;
 }
 
-type ShaderInput = RangeInput | ImageInput | Vec2Input | Vec3Input | BooleanInput;
+type ShaderInput = RangeInput | ImageInput | Vec2Input | ColorInput | BooleanInput;
 
 interface ShaderVariable {
   name: string;
@@ -138,7 +140,7 @@ export const createShaderVariable = (name: string) => ({
       name,
       'vec3',
       Color.fromRGB(defaultX, defaultY, defaultZ),
-      { type: 'vec3', label }
+      { type: 'color', label }
     ),
   asBoolean: (label: string, defaultValue = false) =>
     createVariable(name, 'bool', defaultValue, { type: 'boolean', label }),

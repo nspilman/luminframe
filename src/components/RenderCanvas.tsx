@@ -17,7 +17,6 @@ interface RenderCanvasProps {
 export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
   ({ dimensions, className = '', onCanvasResize }, ref) => {
     const [width, height] = dimensions;
-    console.log('[RenderCanvas] Received dimensions:', width, 'x', height, 'aspect:', width/height);
     const aspectRatio = (height / width) * 100;
     const containerRef = useRef<HTMLDivElement>(null);
     const lastDimensionsRef = useRef<{ width: number; height: number } | null>(null);
@@ -36,8 +35,6 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
       const canvas = ref.current;
       if (!canvas) return;
 
-      console.log('[RenderCanvas] Effect triggered, container rect:', container.getBoundingClientRect());
-
       // Set canvas pixel dimensions to match container while preserving aspect ratio
       const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -48,8 +45,6 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
 
       let newWidth: number;
       let newHeight: number;
-
-      console.log('[RenderCanvas] Target aspect:', targetAspect, 'Container aspect:', containerAspect);
 
       // Check if aspects are close enough (within 0.1%)
       if (Math.abs(targetAspect - containerAspect) < 0.001) {
@@ -62,11 +57,8 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
         newHeight = Math.round(newWidth / targetAspect);
       }
 
-      console.log('[RenderCanvas] Calculated canvas size:', newWidth, 'x', newHeight, 'aspect:', newWidth/newHeight);
-
       // Check if dimensions actually changed
       if (lastDimensionsRef.current?.width === newWidth && lastDimensionsRef.current?.height === newHeight) {
-        console.log('[RenderCanvas] Dimensions unchanged, skipping resize');
         return;
       }
 
@@ -74,8 +66,6 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
 
       canvas.width = newWidth;
       canvas.height = newHeight;
-
-      console.log('[RenderCanvas] Canvas resized to:', canvas.width, 'x', canvas.height);
 
       // Notify parent of actual canvas dimensions
       if (onCanvasResizeRef.current) {

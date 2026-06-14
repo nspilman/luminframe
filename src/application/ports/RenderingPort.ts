@@ -1,7 +1,6 @@
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
-import { RenderResult } from '@/domain/value-objects/RenderResult';
 import { ShaderEffect } from '@/types/shader';
 import { ShaderInputVars } from '@/types/shader';
 
@@ -15,16 +14,18 @@ export interface RenderingPort {
   /**
    * Render a scene with the given shader effect and parameters
    *
+   * Renders to the canvas. Consumers that need pixels read the canvas
+   * separately via getCanvas()/exportCanvas().
+   *
    * @param image - The source image to render
    * @param effect - The shader effect to apply
    * @param params - Parameter values for the shader
-   * @returns The rendered result
    */
   renderScene(
     image: Image,
     effect: ShaderEffect,
     params: ShaderInputVars
-  ): RenderResult;
+  ): void;
 
   /**
    * Export the current canvas to a specific image format

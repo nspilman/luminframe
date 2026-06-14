@@ -10,7 +10,7 @@ import { Color } from '@/domain/value-objects/Color'
 export type ShaderInputVars = Record<string, string | number | number[] | Image | Color | null | Float32Array | boolean>
 
 export type ShaderInputDefinition = {
-    type: 'range' | 'number' | 'vec2' | 'vec3' | 'image' | 'boolean'
+    type: 'range' | 'number' | 'vec2' | 'color' | 'image' | 'boolean'
     min?: number
     max?: number
     step?: number

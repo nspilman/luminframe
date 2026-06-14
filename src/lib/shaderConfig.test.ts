@@ -1,4 +1,5 @@
 import { createShaderRecord, createShaderVariable } from './shaderConfig';
+import { Color } from '@/domain/value-objects/Color';
 
 describe('shaderRecordBuilder', () => {
   describe('createShaderRecord', () => {
@@ -70,6 +71,17 @@ describe('shaderRecordBuilder', () => {
         getBody: expect.any(Function)
       });
     });
+
+    it('should preserve a Color default for vec3 variables', () => {
+      const record = createShaderRecord({
+        name: 'Tint Shader',
+        variables: [createShaderVariable('tint').asVec3('Tint', 1.0, 0.0, 0.0)],
+        body: 'void main() {}'
+      });
+
+      expect(record.declarationVars).toEqual({ tint: 'vec3', resolution: 'vec2' });
+      expect(record.defaultValues.tint).toEqual(Color.fromRGB(1.0, 0.0, 0.0));
+    });
   });
 
   describe('createShaderVariable', () => {
@@ -121,49 +133,58 @@ describe('shaderRecordBuilder', () => {
       });
     });
 
-    it('should create vec3 variable correctly', () => {
+    it('should create a vec3 from three channels', () => {
       const variable = createShaderVariable('color')
         .asVec3('Color', 1.0, 0.5, 0.2);
 
+      // GLSL declaration type stays 'vec3'; the UI input type is 'color'.
       expect(variable).toEqual({
         name: 'color',
         type: 'vec3',
-        defaultValue: new Float32Array([1.0, 0.5, 0.2]),
+        defaultValue: Color.fromRGB(1.0, 0.5, 0.2),
         input: {
-          type: 'vec3',
+          type: 'color',
           label: 'Color'
         }
       });
     });
 
-    it('should create vec3 variable with default values when not provided', () => {
+    it('should default all vec3 channels to 0 when none are provided', () => {
       const variable = createShaderVariable('position')
         .asVec3('Position');
 
       expect(variable).toEqual({
         name: 'position',
         type: 'vec3',
-        defaultValue: new Float32Array([0, 0, 0]),
+        defaultValue: Color.fromRGB(0, 0, 0),
         input: {
-          type: 'vec3',
+          type: 'color',
           label: 'Position'
         }
       });
     });
 
-    it('should handle vec3 variable with partial values', () => {
+    it('should default omitted vec3 channels to 0', () => {
       const variable = createShaderVariable('scale')
-        .asVec3('Scale', 2.0);
+        .asVec3('Scale', 0.5);
 
       expect(variable).toEqual({
         name: 'scale',
         type: 'vec3',
-        defaultValue: new Float32Array([2.0, 0, 0]),
+        defaultValue: Color.fromRGB(0.5, 0, 0),
         input: {
-          type: 'vec3',
+          type: 'color',
           label: 'Scale'
         }
       });
+    });
+
+    it('should reject a vec3 channel outside 0-1', () => {
+      // vec3 defaults are Color value objects, normalized to 0-1.
+      // An author passing 0-255 values (here: 2) is a real mistake to surface.
+      expect(() => createShaderVariable('bad').asVec3('Bad', 2)).toThrow(
+        /between 0 and 1/
+      );
     });
 
     it('should create vec2 variable with default values when not provided', () => {
@@ -194,89 +215,6 @@ describe('shaderRecordBuilder', () => {
           label: 'Scale'
         }
       });
-    });
-
-    it('should handle vec3 variable with array input and ensure Float32Array conversion', () => {
-      const variable = createShaderVariable('color')
-        .asVec3('Color', ...[0.5, 0.7, 0.9]);
-
-      expect(variable.defaultValue).toBeInstanceOf(Float32Array);
-      
-      // Use toBeCloseTo for each value to handle floating point precision
-      const values = Array.from(variable.defaultValue);
-      expect(values[0]).toBeCloseTo(0.5, 6);
-      expect(values[1]).toBeCloseTo(0.7, 6);
-      expect(values[2]).toBeCloseTo(0.9, 6);
-
-      // For the full object comparison, we'll use the actual Float32Array values
-      expect(variable).toEqual({
-        name: 'color',
-        type: 'vec3',
-        defaultValue: variable.defaultValue, // Use the actual values
-        input: {
-          type: 'vec3',
-          label: 'Color'
-        }
-      });
-    });
-
-    it('should handle vec3 variable with incomplete array and pad with zeros', () => {
-      const variable = createShaderVariable('color')
-        .asVec3('Color', ...[0.5, 0.7]);  // Missing third value
-      expect(variable.defaultValue).toBeInstanceOf(Float32Array);
-      
-      // Use toBeCloseTo for each value to handle floating point precision
-      const values = Array.from(variable.defaultValue);
-      expect(values[0]).toBeCloseTo(0.5, 6);
-      expect(values[1]).toBeCloseTo(0.7, 6);
-      expect(values[2]).toBe(0);
-
-      // For the full object comparison, we'll use the actual Float32Array values
-      expect(variable).toEqual({
-        name: 'color',
-        type: 'vec3',
-        defaultValue: variable.defaultValue, // Use the actual values
-        input: {
-          type: 'vec3',
-          label: 'Color'
-        }
-      });
-    });
-
-    it('should handle vec3 variables with various input types', () => {
-      const record = createShaderRecord({
-        name: 'Test Shader',
-        variables: [
-          // Test null/default values
-          createShaderVariable('nullVec').asVec3('Null Vec'),
-          // Test regular values
-          createShaderVariable('normalVec').asVec3('Normal Vec', 1, 2, 3),
-          // Test partial values
-          createShaderVariable('partialVec').asVec3('Partial Vec', 1, 2),
-          // Test spread array
-          createShaderVariable('arrayVec').asVec3('Array Vec', ...[0.5, 0.7, 0.9])
-        ],
-        body: ''
-      });
-
-      // Check null/default case
-      expect(record.defaultValues.nullVec).toBeInstanceOf(Float32Array);
-      expect(Array.from(record.defaultValues.nullVec)).toEqual([0, 0, 0]);
-
-      // Check normal case
-      const normalValues = Array.from(record.defaultValues.normalVec);
-      expect(normalValues[0]).toBeCloseTo(1, 6);
-      expect(normalValues[1]).toBeCloseTo(2, 6);
-      expect(normalValues[2]).toBeCloseTo(3, 6);
-
-      // Check partial values case
-      expect(Array.from(record.defaultValues.partialVec)).toEqual([1, 2, 0]);
-
-      // Check array spread case
-      const arrayValues = Array.from(record.defaultValues.arrayVec);
-      expect(arrayValues[0]).toBeCloseTo(0.5, 6);
-      expect(arrayValues[1]).toBeCloseTo(0.7, 6);
-      expect(arrayValues[2]).toBeCloseTo(0.9, 6);
     });
 
     it('should create boolean variable correctly', () => {

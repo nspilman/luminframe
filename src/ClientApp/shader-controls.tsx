@@ -16,11 +16,11 @@ export function ShaderControls({ effect, values, onChange }: ShaderControlsProps
   return (
     <div className="space-y-6">
       {Object.entries(effect.inputs).map(([key, input]) => {
-        // Convert ShaderInputDefinition to ParameterDefinition format
+        // Effects declare UI input types directly (range, color, vec2, ...),
+        // so the descriptor maps straight onto a ParameterDefinition.
         const paramDefinition: ParameterDefinition = {
-          ...input, // Spread all properties first (label, min, max, step, etc.)
-          type: input.type === 'vec3' ? 'color' : input.type, // Override type to map vec3 to color
-          defaultValue: effect.defaultValues[key], // Use the default value from the effect definition
+          ...input,
+          defaultValue: effect.defaultValues[key],
         };
 
         // Get the renderer for this parameter type

@@ -1,7 +1,6 @@
 import { RenderingPort } from '@/application/ports/RenderingPort';
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { Image } from '@/domain/models/Image';
-import { RenderResult } from '@/domain/value-objects/RenderResult';
 import { ShaderInputVars, ShaderType } from '@/types/shader';
 
 /**
@@ -9,8 +8,7 @@ import { ShaderInputVars, ShaderType } from '@/types/shader';
  *
  * This orchestrates the rendering port and shader repository to:
  * 1. Retrieve the requested shader effect
- * 2. Apply it to the image with given parameters
- * 3. Return the rendered result
+ * 2. Apply it to the image with given parameters (rendered to the canvas)
  */
 export class ApplyShaderEffectUseCase {
   constructor(
@@ -24,13 +22,12 @@ export class ApplyShaderEffectUseCase {
    * @param image - The image to apply the effect to
    * @param shaderType - The type of shader effect to apply
    * @param parameters - Additional shader parameters (colors, intensities, etc.)
-   * @returns The rendered result with the applied effect
    */
   execute(
     image: Image,
     shaderType: ShaderType,
     parameters: ShaderInputVars
-  ): RenderResult {
+  ): void {
     // Get the shader effect from the repository
     const effect = this.shaderRepository.getShader(shaderType);
 
@@ -41,7 +38,7 @@ export class ApplyShaderEffectUseCase {
     };
 
     // Render the scene with the effect
-    return this.renderingPort.renderScene(image, effect, allParams);
+    this.renderingPort.renderScene(image, effect, allParams);
   }
 
   /**

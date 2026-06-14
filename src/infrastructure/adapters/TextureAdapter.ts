@@ -34,21 +34,16 @@ export class TextureAdapter {
     // Check cache first
     const cached = this.textureCache.get(image.id);
     if (cached) {
-      console.log('[TextureAdapter] Using cached texture for:', image.id);
       return cached;
     }
-
-    console.log('[TextureAdapter] Loading new texture from:', image.data.url);
 
     // Create new texture with callbacks
     const texture = this.textureLoader.load(
       image.data.url,
       // onLoad
-      (loadedTexture) => {
-        console.log('[TextureAdapter] Texture loaded successfully:', image.id, 'size:', loadedTexture.image?.width, 'x', loadedTexture.image?.height);
+      () => {
         // Trigger re-render callback
         if (this.onTextureLoadCallback) {
-          console.log('[TextureAdapter] Calling onTextureLoad callback');
           this.onTextureLoadCallback();
         }
       },

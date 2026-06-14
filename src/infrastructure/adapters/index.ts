@@ -8,6 +8,5 @@
 export { ThreeJSRenderingAdapter } from './ThreeJSRenderingAdapter';
 export { BrowserFileSystemAdapter } from './BrowserFileSystemAdapter';
 export { InMemoryShaderRepositoryAdapter } from './InMemoryShaderRepositoryAdapter';
-
-// Re-export existing TextureAdapter for backward compatibility
-export { TextureAdapter } from '@/adapters/TextureAdapter';
+export { TextureAdapter } from './TextureAdapter';
+export type { TextureHandle } from './TextureAdapter';

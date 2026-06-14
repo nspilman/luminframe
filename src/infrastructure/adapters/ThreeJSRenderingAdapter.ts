@@ -3,11 +3,10 @@ import { RenderingPort } from '@/application/ports/RenderingPort';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
-import { RenderResult } from '@/domain/value-objects/RenderResult';
 import { ShaderEffect } from '@/types/shader';
 import { ShaderInputVars } from '@/types/shader';
 import { Color } from '@/domain/value-objects/Color';
-import { TextureAdapter } from '@/adapters/TextureAdapter';
+import { TextureAdapter } from './TextureAdapter';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
 
 /**
@@ -35,7 +34,6 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
 
     // Set up texture load callback to trigger re-render
     this.textureAdapter.setOnTextureLoad(() => {
-      console.log('[ThreeJSRenderingAdapter] Texture loaded, triggering re-render');
       if (this.lastRenderParams) {
         this.renderScene(
           this.lastRenderParams.image,
@@ -162,13 +160,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     image: Image,
     effect: ShaderEffect,
     params: ShaderInputVars
-  ): RenderResult {
-    console.log('[ThreeJSRenderingAdapter] renderScene called', {
-      image: image.toString(),
-      effect: effect.name,
-      dimensions: this.currentDimensions.toString()
-    });
-
+  ): void {
     // Store params for potential re-render when texture loads
     this.lastRenderParams = { image, effect, params };
 
@@ -182,11 +174,8 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       imageTexture: params.imageTexture || image,
     };
 
-    console.log('[ThreeJSRenderingAdapter] All params:', Object.keys(allParams));
-
     // Convert parameters to uniforms
     const uniforms = this.convertToUniforms(allParams);
-    console.log('[ThreeJSRenderingAdapter] Uniforms:', Object.keys(uniforms));
 
     // Build complete fragment shader with declarations
     const fragmentShader = shaderBuilder({
@@ -220,50 +209,9 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       this.mesh.material = material;
     }
 
-    // Render
-    console.log('[ThreeJSRenderingAdapter] Rendering to canvas...');
-    console.log('[ThreeJSRenderingAdapter] Canvas element dimensions:', {
-      width: this.renderer.domElement.width,
-      height: this.renderer.domElement.height,
-      clientWidth: this.renderer.domElement.clientWidth,
-      clientHeight: this.renderer.domElement.clientHeight,
-      aspect: this.renderer.domElement.width / this.renderer.domElement.height
-    });
-    console.log('[ThreeJSRenderingAdapter] Renderer size:', {
-      width: this.currentDimensions.width,
-      height: this.currentDimensions.height,
-      aspect: this.currentDimensions.getAspectRatio()
-    });
-    console.log('[ThreeJSRenderingAdapter] Camera settings:', {
-      left: this.camera.left,
-      right: this.camera.right,
-      top: this.camera.top,
-      bottom: this.camera.bottom,
-      aspect: (this.camera.right - this.camera.left) / (this.camera.top - this.camera.bottom)
-    });
+    // Render to the canvas. Consumers that need pixels (export, save-as-input)
+    // read the canvas directly via getCanvas()/exportCanvas().
     this.renderer.render(this.scene, this.camera);
-    console.log('[ThreeJSRenderingAdapter] Render complete');
-
-    // Read pixels from WebGL context
-    const gl = this.renderer.getContext();
-    const width = this.currentDimensions.width;
-    const height = this.currentDimensions.height;
-    const pixels = new Uint8Array(width * height * 4);
-
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-    // WebGL has origin at bottom-left, but ImageData expects top-left
-    // So we need to flip vertically
-    const flippedPixels = new Uint8ClampedArray(width * height * 4);
-    for (let y = 0; y < height; y++) {
-      const srcRow = (height - 1 - y) * width * 4;
-      const dstRow = y * width * 4;
-      flippedPixels.set(pixels.subarray(srcRow, srcRow + width * 4), dstRow);
-    }
-
-    const imageData = new ImageData(flippedPixels, width, height);
-
-    return new RenderResult(imageData, this.currentDimensions);
   }
 
   /**
@@ -305,13 +253,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * Update canvas dimensions
    */
   updateDimensions(dimensions: Dimensions): void {
-    console.log('[ThreeJSRenderingAdapter] updateDimensions called:', dimensions.toString());
     this.currentDimensions = dimensions;
 
     if (this.renderer) {
       // Set size with updateStyle=false to prevent Three.js from overriding our CSS
       this.renderer.setSize(dimensions.width, dimensions.height, false);
-      console.log('[ThreeJSRenderingAdapter] Renderer size updated to:', dimensions.toString());
     } else {
       console.warn('[ThreeJSRenderingAdapter] Renderer not initialized, cannot update size');
     }

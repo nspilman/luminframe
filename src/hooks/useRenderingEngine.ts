@@ -80,6 +80,17 @@ export function useRenderingEngine() {
   }, []);
 
   /**
+   * Save the current rendered canvas as an Image domain object,
+   * for feeding the output back in as a shader input.
+   */
+  const saveCanvasAsInput = useCallback(async (): Promise<Image> => {
+    if (!contextRef.current) {
+      throw new Error('Rendering engine not initialized');
+    }
+    return contextRef.current.getSaveCanvasAsInputUseCase().execute();
+  }, []);
+
+  /**
    * Get available shader types
    */
   const getAvailableShaders = useCallback((): ShaderType[] => {
@@ -107,6 +118,7 @@ export function useRenderingEngine() {
     canvasRef,
     render,
     getCanvas,
+    saveCanvasAsInput,
     updateDimensions,
     getAvailableShaders,
     getShaderMetadata,
