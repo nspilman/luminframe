@@ -5,7 +5,7 @@ export const lightThresholdSwap = createShaderRecord({
   variables: [
     createShaderVariable('imageTexture').asImage('Source Image'),
     createShaderVariable('imageTextureTwo').asImage('Second Image'),
-    createShaderVariable('threshold').asRange('Light Threshold', 382.5, 0.0, 765.0, 1.0),
+    createShaderVariable('threshold').asRange('Light Threshold', 383, 0.0, 765.0, 1.0),
     createShaderVariable('isHighPass').asBoolean('High Pass Filter'),
   ],
   body: `

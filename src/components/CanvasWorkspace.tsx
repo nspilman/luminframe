@@ -54,15 +54,16 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         )}
         {!hasImage ? (
-          <div
+          <button
+            type="button"
             onClick={open}
-            className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer"
+            className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500"
           >
             <div className="text-center space-y-2">
               <Upload className="w-10 h-10 mx-auto text-zinc-500" />
               <p className="text-lg text-zinc-400">Drop an image here or click to choose</p>
             </div>
-          </div>
+          </button>
         ) : (
           <div className="absolute top-4 right-4 flex gap-2">
             <Button

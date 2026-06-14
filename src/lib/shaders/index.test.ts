@@ -195,7 +195,7 @@ describe('shader library contract', () => {
       "type": "boolean",
     },
     "threshold": {
-      "default": 382.5,
+      "default": 383,
       "type": "range",
     },
   },
