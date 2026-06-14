@@ -3,7 +3,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ImagePlus, Plus, Layers, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { ImagePlus, Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2 } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 
@@ -18,6 +18,10 @@ type EditorSidebarProps = {
   onApply: () => void
   onRemoveEffect: (index: number) => void
   onMoveEffect: (from: number, to: number) => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 const sidebarShell =
@@ -34,6 +38,10 @@ export function EditorSidebar({
   onApply,
   onRemoveEffect,
   onMoveEffect,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: EditorSidebarProps) {
   // Image-first: the tools have no subject to act on until a source is loaded,
   // so they aren't mounted yet — the canvas holds the one invitation to begin.
@@ -70,6 +78,33 @@ export function EditorSidebar({
           <Plus className="h-4 w-4" />
           Apply effect
         </Button>
+
+        {(canUndo || canRedo) && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onUndo}
+              disabled={!canUndo}
+              aria-label="Undo"
+              className="flex-1 gap-2 text-zinc-400 hover:bg-white/5 disabled:opacity-30"
+            >
+              <Undo2 className="h-4 w-4" />
+              Undo
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onRedo}
+              disabled={!canRedo}
+              aria-label="Redo"
+              className="flex-1 gap-2 text-zinc-400 hover:bg-white/5 disabled:opacity-30"
+            >
+              <Redo2 className="h-4 w-4" />
+              Redo
+            </Button>
+          </div>
+        )}
 
         {appliedEffects.length > 0 && (
           <div className="space-y-1">

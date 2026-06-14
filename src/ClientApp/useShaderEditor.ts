@@ -7,6 +7,15 @@ import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
+import {
+  History,
+  initHistory,
+  pushHistory,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
+} from '@/lib/history'
 
 /**
  * Reconcile parameter values across an effect switch.
@@ -64,7 +73,15 @@ export function useShaderEditor() {
     () => ({ ...shaderLibrary[selectedShader].defaultValues })
   )
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
-  const [pipeline, setPipeline] = useState<EditPipeline>(() => EditPipeline.empty())
+
+  // The committed pipeline lives inside an undo/redo history. Every commit-level
+  // action (apply, remove, reorder) pushes a new present; undo/redo step through
+  // them. The live draft (selectedShader/varValues) is deliberately outside the
+  // history — undo works at the granularity of committed effects, not slider drags.
+  const [history, setHistory] = useState<History<EditPipeline>>(
+    () => initHistory(EditPipeline.empty())
+  )
+  const pipeline = history.present
 
   const { canvasRef, renderEdit, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
     useRenderingEngine()
@@ -126,18 +143,40 @@ export function useShaderEditor() {
   // on the new base. The committed values now live in the pipeline, so the
   // canvas keeps showing them — the fresh draft starts from defaults on top.
   const handleApply = useCallback(() => {
-    setPipeline(prev => prev.append(selectedShader, varValues))
+    setHistory(h => pushHistory(h, h.present.append(selectedShader, varValues)))
     setVarValues(prev =>
       freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
     )
   }, [selectedShader, varValues])
 
   const handleRemoveEffect = useCallback((index: number) => {
-    setPipeline(prev => prev.removeAt(index))
+    setHistory(h => pushHistory(h, h.present.removeAt(index)))
   }, [])
 
   const handleMoveEffect = useCallback((from: number, to: number) => {
-    setPipeline(prev => prev.move(from, to))
+    setHistory(h => pushHistory(h, h.present.move(from, to)))
+  }, [])
+
+  const handleUndo = useCallback(() => setHistory(undo), [])
+  const handleRedo = useCallback(() => setHistory(redo), [])
+
+  // ⌘Z / Ctrl+Z undoes a commit; adding Shift (or ⌘Y) redoes. setHistory's
+  // undo/redo are no-ops at the ends of history, so the guards stay simple.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey
+      if (!mod) return
+      const key = e.key.toLowerCase()
+      if (key === 'z') {
+        e.preventDefault()
+        setHistory(e.shiftKey ? redo : undo)
+      } else if (key === 'y') {
+        e.preventDefault()
+        setHistory(redo)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
   const handleSaveImage = useCallback(
@@ -151,7 +190,7 @@ export function useShaderEditor() {
         } else {
           // Baking the canvas as the new source folds every committed effect
           // into the pixels, so the pipeline starts empty over the new base.
-          setPipeline(EditPipeline.empty())
+          setHistory(initHistory(EditPipeline.empty()))
           updateVarValue('imageTexture', image)
         }
       } catch (error) {
@@ -175,7 +214,7 @@ export function useShaderEditor() {
     try {
       const image = await loadFromFile(file)
       // A new source is a fresh edit — the prior stack belonged to the old image.
-      setPipeline(EditPipeline.empty())
+      setHistory(initHistory(EditPipeline.empty()))
       updateVarValue('imageTexture', image)
     } catch (error) {
       console.error('Failed to load image:', error)
@@ -196,6 +235,10 @@ export function useShaderEditor() {
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,
+    handleUndo,
+    handleRedo,
+    canUndo: canUndo(history),
+    canRedo: canRedo(history),
     handleSaveImage,
     handleDownload,
     handleImageDrop,

@@ -20,6 +20,10 @@ export function ClientApp(): JSX.Element {
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,
+    handleUndo,
+    handleRedo,
+    canUndo,
+    canRedo,
     handleSaveImage,
     handleDownload,
     handleImageDrop,
@@ -41,6 +45,10 @@ export function ClientApp(): JSX.Element {
           onApply={handleApply}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
 
         {/* Main Content */}
