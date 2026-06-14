@@ -91,6 +91,16 @@ export function useRenderingEngine() {
   }, []);
 
   /**
+   * Download the current rendered canvas as an image file.
+   */
+  const downloadImage = useCallback(async (filename: string): Promise<void> => {
+    if (!contextRef.current) {
+      throw new Error('Rendering engine not initialized');
+    }
+    return contextRef.current.getExportCanvasUseCase().execute(filename);
+  }, []);
+
+  /**
    * Get available shader types
    */
   const getAvailableShaders = useCallback((): ShaderType[] => {
@@ -119,6 +129,7 @@ export function useRenderingEngine() {
     render,
     getCanvas,
     saveCanvasAsInput,
+    downloadImage,
     updateDimensions,
     getAvailableShaders,
     getShaderMetadata,

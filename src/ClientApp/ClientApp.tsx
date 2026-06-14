@@ -17,6 +17,7 @@ export function ClientApp(): JSX.Element {
     aspectRatioArray,
     hasImage,
     handleSaveImage,
+    handleDownload,
     handleCanvasResize,
   } = useShaderEditor()
 
@@ -40,6 +41,7 @@ export function ClientApp(): JSX.Element {
               dimensions={aspectRatioArray}
               hasImage={hasImage}
               onSaveImage={handleSaveImage}
+              onDownload={handleDownload}
               onCanvasResize={handleCanvasResize}
             />
           </div>

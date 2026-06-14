@@ -2,15 +2,15 @@
 
 import { forwardRef } from 'react'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload } from 'lucide-react'
+import { Upload, Save, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Save } from 'lucide-react'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
   hasImage: boolean
   onSaveImage: (target: "one" | "two") => void
+  onDownload: () => void
   onCanvasResize?: (dimensions: Dimensions) => void
 }
 
@@ -19,7 +19,7 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, onSaveImage, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, onSaveImage, onDownload, onCanvasResize }, ref) => {
     return (
       <div className="relative h-full rounded-xl border border-zinc-800/50 bg-black/20 backdrop-blur-sm shadow-2xl overflow-hidden">
         <div className="absolute inset-0">
@@ -38,6 +38,13 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         ) : (
           <div className="absolute top-4 right-4 flex gap-2">
+            <Button
+              onClick={onDownload}
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
             <Button
               onClick={() => onSaveImage("one")}
               variant="secondary"

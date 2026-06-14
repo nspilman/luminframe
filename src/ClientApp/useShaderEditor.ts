@@ -41,7 +41,7 @@ export function useShaderEditor() {
   )
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
-  const { canvasRef, render, saveCanvasAsInput, updateDimensions, isInitialized } =
+  const { canvasRef, render, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
     useRenderingEngine()
   const windowSize = useWindowSize()
 
@@ -105,6 +105,14 @@ export function useShaderEditor() {
     [saveCanvasAsInput, updateVarValue]
   )
 
+  const handleDownload = useCallback(async () => {
+    try {
+      await downloadImage(`luminframe-${selectedShader}.png`)
+    } catch (error) {
+      console.error('Failed to download image:', error)
+    }
+  }, [downloadImage, selectedShader])
+
   return {
     canvasRef,
     selectedShader,
@@ -116,6 +124,7 @@ export function useShaderEditor() {
     aspectRatioArray,
     hasImage,
     handleSaveImage,
+    handleDownload,
     handleCanvasResize,
   }
 }
