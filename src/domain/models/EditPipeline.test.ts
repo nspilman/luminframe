@@ -57,4 +57,57 @@ describe('EditPipeline', () => {
       expect(original.length).toBe(0);
     });
   });
+
+  describe('removeAt', () => {
+    const threeEffects = () =>
+      EditPipeline.empty()
+        .append('tint' as ShaderType, {})
+        .append('vignette' as ShaderType, {})
+        .append('wave' as ShaderType, {});
+
+    it('drops the effect at the given index', () => {
+      const result = threeEffects().removeAt(1);
+      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'wave']);
+    });
+
+    it('leaves the pipeline unchanged for an out-of-range index', () => {
+      const result = threeEffects().removeAt(5);
+      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+    });
+
+    it('does not mutate the original', () => {
+      const original = threeEffects();
+      original.removeAt(0);
+      expect(original.length).toBe(3);
+    });
+  });
+
+  describe('move', () => {
+    const threeEffects = () =>
+      EditPipeline.empty()
+        .append('tint' as ShaderType, {})
+        .append('vignette' as ShaderType, {})
+        .append('wave' as ShaderType, {});
+
+    it('moves an effect later in the order', () => {
+      const result = threeEffects().move(0, 2);
+      expect(result.effects.map((e) => e.type)).toEqual(['vignette', 'wave', 'tint']);
+    });
+
+    it('moves an effect earlier in the order', () => {
+      const result = threeEffects().move(2, 0);
+      expect(result.effects.map((e) => e.type)).toEqual(['wave', 'tint', 'vignette']);
+    });
+
+    it('leaves the pipeline unchanged for an out-of-range index', () => {
+      const result = threeEffects().move(0, 9);
+      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+    });
+
+    it('does not mutate the original', () => {
+      const original = threeEffects();
+      original.move(0, 2);
+      expect(original.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+    });
+  });
 });

@@ -42,6 +42,30 @@ export class EditPipeline {
     return new EditPipeline(this.source, [...this.effects, { type, params }]);
   }
 
+  /** Drop the effect at `index`. An out-of-range index is a no-op. */
+  removeAt(index: number): EditPipeline {
+    if (index < 0 || index >= this.effects.length) {
+      return this;
+    }
+    return new EditPipeline(this.source, this.effects.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Move the effect at `from` to position `to`, shifting the rest. Order is the
+   * edit — effects fold in sequence, so reordering changes the result. An
+   * out-of-range index is a no-op.
+   */
+  move(from: number, to: number): EditPipeline {
+    const last = this.effects.length - 1;
+    if (from < 0 || from > last || to < 0 || to > last || from === to) {
+      return this;
+    }
+    const next = [...this.effects];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return new EditPipeline(this.source, next);
+  }
+
   get isEmpty(): boolean {
     return this.effects.length === 0;
   }

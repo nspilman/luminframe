@@ -18,6 +18,8 @@ export function ClientApp(): JSX.Element {
     hasImage,
     appliedEffects,
     handleApply,
+    handleRemoveEffect,
+    handleMoveEffect,
     handleSaveImage,
     handleDownload,
     handleImageDrop,
@@ -37,6 +39,8 @@ export function ClientApp(): JSX.Element {
           onChange={updateVarValue}
           appliedEffects={appliedEffects}
           onApply={handleApply}
+          onRemoveEffect={handleRemoveEffect}
+          onMoveEffect={handleMoveEffect}
         />
 
         {/* Main Content */}

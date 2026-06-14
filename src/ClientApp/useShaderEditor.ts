@@ -132,6 +132,14 @@ export function useShaderEditor() {
     )
   }, [selectedShader, varValues])
 
+  const handleRemoveEffect = useCallback((index: number) => {
+    setPipeline(prev => prev.removeAt(index))
+  }, [])
+
+  const handleMoveEffect = useCallback((from: number, to: number) => {
+    setPipeline(prev => prev.move(from, to))
+  }, [])
+
   const handleSaveImage = useCallback(
     async (inputImage: 'one' | 'two' = 'one') => {
       try {
@@ -186,6 +194,8 @@ export function useShaderEditor() {
     hasImage,
     appliedEffects: pipeline.effects,
     handleApply,
+    handleRemoveEffect,
+    handleMoveEffect,
     handleSaveImage,
     handleDownload,
     handleImageDrop,
