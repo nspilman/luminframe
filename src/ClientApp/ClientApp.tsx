@@ -27,6 +27,7 @@ export function ClientApp(): JSX.Element {
       <HeaderBar />
       <div className="flex flex-col md:flex-row flex-1">
         <EditorSidebar
+          hasImage={hasImage}
           selectedShader={selectedShader}
           onShaderSelect={setSelectedShader}
           effect={effect}
