@@ -33,7 +33,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="text-center space-y-2">
               <Upload className="w-10 h-10 mx-auto text-zinc-500" />
-              <p className="text-lg text-zinc-400">Add an image to the left to begin</p>
+              <p className="text-lg text-zinc-400">Add an image to begin</p>
             </div>
           </div>
         ) : (
@@ -44,7 +44,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
             >
               <Save className="w-4 h-4 mr-2" />
-              Save as Input
+              Save as Source Image
             </Button>
             <Button
               onClick={() => onSaveImage("two")}
@@ -52,7 +52,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
             >
               <Save className="w-4 h-4 mr-2" />
-              Save as Second Input
+              Save as Second Image
             </Button>
           </div>
         )}
