@@ -107,6 +107,9 @@ export function useShaderEditor() {
     ? (varValues.imageTexture as Image).getDimensions().toArray()
     : windowSize.toArray()
 
+  // The untouched source, for hold-to-compare. Null until an image is loaded.
+  const sourceUrl = hasImage ? (varValues.imageTexture as Image).data.url : null
+
   // Reconcile parameters when the selected effect changes.
   useEffect(() => {
     setVarValues(prev => reconcileShaderParams(prev, effect.defaultValues))
@@ -231,6 +234,7 @@ export function useShaderEditor() {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    sourceUrl,
     appliedEffects: pipeline.effects,
     handleApply,
     handleRemoveEffect,

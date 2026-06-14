@@ -16,6 +16,7 @@ export function ClientApp(): JSX.Element {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    sourceUrl,
     appliedEffects,
     handleApply,
     handleRemoveEffect,
@@ -58,6 +59,7 @@ export function ClientApp(): JSX.Element {
               ref={canvasRef}
               dimensions={aspectRatioArray}
               hasImage={hasImage}
+              sourceUrl={sourceUrl}
               onSaveImage={handleSaveImage}
               onDownload={handleDownload}
               onImageDrop={handleImageDrop}

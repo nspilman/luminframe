@@ -5,6 +5,9 @@ interface RenderCanvasProps {
   dimensions: [number, number];
   className?: string;
   onCanvasResize?: (dimensions: Dimensions) => void;
+  // When set, an image drawn over the canvas at the same box — used by
+  // hold-to-compare to show the untouched source in place of the render.
+  overlayUrl?: string | null;
 }
 
 /**
@@ -15,7 +18,7 @@ interface RenderCanvasProps {
  * the useRenderingEngine hook.
  */
 export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
-  ({ dimensions, className = '', onCanvasResize }, ref) => {
+  ({ dimensions, className = '', onCanvasResize, overlayUrl = null }, ref) => {
     const [width, height] = dimensions;
     const aspectRatio = (height / width) * 100;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +84,14 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
             className={`w-full h-full ${className}`}
             style={{ display: 'block' }}
           />
+          {overlayUrl && (
+            <img
+              src={overlayUrl}
+              alt="Original source"
+              className="absolute inset-0 w-full h-full"
+              style={{ display: 'block' }}
+            />
+          )}
         </div>
       </div>
     );

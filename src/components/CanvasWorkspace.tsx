@@ -1,15 +1,16 @@
 'use client'
 
-import { forwardRef } from 'react'
+import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download } from 'lucide-react'
+import { Upload, Save, Download, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
   hasImage: boolean
+  sourceUrl: string | null
   onSaveImage: (target: "one" | "two") => void
   onDownload: () => void
   onImageDrop: (file: File) => void
@@ -21,7 +22,11 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+    // Press-and-hold the compare button to swap the live render for the
+    // untouched source — a glance back at where the edit started.
+    const [isComparing, setIsComparing] = useState(false)
+
     // The whole workspace is a drop target. noClick keeps clicks free for the
     // action buttons; the empty state opens the file dialog via open().
     const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
@@ -46,6 +51,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             ref={ref}
             dimensions={dimensions}
             onCanvasResize={onCanvasResize}
+            overlayUrl={isComparing ? sourceUrl : null}
           />
         </div>
         {isDragActive && (
@@ -66,6 +72,18 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </button>
         ) : (
           <div className="absolute top-4 right-4 flex gap-2">
+            <Button
+              onPointerDown={() => setIsComparing(true)}
+              onPointerUp={() => setIsComparing(false)}
+              onPointerLeave={() => setIsComparing(false)}
+              onPointerCancel={() => setIsComparing(false)}
+              variant="secondary"
+              aria-label="Hold to compare with original"
+              className="bg-zinc-900/50 hover:bg-zinc-900/70 select-none touch-none"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              {isComparing ? 'Original' : 'Compare'}
+            </Button>
             <Button
               onClick={onDownload}
               className="bg-violet-600 hover:bg-violet-700 text-white"
