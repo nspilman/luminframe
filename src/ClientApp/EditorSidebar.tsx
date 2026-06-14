@@ -19,7 +19,7 @@ export function EditorSidebar({
   onChange,
 }: EditorSidebarProps) {
   return (
-    <div className="relative md:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-r before:from-violet-500/20 before:via-indigo-500/20 before:to-purple-500/20 before:-z-10">
+    <div className="md:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl">
       <div className="p-4 space-y-4 md:space-y-6">
         <EffectPicker selectedShader={selectedShader} onShaderSelect={onShaderSelect} />
 
