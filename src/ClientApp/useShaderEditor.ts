@@ -32,6 +32,28 @@ export function reconcileShaderParams(
 }
 
 /**
+ * The parameters a fresh draft starts with after the current effect is applied:
+ * the effect's own defaults, but with the source image carried forward.
+ *
+ * Carrying the source is load-bearing — `hasImage` is derived from
+ * `imageTexture`, so dropping it would send the whole editor back to its
+ * dormant, image-less state the instant the user clicks Apply. Unlike
+ * reconcileShaderParams (an effect *switch*, where tuned values survive), an
+ * Apply deliberately resets the knobs: the tuned values were just committed into
+ * the pipeline, so the new draft is a clean slate on top of them.
+ */
+export function freshDraftParams(
+  prev: ShaderInputVars,
+  defaults: ShaderInputVars
+): ShaderInputVars {
+  const fresh: ShaderInputVars = { ...defaults }
+  if (prev.imageTexture instanceof Image) {
+    fresh.imageTexture = prev.imageTexture
+  }
+  return fresh
+}
+
+/**
  * Owns the shader-editor state and orchestration: which effect is selected,
  * its parameter values, and the render/resize/save wiring against the
  * rendering engine. Keeps ClientApp purely presentational.
@@ -42,6 +64,7 @@ export function useShaderEditor() {
     () => ({ ...shaderLibrary[selectedShader].defaultValues })
   )
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
+  const [pipeline, setPipeline] = useState<EditPipeline>(() => EditPipeline.empty())
 
   const { canvasRef, renderEdit, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
     useRenderingEngine()
@@ -72,18 +95,17 @@ export function useShaderEditor() {
     setVarValues(prev => reconcileShaderParams(prev, effect.defaultValues))
   }, [selectedShader])
 
-  // Render whenever the effect, its parameters, or the canvas size change.
-  // Phase 0: the committed pipeline is always empty, so the selected effect is a
-  // single draft rendered directly on the source — identical to the prior
-  // single-pass path. Apply (Phase 1) will start committing effects onto it.
+  // Render whenever the committed pipeline, the live draft effect, its
+  // parameters, or the canvas size change. The committed effects fold over the
+  // source; the selected effect renders as the live draft on top.
   useEffect(() => {
     if (!isInitialized || !hasImage || !canvasDimensions) {
       return
     }
     const source = varValues.imageTexture as Image
-    const pipeline = EditPipeline.empty().withSource(source)
-    renderEdit(pipeline, { type: selectedShader, params: varValues }, resolution)
-  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions])
+    const committed = pipeline.withSource(source)
+    renderEdit(committed, { type: selectedShader, params: varValues }, resolution)
+  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
@@ -99,12 +121,31 @@ export function useShaderEditor() {
     []
   )
 
+  // Commit the live draft as a new effect on top of the pipeline (stack-forward:
+  // each Apply adds, never replaces), then open a fresh draft of the same effect
+  // on the new base. The committed values now live in the pipeline, so the
+  // canvas keeps showing them — the fresh draft starts from defaults on top.
+  const handleApply = useCallback(() => {
+    setPipeline(prev => prev.append(selectedShader, varValues))
+    setVarValues(prev =>
+      freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
+    )
+  }, [selectedShader, varValues])
+
   const handleSaveImage = useCallback(
     async (inputImage: 'one' | 'two' = 'one') => {
       try {
         const image = await saveCanvasAsInput()
-        const varKey = `imageTexture${inputImage === 'two' ? 'Two' : ''}`
-        updateVarValue(varKey, image)
+        if (inputImage === 'two') {
+          // The blend/threshold second input is a per-effect parameter, not a
+          // new source — the committed pipeline stays intact.
+          updateVarValue('imageTextureTwo', image)
+        } else {
+          // Baking the canvas as the new source folds every committed effect
+          // into the pixels, so the pipeline starts empty over the new base.
+          setPipeline(EditPipeline.empty())
+          updateVarValue('imageTexture', image)
+        }
       } catch (error) {
         console.error('Failed to save canvas as image:', error)
       }
@@ -125,6 +166,8 @@ export function useShaderEditor() {
   const handleImageDrop = useCallback(async (file: File) => {
     try {
       const image = await loadFromFile(file)
+      // A new source is a fresh edit — the prior stack belonged to the old image.
+      setPipeline(EditPipeline.empty())
       updateVarValue('imageTexture', image)
     } catch (error) {
       console.error('Failed to load image:', error)
@@ -141,6 +184,8 @@ export function useShaderEditor() {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    appliedEffects: pipeline.effects,
+    handleApply,
     handleSaveImage,
     handleDownload,
     handleImageDrop,

@@ -1,4 +1,4 @@
-import { reconcileShaderParams } from './useShaderEditor';
+import { reconcileShaderParams, freshDraftParams } from './useShaderEditor';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 
@@ -28,5 +28,25 @@ describe('reconcileShaderParams', () => {
     // effect's surface — no stale key reaches the renderer as a phantom uniform.
     const result = reconcileShaderParams({ intensity: 0.8, splitOffset: 0.005 }, { intensity: 0.5 });
     expect('splitOffset' in result).toBe(false);
+  });
+});
+
+// freshDraftParams builds the draft that opens right after an effect is applied.
+// Unlike reconcileShaderParams (an effect switch, where tuned values survive),
+// Apply resets the knobs to defaults but must keep the loaded source image.
+describe('freshDraftParams', () => {
+  it('carries the source image into the fresh draft', () => {
+    // hasImage is derived from imageTexture; dropping it here would send the
+    // editor back to its dormant, image-less state the instant Apply is clicked.
+    const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' });
+    const result = freshDraftParams({ imageTexture: image, intensity: 0.8 }, { intensity: 0.5 });
+    expect(result.imageTexture).toBe(image);
+  });
+
+  it('resets a tuned knob back to the effect default', () => {
+    // The tuned value was just committed into the pipeline, so the new draft
+    // starts clean — it must not inherit the previous value the way a switch does.
+    const result = freshDraftParams({ intensity: 0.8 }, { intensity: 0.5 });
+    expect(result.intensity).toBe(0.5);
   });
 });

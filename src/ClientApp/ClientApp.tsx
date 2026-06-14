@@ -16,6 +16,8 @@ export function ClientApp(): JSX.Element {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    appliedEffects,
+    handleApply,
     handleSaveImage,
     handleDownload,
     handleImageDrop,
@@ -33,6 +35,8 @@ export function ClientApp(): JSX.Element {
           effect={effect}
           values={{ ...varValues, resolution }}
           onChange={updateVarValue}
+          appliedEffects={appliedEffects}
+          onApply={handleApply}
         />
 
         {/* Main Content */}
