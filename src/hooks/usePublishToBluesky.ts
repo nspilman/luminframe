@@ -2,6 +2,7 @@ import { useState, useCallback, RefObject } from 'react'
 import { AtprotoSession } from './useAtprotoSession'
 import { BlueskyPublishAdapter } from '@/infrastructure/adapters/BlueskyPublishAdapter'
 import { exportCanvasForUpload } from '@/lib/exportCanvasForUpload'
+import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
 
 export type PublishPhase = 'idle' | 'publishing' | 'success' | 'error'
 
@@ -64,6 +65,18 @@ export function usePublishToBluesky(
         })
       } catch (err) {
         console.error('Publish to Bluesky failed:', err)
+        // A dead session can only be discovered on a failed write (no
+        // session-deleted event in this client). Drop it so the UI returns to
+        // signed-out and the user can re-authenticate.
+        if (isSessionExpiredError(err)) {
+          session.clearSession()
+          setState({
+            phase: 'error',
+            postUrl: null,
+            error: 'Your Bluesky session expired. Please sign in again.',
+          })
+          return
+        }
         setState({
           phase: 'error',
           postUrl: null,
@@ -71,7 +84,7 @@ export function usePublishToBluesky(
         })
       }
     },
-    [session.agent, session.handle, canvasRef]
+    [session.agent, session.handle, session.clearSession, canvasRef]
   )
 
   const reset = useCallback(

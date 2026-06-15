@@ -16,6 +16,11 @@ export interface AtprotoSession {
   /** Begin the OAuth flow for a handle/DID/PDS. Navigates away; only settles on cancel. */
   signIn: (handle: string) => Promise<void>
   signOut: () => Promise<void>
+  /**
+   * Drop the local session without a network revoke — for when we've already
+   * learned the session is dead (e.g. a write failed with an auth error).
+   */
+  clearSession: () => void
 }
 
 /**
@@ -108,5 +113,5 @@ export function useAtprotoSession(): AtprotoSession {
     reset()
   }, [reset])
 
-  return { status, agent, did, handle, error, signIn, signOut }
+  return { status, agent, did, handle, error, signIn, signOut, clearSession: reset }
 }
