@@ -3,16 +3,20 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download, Eye } from 'lucide-react'
+import { Upload, Save, Download, Eye, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
+import { PublishToBlueskyDialog } from './PublishToBlueskyDialog'
+import { PublishToBluesky } from '@/hooks/usePublishToBluesky'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
   hasImage: boolean
   sourceUrl: string | null
   isLoadingImage: boolean
+  isSignedIn: boolean
+  publish: PublishToBluesky
   onSaveAsSecondImage: () => void
   onDownload: () => void
   onImageDrop: (file: File) => void
@@ -24,10 +28,17 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, sourceUrl, isLoadingImage, onSaveAsSecondImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, isLoadingImage, isSignedIn, publish, onSaveAsSecondImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
     // Press-and-hold the compare button to swap the live render for the
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
+    const [publishOpen, setPublishOpen] = useState(false)
+
+    const openPublish = () => {
+      // Clear any prior result so the dialog opens on the fresh form.
+      publish.reset()
+      setPublishOpen(true)
+    }
 
     // The whole workspace is a drop target. noClick keeps clicks free for the
     // action buttons; the empty state opens the file dialog via open().
@@ -94,6 +105,14 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               Download
             </Button>
             <Button
+              onClick={openPublish}
+              variant="secondary"
+              className="bg-zinc-900/50 hover:bg-zinc-900/70"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Publish to Bluesky
+            </Button>
+            <Button
               onClick={onSaveAsSecondImage}
               variant="secondary"
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
@@ -103,6 +122,15 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             </Button>
           </div>
         )}
+        <PublishToBlueskyDialog
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+          isSignedIn={isSignedIn}
+          phase={publish.phase}
+          postUrl={publish.postUrl}
+          error={publish.error}
+          onPublish={publish.publish}
+        />
         <LoadingOverlay show={isLoadingImage} label="Loading image…" />
       </div>
     )

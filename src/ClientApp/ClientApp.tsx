@@ -5,6 +5,7 @@ import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
+import { usePublishToBluesky } from '@/hooks/usePublishToBluesky'
 
 export function ClientApp(): JSX.Element {
   const session = useAtprotoSession()
@@ -34,6 +35,8 @@ export function ClientApp(): JSX.Element {
     handleImageDrop,
     handleCanvasResize,
   } = useShaderEditor()
+
+  const publish = usePublishToBluesky(session, canvasRef)
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">
@@ -66,6 +69,8 @@ export function ClientApp(): JSX.Element {
               hasImage={hasImage}
               sourceUrl={sourceUrl}
               isLoadingImage={isLoadingImage}
+              isSignedIn={session.status === 'signed-in'}
+              publish={publish}
               onSaveAsSecondImage={handleSaveAsSecondImage}
               onDownload={handleDownload}
               onImageDrop={handleImageDrop}
