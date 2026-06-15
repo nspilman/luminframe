@@ -87,9 +87,21 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * @param canvas - The canvas to render to
    */
   setCanvas(canvas: HTMLCanvasElement): void {
-    if (!this.renderer) {
-      this.initializeRenderer(canvas);
+    // Already bound to this exact canvas — nothing to do.
+    if (this.renderer && this.renderer.domElement === canvas) {
+      return;
     }
+
+    // Handed a *different* canvas than the one we hold. This adapter is a
+    // singleton that outlives any single React mount, so a remount (HMR, a route
+    // change) brings a fresh <canvas> while we keep the old renderer bound to the
+    // now-detached one. Left alone, every render() draws to the orphaned canvas
+    // and the visible canvas stays blank. Tear down and rebind to the live one.
+    if (this.renderer) {
+      this.dispose();
+    }
+
+    this.initializeRenderer(canvas);
   }
 
   /**
