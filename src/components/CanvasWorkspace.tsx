@@ -13,7 +13,7 @@ interface CanvasWorkspaceProps {
   hasImage: boolean
   sourceUrl: string | null
   isLoadingImage: boolean
-  onSaveImage: (target: "one" | "two") => void
+  onSaveAsSecondImage: () => void
   onDownload: () => void
   onImageDrop: (file: File) => void
   onCanvasResize?: (dimensions: Dimensions) => void
@@ -24,7 +24,7 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, sourceUrl, isLoadingImage, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, isLoadingImage, onSaveAsSecondImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
     // Press-and-hold the compare button to swap the live render for the
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
@@ -94,15 +94,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               Download
             </Button>
             <Button
-              onClick={() => onSaveImage("one")}
-              variant="secondary"
-              className="bg-zinc-900/50 hover:bg-zinc-900/70"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save as Source Image
-            </Button>
-            <Button
-              onClick={() => onSaveImage("two")}
+              onClick={onSaveAsSecondImage}
               variant="secondary"
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
             >

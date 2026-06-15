@@ -27,7 +27,7 @@ export function ClientApp(): JSX.Element {
     handleRedo,
     canUndo,
     canRedo,
-    handleSaveImage,
+    handleSaveAsSecondImage,
     handleDownload,
     handleImageDrop,
     handleCanvasResize,
@@ -64,7 +64,7 @@ export function ClientApp(): JSX.Element {
               hasImage={hasImage}
               sourceUrl={sourceUrl}
               isLoadingImage={isLoadingImage}
-              onSaveImage={handleSaveImage}
+              onSaveAsSecondImage={handleSaveAsSecondImage}
               onDownload={handleDownload}
               onImageDrop={handleImageDrop}
               onCanvasResize={handleCanvasResize}

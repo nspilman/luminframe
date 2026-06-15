@@ -186,22 +186,15 @@ export function useShaderEditor() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handleSaveImage = useCallback(
-    async (inputImage: 'one' | 'two' = 'one') => {
+  const handleSaveAsSecondImage = useCallback(
+    async () => {
       try {
+        // The blend/threshold second input is a per-effect parameter, not a
+        // new source — the committed pipeline stays intact.
         const image = await saveCanvasAsInput()
-        if (inputImage === 'two') {
-          // The blend/threshold second input is a per-effect parameter, not a
-          // new source — the committed pipeline stays intact.
-          updateVarValue('imageTextureTwo', image)
-        } else {
-          // Baking the canvas as the new source folds every committed effect
-          // into the pixels, so the pipeline starts empty over the new base.
-          setHistory(initHistory(EditPipeline.empty()))
-          updateVarValue('imageTexture', image)
-        }
+        updateVarValue('imageTextureTwo', image)
       } catch (error) {
-        console.error('Failed to save canvas as image:', error)
+        console.error('Failed to save canvas as second image:', error)
       }
     },
     [saveCanvasAsInput, updateVarValue]
@@ -251,7 +244,7 @@ export function useShaderEditor() {
     handleRedo,
     canUndo: canUndo(history),
     canRedo: canRedo(history),
-    handleSaveImage,
+    handleSaveAsSecondImage,
     handleDownload,
     handleImageDrop,
     handleCanvasResize,
