@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRenderingEngine } from '@/hooks/useRenderingEngine'
 import { useImageLoader } from '@/hooks/useImageLoader'
 import { useWindowSize } from '@/hooks/useWindowSize'
+import { useAsyncStatus } from '@/hooks/useAsyncStatus'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
@@ -214,18 +215,20 @@ export function useShaderEditor() {
     }
   }, [downloadImage, selectedShader])
 
-  // Dropping a file onto the canvas loads it as the source image, the same
-  // slot the sidebar's upload fills — one loader (the door), two entry points.
-  const handleImageDrop = useCallback(async (file: File) => {
-    try {
+  // Loading a source is the slowest first-contact in the editor, so it is the
+  // first surface to adopt the app's loading-state SoT: useAsyncStatus tracks the
+  // in-flight load, and the canvas shows a LoadingOverlay until the image lands.
+  // Both entry points — canvas drop and click-to-choose — funnel through this one
+  // task, the same slot the sidebar's upload fills (one door, two doorways).
+  const loadImage = useAsyncStatus(
+    useCallback(async (file: File) => {
       const image = await loadFromFile(file)
       // A new source is a fresh edit — the prior stack belonged to the old image.
       setHistory(initHistory(EditPipeline.empty()))
       updateVarValue('imageTexture', image)
-    } catch (error) {
-      console.error('Failed to load image:', error)
-    }
-  }, [loadFromFile, updateVarValue])
+    }, [loadFromFile, updateVarValue])
+  )
+  const handleImageDrop = loadImage.run
 
   return {
     canvasRef,
@@ -239,6 +242,7 @@ export function useShaderEditor() {
     hasImage,
     source,
     sourceUrl,
+    isLoadingImage: loadImage.isPending,
     appliedEffects: pipeline.effects,
     handleApply,
     handleRemoveEffect,

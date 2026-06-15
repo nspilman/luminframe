@@ -5,12 +5,14 @@ import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
 import { Upload, Save, Download, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
   hasImage: boolean
   sourceUrl: string | null
+  isLoadingImage: boolean
   onSaveImage: (target: "one" | "two") => void
   onDownload: () => void
   onImageDrop: (file: File) => void
@@ -22,7 +24,7 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, sourceUrl, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, isLoadingImage, onSaveImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
     // Press-and-hold the compare button to swap the live render for the
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
@@ -109,6 +111,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             </Button>
           </div>
         )}
+        <LoadingOverlay show={isLoadingImage} label="Loading image…" />
       </div>
     )
   }

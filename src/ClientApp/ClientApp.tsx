@@ -18,6 +18,7 @@ export function ClientApp(): JSX.Element {
     hasImage,
     source,
     sourceUrl,
+    isLoadingImage,
     appliedEffects,
     handleApply,
     handleRemoveEffect,
@@ -62,6 +63,7 @@ export function ClientApp(): JSX.Element {
               dimensions={aspectRatioArray}
               hasImage={hasImage}
               sourceUrl={sourceUrl}
+              isLoadingImage={isLoadingImage}
               onSaveImage={handleSaveImage}
               onDownload={handleDownload}
               onImageDrop={handleImageDrop}
