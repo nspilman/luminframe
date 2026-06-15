@@ -1,7 +1,13 @@
 import { Button } from './ui/button'
 import { Github } from 'lucide-react'
+import { BlueskyAuth } from './BlueskyAuth'
+import { AtprotoSession } from '@/hooks/useAtprotoSession'
 
-export function HeaderBar() {
+interface HeaderBarProps {
+  session: AtprotoSession
+}
+
+export function HeaderBar({ session }: HeaderBarProps) {
   return (
     <header className="border-b border-zinc-800/50 bg-black/20 backdrop-blur-xl p-4">
       <div className="container mx-auto flex items-center justify-between">
@@ -25,6 +31,7 @@ export function HeaderBar() {
               GitHub
             </a>
           </Button>
+          <BlueskyAuth session={session} />
         </nav>
       </div>
     </header>

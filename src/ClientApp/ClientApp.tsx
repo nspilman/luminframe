@@ -4,8 +4,10 @@ import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
+import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 
 export function ClientApp(): JSX.Element {
+  const session = useAtprotoSession()
   const {
     canvasRef,
     selectedShader,
@@ -35,7 +37,7 @@ export function ClientApp(): JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">
-      <HeaderBar />
+      <HeaderBar session={session} />
       <div className="flex flex-col md:flex-row flex-1">
         <EditorSidebar
           hasImage={hasImage}
