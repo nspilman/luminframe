@@ -5,6 +5,7 @@ import {
   PublishResult,
 } from '@/application/ports/PublishPort'
 import { buildImagePostRecord } from './blueskyPostRecord'
+import { appendAttribution } from './blueskyAttribution'
 
 /**
  * Publishes an image to Bluesky as an `app.bsky.feed.post`, on behalf of the
@@ -27,21 +28,28 @@ export class BlueskyPublishAdapter implements PublishPort {
     // 2. Resolve rich-text facets (links, tags, mentions) in the caption so
     //    they render as live links. Best-effort: resolving @mentions needs an
     //    identity RPC scope we don't request (least-privilege), so on failure we
-    //    just post without facets rather than block the publish.
-    const richText = new RichText({ text: input.caption ?? '' })
+    //    just keep whatever was detected rather than block the publish.
+    const caption = (input.caption ?? '').trim()
+    const richText = new RichText({ text: caption })
     try {
       await richText.detectFacets(this.agent)
     } catch {
-      // No facets — the caption still posts as plain text.
+      // No caption facets — it still posts as plain text.
     }
 
-    // 3. Assemble the record and refuse to write it if it doesn't validate —
+    // 3. Append the Luminframe attribution backlink. Its facet is computed in the
+    //    final text's byte space and concatenated after the caption's facets,
+    //    whose offsets are unaffected by appending.
+    const { text, facet: attributionFacet } = appendAttribution(caption)
+    const facets = [...(richText.facets ?? []), attributionFacet]
+
+    // 4. Assemble the record and refuse to write it if it doesn't validate —
     //    a malformed record can be silently dropped or break downstream views.
     const record = buildImagePostRecord({
       blob: upload.data.blob,
       alt: input.alt,
-      text: richText.text,
-      facets: richText.facets,
+      text,
+      facets,
       aspectRatio: input.aspectRatio,
       createdAt: new Date().toISOString(),
     })
@@ -52,7 +60,7 @@ export class BlueskyPublishAdapter implements PublishPort {
       )
     }
 
-    // 4. Write the record to the user's repo. Omitting rkey lets the server
+    // 5. Write the record to the user's repo. Omitting rkey lets the server
     //    assign a TID.
     const res = await this.agent.com.atproto.repo.createRecord({
       repo: this.agent.assertDid,
