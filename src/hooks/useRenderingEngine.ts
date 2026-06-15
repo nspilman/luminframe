@@ -62,12 +62,13 @@ export function useRenderingEngine() {
         console.warn('Rendering engine not initialized yet');
         return;
       }
-      contextRef.current
-        .getRenderEditUseCase()
-        .execute(pipeline, draft, resolution)
-        .catch((error) => {
-          console.error('Failed to render edit:', error);
-        });
+      try {
+        contextRef.current
+          .getRenderEditUseCase()
+          .execute(pipeline, draft, resolution);
+      } catch (error) {
+        console.error('Failed to render edit:', error);
+      }
     },
     [isInitialized]
   );

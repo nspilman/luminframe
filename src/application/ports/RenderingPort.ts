@@ -5,6 +5,16 @@ import { ShaderEffect } from '@/types/shader';
 import { ShaderInputVars } from '@/types/shader';
 
 /**
+ * One effect in a render chain: the resolved shader and the parameter values to
+ * render it with. The pass's input texture is not named here — it is the chain
+ * position (the source for the first pass, the previous pass's output after).
+ */
+export interface RenderPass {
+  readonly effect: ShaderEffect;
+  readonly params: ShaderInputVars;
+}
+
+/**
  * Port for rendering operations.
  * Abstracts away rendering engine specifics (Three.js, WebGL, Canvas, etc.)
  *
@@ -25,6 +35,23 @@ export interface RenderingPort {
     image: Image,
     effect: ShaderEffect,
     params: ShaderInputVars
+  ): void;
+
+  /**
+   * Render a chain of effects as a single GPU pipeline: the source flows through
+   * each pass in order, each pass sampling the previous pass's output, and only
+   * the final pass drawing to the canvas. Intermediate results stay on the GPU
+   * (offscreen framebuffers) — no canvas readback, no async round-trip between
+   * passes, so the whole chain is one synchronous, race-free render.
+   *
+   * @param source - The image the chain starts from
+   * @param passes - The effects to fold over the source, in order
+   * @param resolution - The [width, height] uniform fed to each pass
+   */
+  renderChain(
+    source: Image,
+    passes: ReadonlyArray<RenderPass>,
+    resolution: [number, number]
   ): void;
 
   /**

@@ -45,6 +45,7 @@ class FakeRenderingPort implements RenderingPort {
   renderScene(image: Image, e: ShaderEffect, params: ShaderInputVars): void {
     this.lastCall = { image, effect: e, params };
   }
+  renderChain(): void {}
   exportCanvas(): Promise<Blob> {
     return Promise.resolve(new Blob());
   }

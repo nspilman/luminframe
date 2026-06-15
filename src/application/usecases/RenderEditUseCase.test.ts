@@ -1,26 +1,25 @@
 import { RenderEditUseCase } from './RenderEditUseCase';
-import { ApplyShaderEffectUseCase } from './ApplyShaderEffectUseCase';
-import { RenderingPort } from '@/application/ports/RenderingPort';
-import { ImageExportPort } from '@/application/ports/ImageExportPort';
+import { RenderingPort, RenderPass } from '@/application/ports/RenderingPort';
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { EditPipeline } from '@/domain/models/EditPipeline';
-import { Image } from '@/domain/models/Image';
+import { Image, ImageData } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
-import { ImageData } from '@/domain/models/Image';
-import { ImageFormat } from '@/domain/value-objects/ImageFormat';
-import { ShaderEffect, ShaderInputVars, ShaderType } from '@/types/shader';
+import { ShaderEffect, ShaderType } from '@/types/shader';
 
-const effect: ShaderEffect = {
-  name: 'Fake Effect',
-  declarationVars: { resolution: 'vec2' },
-  defaultValues: {},
-  inputs: {},
-  getBody: () => 'void main() {}',
-};
+/** A distinct effect per type so the assembled pass list can be identified. */
+function effectFor(type: ShaderType): ShaderEffect {
+  return {
+    name: `effect:${type}`,
+    declarationVars: { resolution: 'vec2' },
+    defaultValues: {},
+    inputs: {},
+    getBody: () => 'void main() {}',
+  };
+}
 
 class FakeRepository implements ShaderRepositoryPort {
-  getShader(): ShaderEffect {
-    return effect;
+  getShader(type: ShaderType): ShaderEffect {
+    return effectFor(type);
   }
   getAllShaders(): Record<ShaderType, ShaderEffect> {
     return {} as Record<ShaderType, ShaderEffect>;
@@ -32,16 +31,21 @@ class FakeRepository implements ShaderRepositoryPort {
     return true;
   }
   getShaderMetadata(): any {
-    return { name: effect.name, displayName: effect.name, parameterCount: 0 };
+    return { name: 'fake', displayName: 'fake', parameterCount: 0 };
   }
 }
 
-/** Records every render pass so the fold's call sequence can be asserted. */
+/** Records each renderChain call so the assembled pipeline can be asserted. */
 class RecordingRenderingPort implements RenderingPort {
-  calls: { image: Image; params: ShaderInputVars }[] = [];
+  calls: { source: Image; passes: ReadonlyArray<RenderPass>; resolution: [number, number] }[] = [];
 
-  renderScene(image: Image, _effect: ShaderEffect, params: ShaderInputVars): void {
-    this.calls.push({ image, params });
+  renderScene(): void {}
+  renderChain(
+    source: Image,
+    passes: ReadonlyArray<RenderPass>,
+    resolution: [number, number]
+  ): void {
+    this.calls.push({ source, passes, resolution });
   }
   exportCanvas(): Promise<Blob> {
     return Promise.resolve(new Blob());
@@ -53,39 +57,18 @@ class RecordingRenderingPort implements RenderingPort {
   dispose(): void {}
 }
 
-/** canvasToImage returns a fresh, identifiable Image per fold so we can prove
- *  the previous pass's output is what feeds the next pass. */
-class FoldingImageExport implements ImageExportPort {
-  private count = 0;
-
-  toBlob(): Promise<Blob> {
-    return Promise.resolve(new Blob());
-  }
-  async canvasToImage(): Promise<Image> {
-    this.count += 1;
-    return new Image(`folded-${this.count}`, new Dimensions(4, 2), {
-      url: `blob:folded-${this.count}`,
-    });
-  }
-  download(): void {}
-  blobToDataUrl(): Promise<string> {
-    return Promise.resolve('');
-  }
-}
-
 const makeSource = () =>
   new Image('source', new Dimensions(4, 2), { url: 'blob:source' } as ImageData);
 
 function makeUseCase(rendering: RecordingRenderingPort) {
-  const apply = new ApplyShaderEffectUseCase(rendering, new FakeRepository());
-  return new RenderEditUseCase(apply, rendering, new FoldingImageExport());
+  return new RenderEditUseCase(new FakeRepository(), rendering);
 }
 
 describe('RenderEditUseCase', () => {
   describe('execute', () => {
-    it('renders nothing when the pipeline has no source', async () => {
+    it('renders nothing when the pipeline has no source', () => {
       const rendering = new RecordingRenderingPort();
-      await makeUseCase(rendering).execute(
+      makeUseCase(rendering).execute(
         EditPipeline.empty(),
         { type: 'tint' as ShaderType, params: {} },
         [4, 2]
@@ -94,44 +77,53 @@ describe('RenderEditUseCase', () => {
       expect(rendering.calls).toHaveLength(0);
     });
 
-    it('renders the draft once on the source when nothing is committed', async () => {
+    it('renders the draft as a single-pass chain on the source', () => {
       const rendering = new RecordingRenderingPort();
       const source = makeSource();
       const pipeline = EditPipeline.empty().withSource(source);
 
-      await makeUseCase(rendering).execute(
+      makeUseCase(rendering).execute(
         pipeline,
         { type: 'tint' as ShaderType, params: { strength: 0.5 } },
         [4, 2]
       );
 
       expect(rendering.calls).toHaveLength(1);
-      expect(rendering.calls[0].image).toBe(source);
-      expect(rendering.calls[0].params).toMatchObject({
-        strength: 0.5,
-        imageTexture: source,
-        resolution: [4, 2],
-      });
+      const { source: chainSource, passes, resolution } = rendering.calls[0];
+      expect(chainSource).toBe(source);
+      expect(resolution).toEqual([4, 2]);
+      expect(passes).toHaveLength(1);
+      expect(passes[0].effect.name).toBe('effect:tint');
+      expect(passes[0].params).toEqual({ strength: 0.5 });
     });
 
-    it('folds each committed effect forward as the next pass input', async () => {
+    it('assembles committed effects before the draft, in order', () => {
       const rendering = new RecordingRenderingPort();
       const source = makeSource();
       const pipeline = EditPipeline.empty()
         .withSource(source)
-        .append('tint' as ShaderType, {});
+        .append('tint' as ShaderType, { strength: 1 })
+        .append('vignette' as ShaderType, { radius: 0.8 });
 
-      await makeUseCase(rendering).execute(
+      makeUseCase(rendering).execute(
         pipeline,
-        { type: 'vignette' as ShaderType, params: {} },
+        { type: 'pixelate' as ShaderType, params: { size: 4 } },
         [4, 2]
       );
 
-      // pass 1: committed effect on the source; pass 2: draft on the folded result
-      expect(rendering.calls).toHaveLength(2);
-      expect(rendering.calls[0].image).toBe(source);
-      expect(rendering.calls[1].image.id).toBe('folded-1');
-      expect(rendering.calls[1].params.imageTexture).toBe(rendering.calls[1].image);
+      expect(rendering.calls).toHaveLength(1);
+      const { passes } = rendering.calls[0];
+      // Two committed effects fold first, then the live draft on top.
+      expect(passes.map((p) => p.effect.name)).toEqual([
+        'effect:tint',
+        'effect:vignette',
+        'effect:pixelate',
+      ]);
+      expect(passes.map((p) => p.params)).toEqual([
+        { strength: 1 },
+        { radius: 0.8 },
+        { size: 4 },
+      ]);
     });
   });
 });

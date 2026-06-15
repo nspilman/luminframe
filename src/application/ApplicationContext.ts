@@ -51,9 +51,8 @@ export class ApplicationContext {
       this.shaderRepository
     );
     this.renderEditUseCase = new RenderEditUseCase(
-      this.applyShaderEffectUseCase,
-      this.renderingAdapter,
-      this.fileSystemAdapter
+      this.shaderRepository,
+      this.renderingAdapter
     );
     this.loadImageUseCase = new LoadImageUseCase(
       this.fileSystemAdapter

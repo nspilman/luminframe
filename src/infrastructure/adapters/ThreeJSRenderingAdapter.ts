@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RenderingPort } from '@/application/ports/RenderingPort';
+import { RenderingPort, RenderPass } from '@/application/ports/RenderingPort';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
@@ -8,6 +8,7 @@ import { ShaderInputVars } from '@/types/shader';
 import { Color } from '@/domain/value-objects/Color';
 import { TextureAdapter } from './TextureAdapter';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
+import { planPasses } from './renderChainPlan';
 
 /**
  * Three.js implementation of the RenderingPort.
@@ -23,7 +24,17 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   private mesh: THREE.Mesh | null = null;
   private textureAdapter: TextureAdapter;
   private currentDimensions: Dimensions;
-  private lastRenderParams: { image: Image; effect: ShaderEffect; params: ShaderInputVars } | null = null;
+  // The two offscreen framebuffers a multi-pass chain ping-pongs between.
+  // Allocated lazily (single-pass renders never need them) and resized with the
+  // canvas. null until the first multi-pass chain runs.
+  private renderTargets: [THREE.WebGLRenderTarget, THREE.WebGLRenderTarget] | null = null;
+  // The last chain rendered, replayed when a streaming texture finishes loading
+  // so the frame fills in once its pixels arrive.
+  private lastChainParams: {
+    source: Image;
+    passes: ReadonlyArray<RenderPass>;
+    resolution: [number, number];
+  } | null = null;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -32,14 +43,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     this.textureAdapter = new TextureAdapter();
     this.currentDimensions = initialDimensions;
 
-    // Set up texture load callback to trigger re-render
+    // Re-render the last chain once a streaming texture finishes loading. The
+    // source (and any second input) upload asynchronously; the first draw with
+    // an unloaded texture is blank, and this fills it in when the pixels land.
     this.textureAdapter.setOnTextureLoad(() => {
-      if (this.lastRenderParams) {
-        this.renderScene(
-          this.lastRenderParams.image,
-          this.lastRenderParams.effect,
-          this.lastRenderParams.params
-        );
+      if (this.lastChainParams) {
+        const { source, passes, resolution } = this.lastChainParams;
+        this.renderChain(source, passes, resolution);
       }
     });
 
@@ -175,64 +185,164 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
-   * Render a scene with the given shader effect and parameters
+   * Render a single effect on an image, straight to the canvas. A one-element
+   * chain — kept as a named entry point for callers that only ever apply one
+   * effect (e.g. the offscreen thumbnail renderer).
    */
   renderScene(
     image: Image,
     effect: ShaderEffect,
     params: ShaderInputVars
   ): void {
-    // Store params for potential re-render when texture loads
-    this.lastRenderParams = { image, effect, params };
+    const resolution = this.resolutionFrom(params);
+    this.renderChain(image, [{ effect, params }], resolution);
+  }
+
+  /**
+   * Render a chain of effects as one synchronous GPU pipeline. The source flows
+   * through each pass in order; intermediate results live in offscreen
+   * framebuffers (never read back to the CPU), and only the final pass draws to
+   * the canvas. See renderChainPlan for the ping-pong that wires inputs to
+   * outputs.
+   */
+  renderChain(
+    source: Image,
+    passes: ReadonlyArray<RenderPass>,
+    resolution: [number, number]
+  ): void {
+    // Remember the chain so a late-arriving texture can replay it (see the
+    // texture-load callback wired in the constructor).
+    this.lastChainParams = { source, passes, resolution };
 
     if (!this.renderer || !this.scene || !this.camera) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
     }
+    if (passes.length === 0) {
+      return;
+    }
 
-    // Ensure image is in params
-    const allParams: ShaderInputVars = {
-      ...params,
-      imageTexture: params.imageTexture || image,
-    };
+    const sourceTexture = this.textureAdapter.createTexture(source).texture;
+    const plan = planPasses(passes.length);
+    // Framebuffers are only needed when a pass feeds another; a lone pass goes
+    // straight to the canvas, so we never allocate them for the common case.
+    const targets =
+      passes.length > 1
+        ? this.ensureRenderTargets(
+            this.currentDimensions.width,
+            this.currentDimensions.height
+          )
+        : null;
 
-    // Convert parameters to uniforms
-    const uniforms = this.convertToUniforms(allParams);
+    for (let i = 0; i < passes.length; i++) {
+      const step = plan[i];
+      const inputTexture =
+        step.input === 'source' ? sourceTexture : targets![step.input].texture;
 
-    // Build complete fragment shader with declarations
+      const material = this.buildPassMaterial(
+        passes[i].effect,
+        passes[i].params,
+        inputTexture,
+        resolution
+      );
+      this.setMeshMaterial(material);
+
+      this.renderer.setRenderTarget(
+        step.output === 'canvas' ? null : targets![step.output]
+      );
+      this.renderer.render(this.scene, this.camera);
+    }
+
+    // Leave the renderer pointed at the canvas for any external draws.
+    this.renderer.setRenderTarget(null);
+  }
+
+  /**
+   * Build the shader material for one pass. The pass's input texture is injected
+   * directly as the `imageTexture` uniform — for the first pass that is the
+   * source, for later passes the previous pass's framebuffer — overriding
+   * whatever imageTexture the params carried.
+   */
+  private buildPassMaterial(
+    effect: ShaderEffect,
+    params: ShaderInputVars,
+    inputTexture: THREE.Texture,
+    resolution: [number, number]
+  ): THREE.ShaderMaterial {
+    // imageTexture and resolution are owned by the chain, not the params.
+    const { imageTexture: _img, resolution: _res, ...rest } = params;
+    const uniforms = this.convertToUniforms(rest);
+    uniforms.imageTexture = { value: inputTexture };
+    uniforms.resolution = { value: new THREE.Vector2(resolution[0], resolution[1]) };
+
     const fragmentShader = shaderBuilder({
       vars: effect.declarationVars,
       getBody: effect.getBody,
     });
 
-    // Create shader material
-    const material = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
       vertexShader: this.getVertexShader(),
       fragmentShader,
       uniforms,
       transparent: true,
     });
+  }
 
-    // Create or update mesh
+  /**
+   * Mount `material` on the full-screen quad, creating the mesh on first use and
+   * disposing the material it replaces on every use after.
+   */
+  private setMeshMaterial(material: THREE.ShaderMaterial): void {
     if (!this.mesh) {
       const geometry = new THREE.PlaneGeometry(2, 2); // Full-screen quad
       this.mesh = new THREE.Mesh(geometry, material);
-      this.scene.add(this.mesh);
-    } else {
-      // Dispose old material
-      const oldMaterial = this.mesh.material;
-      if (Array.isArray(oldMaterial)) {
-        oldMaterial.forEach((mat) => mat.dispose());
-      } else if (oldMaterial instanceof THREE.Material) {
-        oldMaterial.dispose();
-      }
-
-      // Update material
-      this.mesh.material = material;
+      this.scene!.add(this.mesh);
+      return;
     }
 
-    // Render to the canvas. Consumers that need pixels (export, save-as-input)
-    // read the canvas directly via getCanvas()/exportCanvas().
-    this.renderer.render(this.scene, this.camera);
+    const oldMaterial = this.mesh.material;
+    if (Array.isArray(oldMaterial)) {
+      oldMaterial.forEach((mat) => mat.dispose());
+    } else if (oldMaterial instanceof THREE.Material) {
+      oldMaterial.dispose();
+    }
+    this.mesh.material = material;
+  }
+
+  /**
+   * Lazily create (and resize) the two ping-pong framebuffers. Reused across
+   * renders; rebuilt only when the canvas size changes.
+   */
+  private ensureRenderTargets(
+    width: number,
+    height: number
+  ): [THREE.WebGLRenderTarget, THREE.WebGLRenderTarget] {
+    const existing = this.renderTargets;
+    if (existing && existing[0].width === width && existing[0].height === height) {
+      return existing;
+    }
+
+    existing?.forEach((rt) => rt.dispose());
+    const make = () =>
+      new THREE.WebGLRenderTarget(width, height, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        depthBuffer: false,
+        stencilBuffer: false,
+      });
+    this.renderTargets = [make(), make()];
+    return this.renderTargets;
+  }
+
+  /**
+   * The [width, height] resolution uniform for a render, taken from the params
+   * when present, otherwise the current canvas size.
+   */
+  private resolutionFrom(params: ShaderInputVars): [number, number] {
+    const res = params.resolution;
+    if (Array.isArray(res) && res.length === 2) {
+      return [Number(res[0]), Number(res[1])];
+    }
+    return [this.currentDimensions.width, this.currentDimensions.height];
   }
 
   /**
@@ -316,6 +426,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       this.renderer.dispose();
       this.renderer = null;
     }
+
+    // Dispose the ping-pong framebuffers
+    if (this.renderTargets) {
+      this.renderTargets.forEach((rt) => rt.dispose());
+      this.renderTargets = null;
+    }
+    this.lastChainParams = null;
 
     // Clear texture cache
     this.textureAdapter.clearCache();
