@@ -93,6 +93,15 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
+   * Replace the texture-load callback. The constructor wires this to re-render
+   * the last frame once a streaming texture arrives; an offscreen renderer that
+   * drives its passes manually overrides it to await texture readiness instead.
+   */
+  setTextureLoadCallback(callback: () => void): void {
+    this.textureAdapter.setOnTextureLoad(callback);
+  }
+
+  /**
    * Convert domain types to Three.js uniforms
    */
   private convertToUniforms(inputVars: ShaderInputVars): Record<string, { value: any }> {
