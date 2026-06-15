@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import glsl from 'vite-plugin-glsl';
 import path from "path"
+import { ATPROTO_OAUTH_SCOPE } from './src/infrastructure/atproto/scope'
 
 /**
  * The OAuth client metadata document, derived from the deploy URL. atproto
@@ -16,7 +17,7 @@ function buildClientMetadata(publicUrl: string) {
     client_name: 'Luminframe',
     client_uri: publicUrl,
     redirect_uris: [`${publicUrl}/`],
-    scope: 'atproto transition:generic',
+    scope: ATPROTO_OAUTH_SCOPE,
     grant_types: ['authorization_code', 'refresh_token'],
     response_types: ['code'],
     token_endpoint_auth_method: 'none',

@@ -24,10 +24,16 @@ export class BlueskyPublishAdapter implements PublishPort {
       encoding: input.mimeType,
     })
 
-    // 2. Resolve rich-text facets (mentions, links, tags) in the caption so
-    //    they render as live links rather than plain text.
+    // 2. Resolve rich-text facets (links, tags, mentions) in the caption so
+    //    they render as live links. Best-effort: resolving @mentions needs an
+    //    identity RPC scope we don't request (least-privilege), so on failure we
+    //    just post without facets rather than block the publish.
     const richText = new RichText({ text: input.caption ?? '' })
-    await richText.detectFacets(this.agent)
+    try {
+      await richText.detectFacets(this.agent)
+    } catch {
+      // No facets — the caption still posts as plain text.
+    }
 
     // 3. Assemble the record and refuse to write it if it doesn't validate —
     //    a malformed record can be silently dropped or break downstream views.

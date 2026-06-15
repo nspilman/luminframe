@@ -1,16 +1,16 @@
 import { BrowserOAuthClient } from '@atproto/oauth-client-browser'
+import { ATPROTO_OAUTH_SCOPE } from './scope'
 
 /** Whatever `init()` resolves to — pinned to the lib so we don't hand-mirror its union. */
 export type OAuthInitResult = Awaited<ReturnType<BrowserOAuthClient['init']>>
 
 /**
- * Publishing to Bluesky writes a record to the user's repo, which needs write
- * access. The mandatory `atproto` scope alone is read-only, so we also request
- * the broad `transition:generic` scope (the OAuth equivalent of an App
- * Password's reach). The default loopback client only grants `atproto`, so in
- * dev we hand-build a loopback client_id that carries this scope.
+ * The exact scope we request. Least-privilege (see ./scope) — just enough to
+ * upload the render and create a feed post. The default loopback client would
+ * only grant `atproto` (identity), so in dev we hand-build a loopback client_id
+ * that carries this scope.
  */
-const WRITE_SCOPE = 'atproto transition:generic'
+const WRITE_SCOPE = ATPROTO_OAUTH_SCOPE
 
 /**
  * Handles can't be resolved via DNS from the browser, so the client needs an
