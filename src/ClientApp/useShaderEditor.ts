@@ -107,8 +107,11 @@ export function useShaderEditor() {
     ? (varValues.imageTexture as Image).getDimensions().toArray()
     : windowSize.toArray()
 
-  // The untouched source, for hold-to-compare. Null until an image is loaded.
-  const sourceUrl = hasImage ? (varValues.imageTexture as Image).data.url : null
+  // The untouched source image, anchor of the edit. Null until one is loaded.
+  // Its identity is stable across param tweaks — only a new load or save-as-
+  // source swaps it — so consumers can key expensive work (thumbnails) on it.
+  const source = hasImage ? (varValues.imageTexture as Image) : null
+  const sourceUrl = source ? source.data.url : null
 
   // Reconcile parameters when the selected effect changes.
   useEffect(() => {
@@ -234,6 +237,7 @@ export function useShaderEditor() {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    source,
     sourceUrl,
     appliedEffects: pipeline.effects,
     handleApply,

@@ -16,6 +16,7 @@ export function ClientApp(): JSX.Element {
     updateVarValue,
     aspectRatioArray,
     hasImage,
+    source,
     sourceUrl,
     appliedEffects,
     handleApply,
@@ -37,6 +38,7 @@ export function ClientApp(): JSX.Element {
       <div className="flex flex-col md:flex-row flex-1">
         <EditorSidebar
           hasImage={hasImage}
+          source={source}
           selectedShader={selectedShader}
           onShaderSelect={setSelectedShader}
           effect={effect}

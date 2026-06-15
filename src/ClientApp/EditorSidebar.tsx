@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 import { ImagePlus, Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2 } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
+import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
   hasImage: boolean
+  source: Image | null
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
   effect: ShaderEffect
@@ -29,6 +31,7 @@ const sidebarShell =
 
 export function EditorSidebar({
   hasImage,
+  source,
   selectedShader,
   onShaderSelect,
   effect,
@@ -59,7 +62,7 @@ export function EditorSidebar({
   return (
     <div className={sidebarShell}>
       <div className="p-4 space-y-4 md:space-y-6">
-        <EffectPicker selectedShader={selectedShader} onShaderSelect={onShaderSelect} />
+        <EffectPicker selectedShader={selectedShader} onShaderSelect={onShaderSelect} source={source} />
 
         <div className="space-y-1">
           <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>
