@@ -82,6 +82,10 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
   },
   "blend": {
     "blendStrength": {
@@ -96,6 +100,10 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
   },
   "colorQuantize": {
     "colorLevels": {
@@ -105,6 +113,10 @@ describe('shader library contract', () => {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
   },
   "dream": {
@@ -120,6 +132,10 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
     "saturation": {
       "default": 1.3,
       "type": "range",
@@ -132,6 +148,10 @@ describe('shader library contract', () => {
     },
     "offset": {
       "default": 0.3,
+      "type": "range",
+    },
+    "opacity": {
+      "default": 1,
       "type": "range",
     },
     "pixelNumerator": {
@@ -148,6 +168,10 @@ describe('shader library contract', () => {
       "default": 0.1,
       "type": "range",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
     "speed": {
       "default": 1,
       "type": "range",
@@ -162,6 +186,10 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
   },
   "kaleidoscopeEffect": {
     "gridSize": {
@@ -171,6 +199,10 @@ describe('shader library contract', () => {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
     "rotation": {
       "default": 0,
@@ -194,6 +226,10 @@ describe('shader library contract', () => {
       "default": false,
       "type": "boolean",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
     "threshold": {
       "default": 383,
       "type": "range",
@@ -203,6 +239,10 @@ describe('shader library contract', () => {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
     "stepSize": {
       "default": 0.1,
@@ -226,11 +266,19 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
   },
   "pixelateEffect": {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
     "pixelSize": {
       "default": 4,
@@ -253,6 +301,10 @@ describe('shader library contract', () => {
       "default": null,
       "type": "image",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
     "splitOffset": {
       "default": 0.005,
       "type": "range",
@@ -262,6 +314,10 @@ describe('shader library contract', () => {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
     "tintColor": {
       "default": "#ff0000",
@@ -281,6 +337,10 @@ describe('shader library contract', () => {
       "default": 0.5,
       "type": "range",
     },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
     "smoothness": {
       "default": 0.5,
       "type": "range",
@@ -298,6 +358,10 @@ describe('shader library contract', () => {
     "imageTexture": {
       "default": null,
       "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
     },
     "speed": {
       "default": 2,

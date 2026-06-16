@@ -68,11 +68,47 @@ const ensureColor = (value: number[] | Float32Array | Color | null | undefined):
   return Color.fromRGB(arr[0], arr[1], arr[2]);
 };
 
+/**
+ * Wrap an effect body so its result is blended with the effect's input by an
+ * `opacity` uniform (0 = input untouched, 1 = full effect). Applied to every
+ * shader so each one gets an Opacity control for free.
+ *
+ * The effect writes to a temp `lfFragColor` rather than `gl_FragColor` —
+ * reading `gl_FragColor` back is undefined in GLSL ES 1.00 — and the generated
+ * main mixes the untouched pass input (`texture2D(imageTexture, vUv)`) with the
+ * effect's output. Multi-pass: the "input" is the prior pass's result, so each
+ * effect's opacity is its layer strength over the accumulated edit.
+ */
+export const wrapBodyWithOpacity = (body: string): string => {
+  const redirected = body
+    .replace(/gl_FragColor/g, 'lfFragColor')
+    .replace(/\bvoid\s+main\s*\(/, 'void lfEffectMain(');
+  return `
+vec4 lfFragColor;
+${redirected}
+void main() {
+  lfEffectMain();
+  vec4 lfSrcColor = texture2D(imageTexture, vUv);
+  gl_FragColor = mix(lfSrcColor, lfFragColor, opacity);
+}
+`.trim();
+};
+
+const OPACITY_INPUT: RangeInput = {
+  type: 'range',
+  label: 'Opacity',
+  min: 0,
+  max: 1,
+  step: 0.01,
+};
+
 export const createShaderRecord = (config: ShaderConfig) => {
   const declarationVars = Object.fromEntries(
     config.variables.map(v => [v.name, v.type])
   );
   declarationVars.resolution = "vec2"
+  // Every effect blends against its input by `opacity` (see wrapBodyWithOpacity).
+  declarationVars.opacity = "float"
 
   const defaultValues = Object.fromEntries(
     config.variables.map(v => [
@@ -82,17 +118,19 @@ export const createShaderRecord = (config: ShaderConfig) => {
         : v.defaultValue
     ])
   );
+  defaultValues.opacity = 1.0
 
   const inputs = Object.fromEntries(
     config.variables.map(v => [v.name, v.input])
   );
+  inputs.opacity = OPACITY_INPUT
 
   return {
     name: config.name,
     declarationVars,
     defaultValues,
     inputs,
-    getBody: () => config.body,
+    getBody: () => wrapBodyWithOpacity(config.body),
   };
 };
 

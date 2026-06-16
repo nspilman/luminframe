@@ -23,10 +23,11 @@ describe('shaderRecordBuilder', () => {
         body: 'void main() {}'
       });
 
+      // Every record gains an `opacity` float + range control (see wrapBodyWithOpacity).
       expect(record).toEqual({
         name: 'Test Shader',
-        declarationVars: { intensity: 'float',  resolution: "vec2" },
-        defaultValues: { intensity: 0.5, },
+        declarationVars: { intensity: 'float',  resolution: "vec2", opacity: 'float' },
+        defaultValues: { intensity: 0.5, opacity: 1.0 },
         inputs: {
           intensity: {
             type: 'range',
@@ -34,11 +35,11 @@ describe('shaderRecordBuilder', () => {
             min: 0,
             max: 1,
             step: 0.1
-          }
+          },
+          opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
         getBody: expect.any(Function)
       });
-      expect(record.getBody()).toBe('void main() {}');
     });
 
     it('should create a valid shader record with image input', () => {
@@ -60,13 +61,14 @@ describe('shaderRecordBuilder', () => {
 
       expect(record).toEqual({
         name: 'Image Shader',
-        declarationVars: { texture: 'sampler2D', resolution: "vec2" },
-        defaultValues: { texture: null },
+        declarationVars: { texture: 'sampler2D', resolution: "vec2", opacity: 'float' },
+        defaultValues: { texture: null, opacity: 1.0 },
         inputs: {
           texture: {
             type: 'image',
             label: 'Upload Image'
-          }
+          },
+          opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
         getBody: expect.any(Function)
       });
@@ -79,8 +81,27 @@ describe('shaderRecordBuilder', () => {
         body: 'void main() {}'
       });
 
-      expect(record.declarationVars).toEqual({ tint: 'vec3', resolution: 'vec2' });
+      expect(record.declarationVars).toEqual({ tint: 'vec3', resolution: 'vec2', opacity: 'float' });
       expect(record.defaultValues.tint).toEqual(Color.fromRGB(1.0, 0.0, 0.0));
+    });
+
+    it('adds an opacity control and blends the body output by it', () => {
+      const record = createShaderRecord({
+        name: 'Plain',
+        variables: [createShaderVariable('imageTexture').asImage('Source')],
+        body: 'void main() { gl_FragColor = vec4(1.0); }'
+      });
+
+      // The control surface every effect inherits.
+      expect(record.declarationVars.opacity).toBe('float');
+      expect(record.defaultValues.opacity).toBe(1.0);
+      expect(record.inputs.opacity).toEqual({ type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 });
+
+      // The body is rewritten to write a temp, then mix it with the input by opacity.
+      const glsl = record.getBody();
+      expect(glsl).toContain('void lfEffectMain(');
+      expect(glsl).not.toContain('void main() { gl_FragColor');
+      expect(glsl).toContain('gl_FragColor = mix(lfSrcColor, lfFragColor, opacity);');
     });
   });
 
@@ -261,21 +282,22 @@ describe('shaderRecordBuilder', () => {
         name: 'Test Boolean Shader',
         declarationVars: {
           invertColors: 'bool',
-          resolution: 'vec2'
+          resolution: 'vec2',
+          opacity: 'float'
         },
         defaultValues: {
-          invertColors: true
+          invertColors: true,
+          opacity: 1.0
         },
         inputs: {
           invertColors: {
             type: 'boolean',
             label: 'Invert Colors'
-          }
+          },
+          opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
         getBody: expect.any(Function)
       });
-
-      expect(shaderRecord.getBody()).toBe('void main() {}');
     });
   });
 }); 
