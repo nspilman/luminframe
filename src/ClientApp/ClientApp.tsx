@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { EditorSidebar } from './EditorSidebar'
@@ -34,13 +35,25 @@ export function ClientApp(): JSX.Element {
     handleDownload,
     handleImageDrop,
     handleCanvasResize,
+    captureSession,
   } = useShaderEditor()
 
   const publish = usePublishToBluesky(session, canvasRef)
 
+  // Persist the in-progress edit before sign-in navigates away to Bluesky, so it
+  // restores when the user lands back here. Other session methods pass through.
+  const signIn = useCallback(
+    async (handle: string) => {
+      await captureSession()
+      return session.signIn(handle)
+    },
+    [captureSession, session.signIn]
+  )
+  const headerSession = useMemo(() => ({ ...session, signIn }), [session, signIn])
+
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">
-      <HeaderBar session={session} />
+      <HeaderBar session={headerSession} />
       <div className="flex flex-col md:flex-row flex-1">
         <EditorSidebar
           hasImage={hasImage}

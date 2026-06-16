@@ -17,6 +17,13 @@ import {
   canUndo,
   canRedo,
 } from '@/lib/history'
+import {
+  serializeSession,
+  deserializeSession,
+  saveEditorSession,
+  loadEditorSession,
+  clearEditorSession,
+} from '@/lib/editorSession'
 
 /**
  * Reconcile parameter values across an effect switch.
@@ -113,6 +120,49 @@ export function useShaderEditor() {
   // source swaps it — so consumers can key expensive work (thumbnails) on it.
   const source = hasImage ? (varValues.imageTexture as Image) : null
   const sourceUrl = source ? source.data.url : null
+
+  // Restore a persisted edit once on mount. This is what carries the in-progress
+  // work across the OAuth sign-in redirect (and any reload): the snapshot taken
+  // before navigating away is rehydrated here — source image, committed effects,
+  // and live draft — then consumed so a later clean visit starts empty.
+  useEffect(() => {
+    const saved = loadEditorSession()
+    if (!saved) return
+    let active = true
+    deserializeSession(saved)
+      .then(({ selectedShader: shader, draftVars, effects }) => {
+        if (!active) return
+        setSelectedShader(shader)
+        setVarValues(draftVars)
+        setHistory(
+          initHistory(
+            effects.reduce((p, e) => p.append(e.type, e.params), EditPipeline.empty())
+          )
+        )
+      })
+      .catch(err => console.warn('Could not restore editor session:', err))
+      .finally(() => clearEditorSession())
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // Snapshot the current edit to localStorage. Called right before a sign-in
+  // redirect so the work isn't lost when the page navigates away. No-op without
+  // an image — there's nothing worth restoring.
+  const captureSession = useCallback(async (): Promise<void> => {
+    if (!hasImage) return
+    try {
+      const snapshot = await serializeSession({
+        selectedShader,
+        draftVars: varValues,
+        effects: pipeline.effects,
+      })
+      saveEditorSession(snapshot)
+    } catch (err) {
+      console.warn('Could not capture editor session:', err)
+    }
+  }, [hasImage, selectedShader, varValues, pipeline.effects])
 
   // Reconcile parameters when the selected effect changes.
   useEffect(() => {
@@ -248,5 +298,6 @@ export function useShaderEditor() {
     handleDownload,
     handleImageDrop,
     handleCanvasResize,
+    captureSession,
   }
 }
