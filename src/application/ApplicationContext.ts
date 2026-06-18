@@ -5,7 +5,6 @@ import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRenderingAdapter';
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter';
 import { BrowserFileSystemAdapter } from '@/infrastructure/adapters/BrowserFileSystemAdapter';
-import { ApplyShaderEffectUseCase } from '@/application/usecases/ApplyShaderEffectUseCase';
 import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase';
 import { LoadImageUseCase } from '@/application/usecases/LoadImageUseCase';
 import { ExportCanvasUseCase } from '@/application/usecases/ExportCanvasUseCase';
@@ -33,7 +32,6 @@ export class ApplicationContext {
   private fileSystemAdapter: ImageLoaderPort & ImageExportPort;
 
   // Use cases (application layer)
-  private applyShaderEffectUseCase: ApplyShaderEffectUseCase;
   private renderEditUseCase: RenderEditUseCase;
   private loadImageUseCase: LoadImageUseCase;
   private exportCanvasUseCase: ExportCanvasUseCase;
@@ -46,10 +44,6 @@ export class ApplicationContext {
     this.renderingAdapter = new ThreeJSRenderingAdapter(); // Will be initialized with canvas later
 
     // Initialize use cases with their dependencies
-    this.applyShaderEffectUseCase = new ApplyShaderEffectUseCase(
-      this.renderingAdapter,
-      this.shaderRepository
-    );
     this.renderEditUseCase = new RenderEditUseCase(
       this.shaderRepository,
       this.renderingAdapter
@@ -106,13 +100,6 @@ export class ApplicationContext {
    */
   getFileSystemAdapter(): ImageLoaderPort & ImageExportPort {
     return this.fileSystemAdapter;
-  }
-
-  /**
-   * Get the ApplyShaderEffect use case
-   */
-  getApplyShaderEffectUseCase(): ApplyShaderEffectUseCase {
-    return this.applyShaderEffectUseCase;
   }
 
   /**

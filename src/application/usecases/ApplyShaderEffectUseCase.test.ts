@@ -24,17 +24,8 @@ class FakeRepository implements ShaderRepositoryPort {
     this.requestedType = name;
     return effect;
   }
-  getAllShaders(): Record<ShaderType, ShaderEffect> {
-    return {} as Record<ShaderType, ShaderEffect>;
-  }
   getAvailableTypes(): ShaderType[] {
     return ['colorTint', 'vignette'] as ShaderType[];
-  }
-  hasShader(): boolean {
-    return true;
-  }
-  getShaderMetadata(): any {
-    return { name: effect.name, displayName: effect.name, parameterCount: 0 };
   }
 }
 
@@ -92,17 +83,6 @@ describe('ApplyShaderEffectUseCase', () => {
       useCase.execute(source, 'colorTint' as ShaderType, { imageTexture: explicit });
 
       expect(rendering.lastCall?.params.imageTexture).toBe(explicit);
-    });
-  });
-
-  describe('getAvailableShaders', () => {
-    it('returns the available types from the repository', () => {
-      const useCase = new ApplyShaderEffectUseCase(
-        new FakeRenderingPort(),
-        new FakeRepository()
-      );
-
-      expect(useCase.getAvailableShaders()).toEqual(['colorTint', 'vignette']);
     });
   });
 });

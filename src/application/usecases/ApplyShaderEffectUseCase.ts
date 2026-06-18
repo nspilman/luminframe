@@ -40,18 +40,4 @@ export class ApplyShaderEffectUseCase {
     // Render the scene with the effect
     this.renderingPort.renderScene(image, effect, allParams);
   }
-
-  /**
-   * Get metadata about a shader effect (for UI display)
-   */
-  getShaderMetadata(shaderType: ShaderType) {
-    return this.shaderRepository.getShaderMetadata(shaderType);
-  }
-
-  /**
-   * Get all available shader types
-   */
-  getAvailableShaders(): ShaderType[] {
-    return this.shaderRepository.getAvailableTypes();
-  }
 }

@@ -21,17 +21,8 @@ class FakeRepository implements ShaderRepositoryPort {
   getShader(type: ShaderType): ShaderEffect {
     return effectFor(type);
   }
-  getAllShaders(): Record<ShaderType, ShaderEffect> {
-    return {} as Record<ShaderType, ShaderEffect>;
-  }
   getAvailableTypes(): ShaderType[] {
     return [];
-  }
-  hasShader(): boolean {
-    return true;
-  }
-  getShaderMetadata(): any {
-    return { name: 'fake', displayName: 'fake', parameterCount: 0 };
   }
 }
 

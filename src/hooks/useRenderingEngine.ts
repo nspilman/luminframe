@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { ApplicationContext } from '@/application/ApplicationContext';
-import { ShaderType } from '@/types/shader';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { EditPipeline } from '@/domain/models/EditPipeline';
@@ -102,22 +101,6 @@ export function useRenderingEngine() {
     return contextRef.current.getExportCanvasUseCase().execute(filename);
   }, []);
 
-  /**
-   * Get available shader types
-   */
-  const getAvailableShaders = useCallback((): ShaderType[] => {
-    if (!contextRef.current) return [];
-    return contextRef.current.getApplyShaderEffectUseCase().getAvailableShaders();
-  }, []);
-
-  /**
-   * Get shader metadata
-   */
-  const getShaderMetadata = useCallback((shaderType: ShaderType) => {
-    if (!contextRef.current) return null;
-    return contextRef.current.getApplyShaderEffectUseCase().getShaderMetadata(shaderType);
-  }, []);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -133,8 +116,6 @@ export function useRenderingEngine() {
     saveCanvasAsInput,
     downloadImage,
     updateDimensions,
-    getAvailableShaders,
-    getShaderMetadata,
     isInitialized,
   };
 }
