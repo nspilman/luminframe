@@ -1,7 +1,7 @@
 import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
 
 export const luminanceQuantize = createShaderRecord({
-  name: "Luminance Quantize",
+  name: "Posterize",
   variables: [
     createShaderVariable('imageTexture').asImage('Source Image'),
     createShaderVariable('stepSize').asRange('Step Size', 0.1, 0.01, 0.5, 0.01),

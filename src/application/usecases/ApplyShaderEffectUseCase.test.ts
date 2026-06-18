@@ -28,7 +28,7 @@ class FakeRepository implements ShaderRepositoryPort {
     return {} as Record<ShaderType, ShaderEffect>;
   }
   getAvailableTypes(): ShaderType[] {
-    return ['tint', 'vignette'] as ShaderType[];
+    return ['colorTint', 'vignette'] as ShaderType[];
   }
   hasShader(): boolean {
     return true;
@@ -66,9 +66,9 @@ describe('ApplyShaderEffectUseCase', () => {
       const useCase = new ApplyShaderEffectUseCase(rendering, repo);
       const image = makeImage();
 
-      useCase.execute(image, 'tint' as ShaderType, { imageTexture: image });
+      useCase.execute(image, 'colorTint' as ShaderType, { imageTexture: image });
 
-      expect(repo.requestedType).toBe('tint');
+      expect(repo.requestedType).toBe('colorTint');
       expect(rendering.lastCall?.effect).toBe(effect);
       expect(rendering.lastCall?.image).toBe(image);
     });
@@ -78,7 +78,7 @@ describe('ApplyShaderEffectUseCase', () => {
       const useCase = new ApplyShaderEffectUseCase(rendering, new FakeRepository());
       const image = makeImage();
 
-      useCase.execute(image, 'tint' as ShaderType, {});
+      useCase.execute(image, 'colorTint' as ShaderType, {});
 
       expect(rendering.lastCall?.params.imageTexture).toBe(image);
     });
@@ -89,7 +89,7 @@ describe('ApplyShaderEffectUseCase', () => {
       const source = makeImage();
       const explicit = new Image('img-2', new Dimensions(8, 8), { url: 'blob:other' });
 
-      useCase.execute(source, 'tint' as ShaderType, { imageTexture: explicit });
+      useCase.execute(source, 'colorTint' as ShaderType, { imageTexture: explicit });
 
       expect(rendering.lastCall?.params.imageTexture).toBe(explicit);
     });
@@ -102,7 +102,7 @@ describe('ApplyShaderEffectUseCase', () => {
         new FakeRepository()
       );
 
-      expect(useCase.getAvailableShaders()).toEqual(['tint', 'vignette']);
+      expect(useCase.getAvailableShaders()).toEqual(['colorTint', 'vignette']);
     });
   });
 });

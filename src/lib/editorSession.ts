@@ -17,7 +17,11 @@ import { ShaderInputVars, ShaderType } from '@/types/shader'
  */
 
 const STORAGE_KEY = 'luminframe:editor-session'
-const VERSION = 1
+// v2: shader keys were normalized (e.g. pixelateEffect → pixelate). A v1
+// snapshot can reference a key that no longer exists in the library, which would
+// fault on restore — so loadEditorSession rejects mismatched versions, quietly
+// discarding any stale in-flight snapshot rather than rehydrating a dead effect.
+const VERSION = 2
 
 type SerializedValue =
   | { t: 'str'; v: string }

@@ -32,7 +32,7 @@ describe('EditPipeline', () => {
     });
 
     it('keeps the committed effects', () => {
-      const pipeline = EditPipeline.empty().append('tint' as ShaderType, {});
+      const pipeline = EditPipeline.empty().append('colorTint' as ShaderType, {});
       expect(pipeline.withSource(makeImage()).length).toBe(1);
     });
   });
@@ -40,20 +40,20 @@ describe('EditPipeline', () => {
   describe('append', () => {
     it('adds the effect at the end', () => {
       const pipeline = EditPipeline.empty()
-        .append('tint' as ShaderType, { a: 1 })
+        .append('colorTint' as ShaderType, { a: 1 })
         .append('vignette' as ShaderType, { b: 2 });
 
-      expect(pipeline.effects.map((e) => e.type)).toEqual(['tint', 'vignette']);
+      expect(pipeline.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette']);
     });
 
     it('carries the params it was committed with', () => {
-      const pipeline = EditPipeline.empty().append('tint' as ShaderType, { a: 1 });
+      const pipeline = EditPipeline.empty().append('colorTint' as ShaderType, { a: 1 });
       expect(pipeline.effects[0].params).toEqual({ a: 1 });
     });
 
     it('does not mutate the original', () => {
       const original = EditPipeline.empty();
-      original.append('tint' as ShaderType, {});
+      original.append('colorTint' as ShaderType, {});
       expect(original.length).toBe(0);
     });
   });
@@ -61,18 +61,18 @@ describe('EditPipeline', () => {
   describe('removeAt', () => {
     const threeEffects = () =>
       EditPipeline.empty()
-        .append('tint' as ShaderType, {})
+        .append('colorTint' as ShaderType, {})
         .append('vignette' as ShaderType, {})
         .append('wave' as ShaderType, {});
 
     it('drops the effect at the given index', () => {
       const result = threeEffects().removeAt(1);
-      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'wave']);
+      expect(result.effects.map((e) => e.type)).toEqual(['colorTint', 'wave']);
     });
 
     it('leaves the pipeline unchanged for an out-of-range index', () => {
       const result = threeEffects().removeAt(5);
-      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+      expect(result.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette', 'wave']);
     });
 
     it('does not mutate the original', () => {
@@ -85,29 +85,29 @@ describe('EditPipeline', () => {
   describe('move', () => {
     const threeEffects = () =>
       EditPipeline.empty()
-        .append('tint' as ShaderType, {})
+        .append('colorTint' as ShaderType, {})
         .append('vignette' as ShaderType, {})
         .append('wave' as ShaderType, {});
 
     it('moves an effect later in the order', () => {
       const result = threeEffects().move(0, 2);
-      expect(result.effects.map((e) => e.type)).toEqual(['vignette', 'wave', 'tint']);
+      expect(result.effects.map((e) => e.type)).toEqual(['vignette', 'wave', 'colorTint']);
     });
 
     it('moves an effect earlier in the order', () => {
       const result = threeEffects().move(2, 0);
-      expect(result.effects.map((e) => e.type)).toEqual(['wave', 'tint', 'vignette']);
+      expect(result.effects.map((e) => e.type)).toEqual(['wave', 'colorTint', 'vignette']);
     });
 
     it('leaves the pipeline unchanged for an out-of-range index', () => {
       const result = threeEffects().move(0, 9);
-      expect(result.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+      expect(result.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette', 'wave']);
     });
 
     it('does not mutate the original', () => {
       const original = threeEffects();
       original.move(0, 2);
-      expect(original.effects.map((e) => e.type)).toEqual(['tint', 'vignette', 'wave']);
+      expect(original.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette', 'wave']);
     });
   });
 });

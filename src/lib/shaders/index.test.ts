@@ -119,6 +119,24 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "colorTint": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "tintColor": {
+      "default": "#ff0000",
+      "type": "color",
+    },
+    "tintStrength": {
+      "default": 0.5,
+      "type": "range",
+    },
+  },
   "dream": {
     "blurAmount": {
       "default": 2,
@@ -191,7 +209,7 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
-  "kaleidoscopeEffect": {
+  "kaleidoscope": {
     "gridSize": {
       "default": 1,
       "type": "range",
@@ -249,7 +267,7 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
-  "neonGlowEffect": {
+  "neonGlow": {
     "glowColor": {
       "default": "#00ffff",
       "type": "color",
@@ -271,7 +289,7 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
-  "pixelateEffect": {
+  "pixelate": {
     "imageTexture": {
       "default": null,
       "type": "image",
@@ -307,24 +325,6 @@ describe('shader library contract', () => {
     },
     "splitOffset": {
       "default": 0.005,
-      "type": "range",
-    },
-  },
-  "tint": {
-    "imageTexture": {
-      "default": null,
-      "type": "image",
-    },
-    "opacity": {
-      "default": 1,
-      "type": "range",
-    },
-    "tintColor": {
-      "default": "#ff0000",
-      "type": "color",
-    },
-    "tintStrength": {
-      "default": 0.5,
       "type": "range",
     },
   },

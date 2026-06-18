@@ -1,7 +1,7 @@
 import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
 
 export const lightThresholdSwap = createShaderRecord({
-  name: "Light Threshold Swap",
+  name: "Tone Swap",
   variables: [
     createShaderVariable('imageTexture').asImage('Source Image'),
     createShaderVariable('imageTextureTwo').asImage('Second Image'),

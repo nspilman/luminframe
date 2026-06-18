@@ -28,14 +28,14 @@ export interface ShaderEffect {
 
 export const registeredShaders = [
   'blackAndWhite',
-     'tint',
-     'pixelateEffect',
+     'colorTint',
+     'pixelate',
      'rgbSplit',
      'vignette',
      'wave',
-     "kaleidoscopeEffect",
+     "kaleidoscope",
      'glitch',
-     'neonGlowEffect',
+     'neonGlow',
      'gaussianBlur',
      'dream',
      'blend',

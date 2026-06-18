@@ -70,7 +70,7 @@ describe('RenderEditUseCase', () => {
       const rendering = new RecordingRenderingPort();
       makeUseCase(rendering).execute(
         EditPipeline.empty(),
-        { type: 'tint' as ShaderType, params: {} },
+        { type: 'colorTint' as ShaderType, params: {} },
         [4, 2]
       );
 
@@ -84,7 +84,7 @@ describe('RenderEditUseCase', () => {
 
       makeUseCase(rendering).execute(
         pipeline,
-        { type: 'tint' as ShaderType, params: { strength: 0.5 } },
+        { type: 'colorTint' as ShaderType, params: { strength: 0.5 } },
         [4, 2]
       );
 
@@ -93,7 +93,7 @@ describe('RenderEditUseCase', () => {
       expect(chainSource).toBe(source);
       expect(resolution).toEqual([4, 2]);
       expect(passes).toHaveLength(1);
-      expect(passes[0].effect.name).toBe('effect:tint');
+      expect(passes[0].effect.name).toBe('effect:colorTint');
       expect(passes[0].params).toEqual({ strength: 0.5 });
     });
 
@@ -102,7 +102,7 @@ describe('RenderEditUseCase', () => {
       const source = makeSource();
       const pipeline = EditPipeline.empty()
         .withSource(source)
-        .append('tint' as ShaderType, { strength: 1 })
+        .append('colorTint' as ShaderType, { strength: 1 })
         .append('vignette' as ShaderType, { radius: 0.8 });
 
       makeUseCase(rendering).execute(
@@ -115,7 +115,7 @@ describe('RenderEditUseCase', () => {
       const { passes } = rendering.calls[0];
       // Two committed effects fold first, then the live draft on top.
       expect(passes.map((p) => p.effect.name)).toEqual([
-        'effect:tint',
+        'effect:colorTint',
         'effect:vignette',
         'effect:pixelate',
       ]);

@@ -1,6 +1,12 @@
 import { ShaderRepositoryPort, ShaderMetadata } from '@/application/ports/ShaderRepositoryPort';
 import { ShaderEffect, ShaderType } from '@/types/shader';
 import { shaderLibrary } from '@/lib/shaders';
+import { categoryOf, blurbOf, effectFamilies } from '@/lib/shaders/catalog';
+
+/** Family id → its display label, so metadata reads the curated taxonomy. */
+const categoryLabels: Record<string, string> = Object.fromEntries(
+  effectFamilies.map((f) => [f.id, f.label])
+);
 
 /**
  * In-memory implementation of ShaderRepositoryPort.
@@ -62,70 +68,23 @@ export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
     // Count parameters
     const parameterCount = Object.keys(shader.inputs || {}).length;
 
-    // Generate display name from shader name
-    const displayName = this.generateDisplayName(shader.name);
-
-    // Infer category from shader name/type (basic categorization)
-    const category = this.inferCategory(name);
-
-    // Extract tags from shader type (basic tag extraction)
-    const tags = this.extractTags(name);
-
     return {
       name: shader.name,
-      displayName,
-      description: this.generateDescription(shader),
-      category,
-      tags,
+      // shader.name is already the human display name (e.g. "Black & White").
+      displayName: shader.name,
+      description: this.generateDescription(name),
+      category: this.inferCategory(name),
+      tags: this.extractTags(name),
       parameterCount,
     };
   }
 
   /**
-   * Generate a user-friendly display name from shader name
-   */
-  private generateDisplayName(name: string): string {
-    // Convert camelCase or PascalCase to Title Case
-    return name
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
-      .trim();
-  }
-
-  /**
-   * Infer category from shader type
+   * The display label of the family this effect belongs to. Reads the curated
+   * catalog rather than re-deriving categories from string heuristics.
    */
   private inferCategory(type: ShaderType): string {
-    const categoryMap: Record<string, string> = {
-      // Color effects
-      blackAndWhite: 'Color',
-      colorTint: 'Color',
-      tint: 'Color',
-      hueSwap: 'Color',
-      colorQuantize: 'Color',
-      luminanceQuantize: 'Color',
-
-      // Distortion effects
-      wave: 'Distortion',
-      kaleidoscopeEffect: 'Distortion',
-      pixelateEffect: 'Distortion',
-      glitch: 'Distortion',
-
-      // Blur/Focus effects
-      gaussianBlur: 'Blur',
-      dream: 'Blur',
-
-      // Composite effects
-      blend: 'Composite',
-      lightThresholdSwap: 'Composite',
-
-      // Style effects
-      neonGlowEffect: 'Style',
-      vignette: 'Style',
-      rgbSplit: 'Style',
-    };
-
-    return categoryMap[type] || 'Other';
+    return categoryLabels[categoryOf(type)] ?? 'Other';
   }
 
   /**
@@ -144,7 +103,7 @@ export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
     if (type.includes('color') || type.includes('hue')) {
       tags.push('color');
     }
-    if (type.includes('glow') || type === 'neonGlowEffect') {
+    if (type.includes('glow') || type === 'neonGlow') {
       tags.push('glow');
     }
     if (type === 'blend' || type === 'lightThresholdSwap') {
@@ -158,34 +117,10 @@ export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
   }
 
   /**
-   * Generate a description for a shader based on its properties
+   * The plain-speech description of an effect, from the curated catalog.
    */
-  private generateDescription(shader: ShaderEffect): string {
-    const paramCount = Object.keys(shader.inputs || {}).length;
-
-    const descriptions: Record<string, string> = {
-      blackAndWhite: 'Converts the image to black and white by desaturating colors',
-      tint: 'Applies a color tint overlay to the image',
-      colorTint: 'Applies a color tint overlay to the image',
-      pixelateEffect: 'Creates a pixelated retro effect',
-      rgbSplit: 'Separates RGB channels creating a glitch effect',
-      vignette: 'Darkens the edges of the image',
-      wave: 'Creates a wave distortion effect',
-      kaleidoscopeEffect: 'Creates a kaleidoscope mirror effect',
-      neonGlowEffect: 'Adds a neon glow effect to bright areas',
-      glitch: 'Creates a digital glitch distortion effect',
-      dream: 'Creates a soft, dreamy blur effect',
-      blend: 'Blends two images together',
-      lightThresholdSwap: 'Swaps two images based on brightness threshold',
-      gaussianBlur: 'Applies a Gaussian blur to the image',
-      hueSwap: 'Swaps image colors based on hue',
-      colorQuantize: 'Reduces the number of colors in the image',
-      luminanceQuantize: 'Quantizes brightness levels creating a posterized effect',
-    };
-
-    const defaultDescription = `Shader effect with ${paramCount} adjustable parameter${paramCount !== 1 ? 's' : ''}`;
-
-    return descriptions[shader.name] || defaultDescription;
+  private generateDescription(type: ShaderType): string {
+    return blurbOf(type);
   }
 
   /**
