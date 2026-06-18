@@ -22,22 +22,6 @@ export interface RenderPass {
  */
 export interface RenderingPort {
   /**
-   * Render a scene with the given shader effect and parameters
-   *
-   * Renders to the canvas. Consumers that need pixels read the canvas
-   * separately via getCanvas()/exportCanvas().
-   *
-   * @param image - The source image to render
-   * @param effect - The shader effect to apply
-   * @param params - Parameter values for the shader
-   */
-  renderScene(
-    image: Image,
-    effect: ShaderEffect,
-    params: ShaderInputVars
-  ): void;
-
-  /**
    * Render a chain of effects as a single GPU pipeline: the source flows through
    * each pass in order, each pass sampling the previous pass's output, and only
    * the final pass drawing to the canvas. Intermediate results stay on the GPU

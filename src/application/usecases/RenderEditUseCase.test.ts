@@ -30,7 +30,6 @@ class FakeRepository implements ShaderRepositoryPort {
 class RecordingRenderingPort implements RenderingPort {
   calls: { source: Image; passes: ReadonlyArray<RenderPass>; resolution: [number, number] }[] = [];
 
-  renderScene(): void {}
   renderChain(
     source: Image,
     passes: ReadonlyArray<RenderPass>,

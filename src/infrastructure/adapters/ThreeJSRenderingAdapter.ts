@@ -185,20 +185,6 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
-   * Render a single effect on an image, straight to the canvas. A one-element
-   * chain — kept as a named entry point for callers that only ever apply one
-   * effect (e.g. the offscreen thumbnail renderer).
-   */
-  renderScene(
-    image: Image,
-    effect: ShaderEffect,
-    params: ShaderInputVars
-  ): void {
-    const resolution = this.resolutionFrom(params);
-    this.renderChain(image, [{ effect, params }], resolution);
-  }
-
-  /**
    * Render a chain of effects as one synchronous GPU pipeline. The source flows
    * through each pass in order; intermediate results live in offscreen
    * framebuffers (never read back to the CPU), and only the final pass draws to
@@ -331,18 +317,6 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       });
     this.renderTargets = [make(), make()];
     return this.renderTargets;
-  }
-
-  /**
-   * The [width, height] resolution uniform for a render, taken from the params
-   * when present, otherwise the current canvas size.
-   */
-  private resolutionFrom(params: ShaderInputVars): [number, number] {
-    const res = params.resolution;
-    if (Array.isArray(res) && res.length === 2) {
-      return [Number(res[0]), Number(res[1])];
-    }
-    return [this.currentDimensions.width, this.currentDimensions.height];
   }
 
   /**

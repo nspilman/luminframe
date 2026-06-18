@@ -1,8 +1,9 @@
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
+import { EditPipeline } from '@/domain/models/EditPipeline'
 import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRenderingAdapter'
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter'
-import { ApplyShaderEffectUseCase } from '@/application/usecases/ApplyShaderEffectUseCase'
+import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase'
 import { registeredShaders, ShaderType } from '@/types/shader'
 import { shaderLibrary } from '@/lib/shaders'
 
@@ -46,7 +47,7 @@ export async function renderEffectThumbnails(
   canvas.height = dims.height
 
   const adapter = new ThreeJSRenderingAdapter(canvas, dims)
-  const apply = new ApplyShaderEffectUseCase(adapter, new InMemoryShaderRepositoryAdapter())
+  const renderEdit = new RenderEditUseCase(new InMemoryShaderRepositoryAdapter(), adapter)
 
   // Tearing down the offscreen adapter clears its texture cache, which disposes
   // every cached Image — including the source. A blob-less clone makes that
@@ -54,12 +55,23 @@ export async function renderEffectThumbnails(
   const safeSource = new Image(source.id, source.getDimensions(), { url: source.data.url })
   const resolution = dims.toArray()
 
+  // Each thumbnail is one effect at its defaults on the source: the same engine
+  // door the live editor uses, with an empty committed pipeline and the effect
+  // as the lone draft pass.
+  const pipeline = EditPipeline.empty().withSource(safeSource)
   const renderPass = (type: ShaderType) =>
-    apply.execute(safeSource, type, {
-      ...shaderLibrary[type].defaultValues,
-      imageTexture: safeSource,
-      resolution,
-    })
+    renderEdit.execute(
+      pipeline,
+      {
+        type,
+        params: {
+          ...shaderLibrary[type].defaultValues,
+          imageTexture: safeSource,
+          resolution,
+        },
+      },
+      resolution
+    )
 
   try {
     await primeTexture(adapter, () => renderPass(registeredShaders[0]))
