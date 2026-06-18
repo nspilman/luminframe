@@ -7,8 +7,8 @@ import { Upload, Save, Download, Eye, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
-import { PublishToBlueskyDialog } from './PublishToBlueskyDialog'
-import { PublishToBluesky } from '@/hooks/usePublishToBluesky'
+import { PublishDialog } from './PublishDialog'
+import { Publisher } from '@/hooks/usePublish'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
@@ -16,7 +16,7 @@ interface CanvasWorkspaceProps {
   sourceUrl: string | null
   isLoadingImage: boolean
   isSignedIn: boolean
-  publish: PublishToBluesky
+  publish: Publisher
   onSaveAsSecondImage: () => void
   onDownload: () => void
   onImageDrop: (file: File) => void
@@ -110,7 +110,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
             >
               <Send className="w-4 h-4 mr-2" />
-              Publish to Bluesky
+              Publish
             </Button>
             <Button
               onClick={onSaveAsSecondImage}
@@ -122,7 +122,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             </Button>
           </div>
         )}
-        <PublishToBlueskyDialog
+        <PublishDialog
           open={publishOpen}
           onClose={() => setPublishOpen(false)}
           isSignedIn={isSignedIn}

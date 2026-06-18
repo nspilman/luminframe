@@ -6,7 +6,7 @@ import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
-import { usePublishToBluesky } from '@/hooks/usePublishToBluesky'
+import { usePublish } from '@/hooks/usePublish'
 
 export function ClientApp(): JSX.Element {
   const session = useAtprotoSession()
@@ -38,7 +38,7 @@ export function ClientApp(): JSX.Element {
     captureSession,
   } = useShaderEditor()
 
-  const publish = usePublishToBluesky(session, canvasRef)
+  const publish = usePublish(session, canvasRef)
 
   // Persist the in-progress edit before sign-in navigates away to Bluesky, so it
   // restores when the user lands back here. Other session methods pass through.
