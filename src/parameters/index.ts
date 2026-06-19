@@ -11,9 +11,6 @@ export * from './types/Vec2Parameter';
 // Renderers
 export * from './renderers';
 
-// Converters
-export * from './converters';
-
 // Registry
 export { ParameterRegistry } from './ParameterRegistry';
 export { createDefaultParameterRegistry } from './defaultRegistry';

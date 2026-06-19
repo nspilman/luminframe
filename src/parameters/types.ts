@@ -1,17 +1,6 @@
 import { ReactNode } from 'react';
 
 /**
- * Uniform value types that can be passed to shaders
- */
-export type UniformValue =
-  | number
-  | boolean
-  | [number, number]
-  | [number, number, number]
-  | [number, number, number, number]
-  | object; // For textures, images, etc.
-
-/**
  * Definition of a shader parameter
  * Generic type T represents the parameter's value type
  */
@@ -42,20 +31,4 @@ export interface ParameterRenderer<T = any> {
     value: T,
     onChange: (value: T) => void
   ): ReactNode;
-}
-
-/**
- * Converts parameter values to shader uniform values
- * Handles the translation between domain models and GPU types
- */
-export interface UniformConverter<T = any> {
-  /**
-   * Check if this converter can handle the given value
-   */
-  canConvert(value: any): boolean;
-
-  /**
-   * Convert the value to a uniform value
-   */
-  toUniform(value: T): UniformValue;
 }

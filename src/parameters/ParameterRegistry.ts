@@ -1,17 +1,11 @@
-import {
-  ParameterDefinition,
-  ParameterRenderer,
-  UniformConverter,
-  UniformValue,
-} from './types';
+import { ParameterDefinition, ParameterRenderer } from './types';
 
 /**
- * Central registry for parameter renderers and uniform converters
- * Implements the Registry pattern for extensible parameter system
+ * Central registry for parameter renderers: maps a shader input's UI type
+ * (range, color, vec2, …) to the control that renders it.
  */
 export class ParameterRegistry {
   private renderers = new Map<string, ParameterRenderer>();
-  private converters: UniformConverter[] = [];
 
   /**
    * Register a renderer for a specific parameter type
@@ -21,14 +15,6 @@ export class ParameterRegistry {
       console.warn(`Renderer for type "${type}" is being overwritten`);
     }
     this.renderers.set(type, renderer);
-  }
-
-  /**
-   * Register a uniform converter
-   * Converters are tried in order until one matches
-   */
-  registerConverter(converter: UniformConverter): void {
-    this.converters.push(converter);
   }
 
   /**
@@ -49,21 +35,6 @@ export class ParameterRegistry {
     }
 
     return undefined;
-  }
-
-  /**
-   * Convert a parameter value to a uniform value
-   */
-  convertToUniform(value: any): UniformValue {
-    for (const converter of this.converters) {
-      if (converter.canConvert(value)) {
-        return converter.toUniform(value);
-      }
-    }
-
-    // If no converter matches, return the value as-is
-    // This allows for pass-through of already-converted values
-    return value;
   }
 
   /**

@@ -6,20 +6,12 @@ import {
   BooleanRenderer,
   Vec2Renderer,
 } from './renderers';
-import {
-  NumberConverter,
-  BooleanConverter,
-  ColorConverter,
-  ImageConverter,
-  ArrayConverter,
-} from './converters';
 
 /**
- * Builds a ParameterRegistry with all built-in renderers and converters.
+ * Builds a ParameterRegistry with all built-in renderers.
  *
  * Single source of truth for the default wiring, shared by the React provider
- * and by tests. Converter order is significant — more specific converters are
- * registered first (see ParameterRegistry.convertToUniform).
+ * and by tests.
  */
 export function createDefaultParameterRegistry(): ParameterRegistry {
   const registry = new ParameterRegistry();
@@ -29,12 +21,6 @@ export function createDefaultParameterRegistry(): ParameterRegistry {
   registry.registerRenderer('color', new ColorRenderer());
   registry.registerRenderer('boolean', new BooleanRenderer());
   registry.registerRenderer('vec2', new Vec2Renderer());
-
-  registry.registerConverter(new ImageConverter());
-  registry.registerConverter(new ColorConverter());
-  registry.registerConverter(new BooleanConverter());
-  registry.registerConverter(new ArrayConverter());
-  registry.registerConverter(new NumberConverter());
 
   return registry;
 }
