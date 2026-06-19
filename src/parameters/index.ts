@@ -3,9 +3,6 @@ export * from './types';
 
 // Parameter types
 export * from './types/RangeParameter';
-export * from './types/ImageParameter';
-export * from './types/ColorParameter';
-export * from './types/BooleanParameter';
 export * from './types/Vec2Parameter';
 
 // Renderers
