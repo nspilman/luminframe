@@ -1,45 +1,15 @@
 import { Color } from '@/domain/value-objects/Color';
-
-type InputType = 'image' | 'range' | 'color' | 'number';
-
-interface RangeInput {
-  type: 'range';
-  min: number;
-  max: number;
-  step: number;
-  label: string;
-}
-
-interface ImageInput {
-  type: 'image';
-  label: string;
-}
-
-interface Vec2Input {
-    type: 'vec2';
-      label: string;
-  }
-
-// A vec3 uniform is edited in the UI as a color, so the input type is 'color'
-// while the GLSL declaration type stays 'vec3' (see asVec3 below).
-interface ColorInput {
-  type: 'color';
-  label: string;
-  normalize?: boolean;
-}
-
-interface BooleanInput {
-  type: 'boolean';
-  label: string;
-}
-
-type ShaderInput = RangeInput | ImageInput | Vec2Input | ColorInput | BooleanInput;
+import {
+  ShaderInputDefinition,
+  RangeInputDefinition,
+  ImageInputDefinition,
+} from '@/types/shader';
 
 interface ShaderVariable {
   name: string;
   type: string;
   defaultValue: any;
-  input: ShaderInput;
+  input: ShaderInputDefinition;
 }
 
 interface ShaderConfig {
@@ -94,7 +64,7 @@ void main() {
 `.trim();
 };
 
-const OPACITY_INPUT: RangeInput = {
+const OPACITY_INPUT: RangeInputDefinition = {
   type: 'range',
   label: 'Opacity',
   min: 0,
@@ -139,7 +109,7 @@ const createVariable = (
   name: string,
   type: string,
   defaultValue: any,
-  input: ShaderInput
+  input: ShaderInputDefinition
 ): ShaderVariable => ({
   name,
   type,
@@ -152,7 +122,7 @@ const createRangeInput = (
   min: number,
   max: number,
   step: number
-): RangeInput => ({
+): RangeInputDefinition => ({
   type: 'range',
   label,
   min,
@@ -160,7 +130,7 @@ const createRangeInput = (
   step
 });
 
-const createImageInput = (label: string): ImageInput => ({
+const createImageInput = (label: string): ImageInputDefinition => ({
   type: 'image',
   label
 });
@@ -173,6 +143,8 @@ export const createShaderVariable = (name: string) => ({
     createVariable(name, 'float', defaultValue, createRangeInput(label, min, max, step)),
   asVec2: (label: string, defaultX = 0, defaultY = 0) =>
     createVariable(name, 'vec2', [defaultX, defaultY], { type: 'vec2', label }),
+  // A vec3 uniform is edited in the UI as a color, so the input type is 'color'
+  // while the GLSL declaration type stays 'vec3'.
   asVec3: (label: string, defaultX = 0, defaultY = 0, defaultZ = 0) =>
     createVariable(
       name,

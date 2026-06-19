@@ -9,14 +9,53 @@ import { Color } from '@/domain/value-objects/Color'
  */
 export type ShaderInputVars = Record<string, string | number | number[] | Image | Color | null | Float32Array | boolean>
 
-export type ShaderInputDefinition = {
-    type: 'range' | 'number' | 'vec2' | 'color' | 'image' | 'boolean'
-    min?: number
-    max?: number
-    step?: number
-    label: string
-    isOn?:boolean
-  }
+/**
+ * The descriptor for one editable shader input — what control to show and its
+ * bounds. A discriminated union on `type`: each kind carries exactly the fields
+ * its control needs (a range has min/max/step; an image just a label), so a
+ * `param.type === 'range'` check narrows to the fields that exist. This is the
+ * single source of truth for input shapes — the shaderConfig builder produces
+ * these, ShaderEffect.inputs holds them, and the parameter renderers consume
+ * them (see parameters/types.ts) without re-asserting their shape.
+ */
+export interface RangeInputDefinition {
+  type: 'range'
+  label: string
+  min: number
+  max: number
+  step: number
+}
+
+export interface Vec2InputDefinition {
+  type: 'vec2'
+  label: string
+  min?: [number, number]
+  max?: [number, number]
+  step?: [number, number]
+  labels?: [string, string]
+}
+
+export interface ColorInputDefinition {
+  type: 'color'
+  label: string
+}
+
+export interface ImageInputDefinition {
+  type: 'image'
+  label: string
+}
+
+export interface BooleanInputDefinition {
+  type: 'boolean'
+  label: string
+}
+
+export type ShaderInputDefinition =
+  | RangeInputDefinition
+  | Vec2InputDefinition
+  | ColorInputDefinition
+  | ImageInputDefinition
+  | BooleanInputDefinition
 
 export interface ShaderEffect {
   name: string;
