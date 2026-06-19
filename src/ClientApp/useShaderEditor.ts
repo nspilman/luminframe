@@ -8,6 +8,7 @@ import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
+import { effectFamilies } from '@/lib/shaders/catalog'
 import {
   History,
   initHistory,
@@ -75,8 +76,15 @@ export function freshDraftParams(
  * its parameter values, and the render/resize/save wiring against the
  * rendering engine. Keeps ClientApp purely presentational.
  */
+// The effect the editor lands on for a fresh visit: the first effect of the
+// first family, so the gallery's reading order and the opening selection agree
+// rather than starting on an arbitrary effect (and never on a composite one
+// that wants a second image before there is one). A restored session overrides
+// it. Derived from the catalog so reordering families moves the landing too.
+const LANDING_SHADER: ShaderType = effectFamilies[0].effects[0]
+
 export function useShaderEditor() {
-  const [selectedShader, setSelectedShader] = useState<ShaderType>('lightThresholdSwap')
+  const [selectedShader, setSelectedShader] = useState<ShaderType>(LANDING_SHADER)
   const [varValues, setVarValues] = useState<ShaderInputVars>(
     () => ({ ...shaderLibrary[selectedShader].defaultValues })
   )
