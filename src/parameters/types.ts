@@ -1,33 +1,21 @@
 import { ReactNode } from 'react';
+import { ShaderInputDefinition } from '@/types/shader';
 
 /**
- * Definition of a shader parameter
- * Generic type T represents the parameter's value type
+ * Renders the UI control for one shader input. The renderer consumes the input
+ * descriptor directly (the discriminated ShaderInputDefinition), narrowing by
+ * `param.type` to reach a range's min/max/step or a vec2's per-axis bounds — no
+ * separate parameter vocabulary, no casts. The value type T is per-renderer
+ * (number for range, Color for color, …); the registry keys renderers by input
+ * type, so it holds them type-erased.
  */
-export interface ParameterDefinition<T = any> {
-  readonly type: string;
-  readonly label: string;
-  readonly defaultValue: T;
-  validate?(value: T): boolean;
-  serialize?(value: T): any;
-  deserialize?(data: any): T;
-}
+export interface ParameterRenderer<T = unknown> {
+  /** Whether this renderer handles the given input descriptor. */
+  canRender(param: ShaderInputDefinition): boolean;
 
-/**
- * Renders UI controls for a parameter type
- * Implements the Strategy pattern for different parameter UIs
- */
-export interface ParameterRenderer<T = any> {
-  /**
-   * Check if this renderer can handle the given parameter
-   */
-  canRender(param: ParameterDefinition): boolean;
-
-  /**
-   * Render the parameter control
-   */
+  /** Draw the control for `param`, seeded with `value`. */
   render(
-    param: ParameterDefinition<T>,
+    param: ShaderInputDefinition,
     value: T,
     onChange: (value: T) => void
   ): ReactNode;

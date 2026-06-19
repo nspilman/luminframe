@@ -1,4 +1,5 @@
-import { ParameterRenderer, ParameterDefinition } from '../types';
+import { ParameterRenderer } from '../types';
+import { ShaderInputDefinition } from '@/types/shader';
 import { Color } from '@/domain/value-objects/Color';
 import { ColorPicker } from '@/components/ColorPicker';
 
@@ -6,16 +7,16 @@ import { ColorPicker } from '@/components/ColorPicker';
  * Renderer for color parameters
  */
 export class ColorRenderer implements ParameterRenderer<Color> {
-  canRender(param: ParameterDefinition): boolean {
+  canRender(param: ShaderInputDefinition): boolean {
     return param.type === 'color';
   }
 
   render(
-    param: ParameterDefinition<Color>,
+    param: ShaderInputDefinition,
     value: Color,
     onChange: (value: Color) => void
   ) {
-    let currentValue = value ?? param.defaultValue;
+    let currentValue = value;
 
     // Convert array to Color instance if needed
     if (Array.isArray(currentValue)) {

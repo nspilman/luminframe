@@ -1,27 +1,28 @@
-import { ParameterRenderer, ParameterDefinition } from '../types';
-import { Vec2ParameterDefinition } from '../types/Vec2Parameter';
+import { ParameterRenderer } from '../types';
+import { ShaderInputDefinition } from '@/types/shader';
 import { Slider } from '@/components/ui/slider';
 
 /**
  * Renderer for vec2 parameters
  */
 export class Vec2Renderer implements ParameterRenderer<[number, number]> {
-  canRender(param: ParameterDefinition): boolean {
+  canRender(param: ShaderInputDefinition): boolean {
     return param.type === 'vec2';
   }
 
   render(
-    param: ParameterDefinition<[number, number]>,
+    param: ShaderInputDefinition,
     value: [number, number],
     onChange: (value: [number, number]) => void
   ) {
-    const vec2Param = param as Vec2ParameterDefinition;
-    const currentValue = value ?? param.defaultValue;
-    const [x, y] = currentValue;
-    const labels = vec2Param.labels ?? ['X', 'Y'];
-    const [minX, minY] = vec2Param.min ?? [0, 0];
-    const [maxX, maxY] = vec2Param.max ?? [100, 100];
-    const [stepX, stepY] = vec2Param.step ?? [1, 1];
+    // The registry only routes 'vec2' descriptors here; the guard narrows the
+    // union so the per-axis bounds/labels are reachable without a cast.
+    if (param.type !== 'vec2') return null;
+    const [x, y] = value;
+    const labels = param.labels ?? ['X', 'Y'];
+    const [minX, minY] = param.min ?? [0, 0];
+    const [maxX, maxY] = param.max ?? [100, 100];
+    const [stepX, stepY] = param.step ?? [1, 1];
 
     return (
       <div className="space-y-4">

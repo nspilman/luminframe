@@ -1,8 +1,7 @@
 'use client'
 
-import { ShaderEffect, ShaderInputDefinition, ShaderInputVars } from '@/types/shader'
+import { ShaderEffect, ShaderInputVars } from '@/types/shader'
 import { useParameterRegistry } from '@/parameters'
-import { ParameterDefinition } from '@/parameters/types'
 
 type ShaderControlsProps = {
   effect: ShaderEffect,
@@ -16,31 +15,24 @@ export function ShaderControls({ effect, values, onChange }: ShaderControlsProps
   return (
     <div className="space-y-6">
       {Object.entries(effect.inputs).map(([key, input]) => {
-        // Effects declare UI input types directly (range, color, vec2, ...),
-        // so the descriptor maps straight onto a ParameterDefinition.
-        const paramDefinition: ParameterDefinition = {
-          ...input,
-          defaultValue: effect.defaultValues[key],
-        };
-
-        // Get the renderer for this parameter type
-        const renderer = paramRegistry.getRenderer(paramDefinition);
+        // The input descriptor is what the renderer consumes directly — no
+        // bridging type. Pick the control by its type, seed it with the live
+        // value (falling back to the effect's default when the key is unset).
+        const renderer = paramRegistry.getRenderer(input);
 
         if (!renderer) {
           console.warn(`No renderer found for parameter type: ${input.type}`);
           return null;
         }
 
+        const value = values[key] ?? effect.defaultValues[key];
+
         return (
           <div key={key}>
-            {renderer.render(
-              paramDefinition,
-              values[key],
-              (value) => onChange(key, value)
-            )}
+            {renderer.render(input, value, (v) => onChange(key, v))}
           </div>
         );
       })}
     </div>
   );
-} 
+}

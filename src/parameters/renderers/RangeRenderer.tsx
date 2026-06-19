@@ -1,5 +1,5 @@
-import { ParameterRenderer, ParameterDefinition } from '../types';
-import { RangeParameterDefinition } from '../types/RangeParameter';
+import { ParameterRenderer } from '../types';
+import { ShaderInputDefinition } from '@/types/shader';
 import { Slider } from '@/components/ui/slider';
 
 // A slider's step declares its precision: step 1 is an integer knob, step 0.001
@@ -16,37 +16,38 @@ function decimalsForStep(step: number): number {
  * Renderer for range (slider) parameters
  */
 export class RangeRenderer implements ParameterRenderer<number> {
-  canRender(param: ParameterDefinition): boolean {
+  canRender(param: ShaderInputDefinition): boolean {
     return param.type === 'range';
   }
 
   render(
-    param: ParameterDefinition<number>,
+    param: ShaderInputDefinition,
     value: number,
     onChange: (value: number) => void
   ) {
-    const rangeParam = param as RangeParameterDefinition;
-    const currentValue = value ?? param.defaultValue;
-    const decimals = decimalsForStep(rangeParam.step);
+    // The registry only routes 'range' descriptors here; the guard narrows the
+    // union so min/max/step are reachable without a cast.
+    if (param.type !== 'range') return null;
+    const decimals = decimalsForStep(param.step);
 
     return (
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium">{param.label}</label>
           <span className="text-sm text-muted-foreground tabular-nums">
-            {currentValue.toFixed(decimals)}
+            {value.toFixed(decimals)}
           </span>
         </div>
         <Slider
-          min={rangeParam.min}
-          max={rangeParam.max}
-          step={rangeParam.step}
-          value={[currentValue]}
+          min={param.min}
+          max={param.max}
+          step={param.step}
+          value={[value]}
           onValueChange={([v]) => onChange(v)}
         />
         <div className="flex justify-between text-xs text-muted-foreground/60 tabular-nums">
-          <span>{rangeParam.min.toFixed(decimals)}</span>
-          <span>{rangeParam.max.toFixed(decimals)}</span>
+          <span>{param.min.toFixed(decimals)}</span>
+          <span>{param.max.toFixed(decimals)}</span>
         </div>
       </div>
     );

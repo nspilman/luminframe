@@ -7,13 +7,14 @@ import {
   BooleanRenderer,
   Vec2Renderer,
 } from './renderers';
-import { ParameterDefinition, ParameterRenderer } from './types';
+import { ParameterRenderer } from './types';
+import { ShaderInputDefinition } from '@/types/shader';
 
-const def = (type: string): ParameterDefinition => ({
-  type,
-  label: type,
-  defaultValue: null,
-});
+// A throwaway descriptor for exercising the registry's type-keyed dispatch. The
+// registry only reads `.type`; the range fields keep 'range' valid and the cast
+// lets us probe a synthetic, unregistered type too.
+const def = (type: string): ShaderInputDefinition =>
+  ({ type, label: type, min: 0, max: 1, step: 1 }) as unknown as ShaderInputDefinition;
 
 const fakeRenderer = (canRender: boolean): ParameterRenderer => ({
   canRender: () => canRender,

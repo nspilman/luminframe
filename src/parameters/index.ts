@@ -1,10 +1,6 @@
 // Core types
 export * from './types';
 
-// Parameter types
-export * from './types/RangeParameter';
-export * from './types/Vec2Parameter';
-
 // Renderers
 export * from './renderers';
 
