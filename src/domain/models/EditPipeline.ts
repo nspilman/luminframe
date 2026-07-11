@@ -12,12 +12,9 @@ export interface AppliedEffect {
 
 /**
  * The center the editor organizes around: a source image with an ordered
- * pipeline of effects folded over it.
- *
- * Today the app only ever holds a length-0 committed pipeline (one live draft
- * effect renders directly on the source), but modelling the edit as a pipeline
- * from the start is what lets "Apply", undo, reorder, before/after, and the
- * filmstrip later become views onto one structure rather than separate features.
+ * pipeline of committed effects folded over it. "Apply" appends, and undo,
+ * reorder, and before/after are all views onto this one structure rather than
+ * separate features — which is why the edit is modelled as a pipeline.
  *
  * Every operation returns a new EditPipeline; instances are never mutated.
  */

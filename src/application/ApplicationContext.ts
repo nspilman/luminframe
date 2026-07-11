@@ -19,8 +19,8 @@ import { SaveCanvasAsInputUseCase } from '@/application/usecases/SaveCanvasAsInp
  * Usage:
  * ```ts
  * const context = ApplicationContext.getInstance();
- * const useCase = context.getApplyShaderEffectUseCase();
- * const result = useCase.execute(image, shaderType, params);
+ * context.setCanvas(canvas);
+ * context.getRenderEditUseCase().execute(pipeline, draft, resolution);
  * ```
  */
 export class ApplicationContext {

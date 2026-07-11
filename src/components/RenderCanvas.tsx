@@ -11,11 +11,10 @@ interface RenderCanvasProps {
 }
 
 /**
- * Simple canvas component for displaying rendered shader output.
- *
- * This replaces the complex ImageScene component that used react-three-fiber.
- * The actual rendering is handled by the ThreeJSRenderingAdapter through
- * the useRenderingEngine hook.
+ * Simple canvas component for displaying rendered shader output. The actual
+ * rendering is handled by the ThreeJSRenderingAdapter through the
+ * useRenderingEngine hook; this component owns only the canvas element, its
+ * responsive sizing box, and the hold-to-compare overlay.
  */
 export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
   ({ dimensions, className = '', onCanvasResize, overlayUrl = null }, ref) => {

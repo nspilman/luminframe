@@ -6,21 +6,16 @@ import { EditPipeline } from '@/domain/models/EditPipeline';
 import { DraftEffect } from '@/application/usecases/RenderEditUseCase';
 
 /**
- * React hook that provides access to the rendering engine.
- *
- * This replaces the old useShader hook and ImageScene component.
- * It uses the ApplicationContext to access the rendering infrastructure
- * through the hexagonal architecture.
+ * React hook that exposes the rendering engine to components, wiring a canvas
+ * ref to the ApplicationContext's rendering infrastructure through the
+ * hexagonal architecture.
  *
  * Usage:
  * ```tsx
- * const { canvasRef, render, getCanvas } = useRenderingEngine();
+ * const { canvasRef, renderEdit, downloadImage } = useRenderingEngine();
  *
- * // Render with new parameters
- * render(image, shaderType, parameters);
- *
- * // Get canvas for export
- * const canvas = getCanvas();
+ * // Render the committed pipeline + live draft
+ * renderEdit(pipeline, draft, resolution);
  * ```
  */
 export function useRenderingEngine() {
