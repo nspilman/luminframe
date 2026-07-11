@@ -16,26 +16,13 @@ export class ColorRenderer implements ParameterRenderer<Color> {
     value: Color,
     onChange: (value: Color) => void
   ) {
-    let currentValue = value;
-
-    // Convert array to Color instance if needed
-    if (Array.isArray(currentValue)) {
-      currentValue = Color.fromFloat32Array(currentValue);
-    }
-
-    // Ensure we have a valid Color instance
-    if (!(currentValue instanceof Color)) {
-      console.error('ColorRenderer received non-Color value:', currentValue);
-      currentValue = Color.BLACK; // Fallback to black
-    }
-
     return (
       <div className="space-y-2">
         <label className="text-sm font-medium text-zinc-400">
           {param.label}
         </label>
         <ColorPicker
-          color={currentValue}
+          color={value}
           setColor={onChange}
         />
       </div>

@@ -16,15 +16,13 @@ export class BooleanRenderer implements ParameterRenderer<boolean> {
     value: boolean,
     onChange: (value: boolean) => void
   ) {
-    const currentValue = value;
-
     return (
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-zinc-400">
           {param.label}
         </Label>
         <Switch
-          checked={currentValue}
+          checked={value}
           onCheckedChange={onChange}
           className="data-[state=checked]:bg-violet-600"
         />

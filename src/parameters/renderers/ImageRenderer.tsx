@@ -16,8 +16,6 @@ export class ImageRenderer implements ParameterRenderer<Image | null> {
     value: Image | null,
     onChange: (value: Image | null) => void
   ) {
-    const currentValue = value;
-
     return (
       <div className="space-y-2">
         <label className="text-sm font-medium text-zinc-400">
@@ -25,7 +23,7 @@ export class ImageRenderer implements ParameterRenderer<Image | null> {
         </label>
         <ImageUpload
           onChange={onChange}
-          hasImage={currentValue instanceof Image}
+          hasImage={value instanceof Image}
         />
       </div>
     );
