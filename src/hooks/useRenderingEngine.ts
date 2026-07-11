@@ -68,14 +68,6 @@ export function useRenderingEngine() {
   );
 
   /**
-   * Get the canvas element (for export, etc.)
-   */
-  const getCanvas = useCallback((): HTMLCanvasElement | null => {
-    if (!contextRef.current) return null;
-    return contextRef.current.getRenderingAdapter().getCanvas();
-  }, []);
-
-  /**
    * Save the current rendered canvas as an Image domain object,
    * for feeding the output back in as a shader input.
    */
@@ -96,18 +88,12 @@ export function useRenderingEngine() {
     return contextRef.current.getExportCanvasUseCase().execute(filename);
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // Note: We don't dispose the context here because it's a singleton
-      // It will be reused across component re-mounts
-    };
-  }, []);
+  // No unmount cleanup: the ApplicationContext is a singleton, deliberately
+  // reused across component re-mounts rather than disposed here.
 
   return {
     canvasRef,
     renderEdit,
-    getCanvas,
     saveCanvasAsInput,
     downloadImage,
     updateDimensions,

@@ -1,7 +1,6 @@
 import { ImageLoaderPort } from '@/application/ports/ImageLoaderPort';
 import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { Image } from '@/domain/models/Image';
-import { ImageFormat } from '@/domain/value-objects/ImageFormat';
 
 /**
  * Browser-based implementation of ImageLoaderPort and ImageExportPort.
@@ -66,39 +65,6 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
   }
 
   /**
-   * Convert ImageData to a Blob
-   */
-  async toBlob(imageData: ImageData, format: ImageFormat): Promise<Blob> {
-    // Create a temporary canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Failed to get 2D context from canvas');
-    }
-
-    // Put image data on canvas
-    ctx.putImageData(imageData, 0, 0);
-
-    // Convert to blob
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error(`Failed to create ${format.toString()} blob from ImageData`));
-          }
-        },
-        format.getMimeType(),
-        format.getQuality()
-      );
-    });
-  }
-
-  /**
    * Convert a canvas element to a domain Image object
    */
   async canvasToImage(canvas: HTMLCanvasElement): Promise<Image> {
@@ -147,51 +113,4 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
     }
   }
 
-  /**
-   * Convert a Blob to a data URL
-   */
-  async blobToDataUrl(blob: Blob): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('Failed to convert blob to data URL'));
-        }
-      };
-
-      reader.onerror = () => {
-        reject(new Error('FileReader error'));
-      };
-
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  /**
-   * Check if the browser supports a specific image format
-   */
-  supportsFormat(format: ImageFormat): boolean {
-    // Create a temporary canvas to test format support
-    const canvas = document.createElement('canvas');
-    const supported = canvas.toDataURL(format.getMimeType()).startsWith('data:' + format.getMimeType());
-
-    return supported;
-  }
-
-  /**
-   * Get the best supported format from a list of preferences
-   */
-  getBestSupportedFormat(preferences: ImageFormat[]): ImageFormat {
-    for (const format of preferences) {
-      if (this.supportsFormat(format)) {
-        return format;
-      }
-    }
-
-    // Fallback to PNG (universally supported)
-    return ImageFormat.PNG;
-  }
 }

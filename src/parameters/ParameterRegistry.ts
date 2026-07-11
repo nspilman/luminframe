@@ -39,18 +39,4 @@ export class ParameterRegistry {
 
     return undefined;
   }
-
-  /**
-   * Check if a renderer exists for the given parameter
-   */
-  hasRenderer(param: ShaderInputDefinition): boolean {
-    return this.getRenderer(param) !== undefined;
-  }
-
-  /**
-   * Get all registered parameter types
-   */
-  getRegisteredTypes(): string[] {
-    return Array.from(this.renderers.keys());
-  }
 }

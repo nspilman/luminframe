@@ -414,14 +414,4 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // Reset camera
     this.camera = null;
   }
-
-  /**
-   * Update time uniform for animated effects
-   * @param time - Time in seconds
-   */
-  updateTime(time: number): void {
-    if (this.mesh && this.mesh.material instanceof THREE.ShaderMaterial) {
-      this.mesh.material.uniforms.time.value = time;
-    }
-  }
 }

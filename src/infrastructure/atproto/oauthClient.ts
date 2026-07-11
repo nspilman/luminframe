@@ -2,7 +2,7 @@ import { BrowserOAuthClient } from '@atproto/oauth-client-browser'
 import { ATPROTO_OAUTH_SCOPE } from './scope'
 
 /** Whatever `init()` resolves to — pinned to the lib so we don't hand-mirror its union. */
-export type OAuthInitResult = Awaited<ReturnType<BrowserOAuthClient['init']>>
+type OAuthInitResult = Awaited<ReturnType<BrowserOAuthClient['init']>>
 
 /**
  * The exact scope we request. Least-privilege (see ./scope) — just enough to
