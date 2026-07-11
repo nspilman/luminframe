@@ -1,881 +1,503 @@
-# Luminframe Architecture Guide
+# Luminframe — A Pattern Language for the Architecture
 
-**Version:** 1.0
-**Last Updated:** 2025-12-28
-**Phase:** Phase 1 Complete
+**A living reference.** This document names the patterns that prevail in Luminframe
+today, so that future work can reference them, amend them deliberately, and stay
+aligned with the whole. It is written as a *pattern language* in the spirit of
+Christopher Alexander: each pattern names a recurring situation, states the tension
+in it, and resolves that tension with a rule — grounded in the actual files so the
+claim can always be checked against the code.
 
----
+> **The prime directive is wholeness.** Every part should be alive (reached by
+> something), honest (it does what it says), and helping the parts around it. A
+> part that is dead, lying, or duplicated weakens the whole even when it "works."
+> When a pattern below and the code disagree, one of them is wrong — fix the code,
+> or amend the pattern, but never let them drift apart in silence.
 
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Architectural Layers](#architectural-layers)
-3. [Directory Structure](#directory-structure)
-4. [Domain Models](#domain-models)
-5. [Core Concepts](#core-concepts)
-6. [Data Flow](#data-flow)
-7. [Key Patterns](#key-patterns)
-8. [Adding New Features](#adding-new-features)
-9. [Testing Strategy](#testing-strategy)
-10. [Performance Considerations](#performance-considerations)
-
----
-
-## Overview
-
-Luminframe follows a **layered architecture** with clear separation between:
-- **Domain Layer** - Business logic and domain models
-- **Application Layer** - Use cases and application services
-- **Presentation Layer** - React components and UI
-- **Infrastructure Layer** - Three.js, WebGL, external services
-
-### Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────┐
-│              Presentation Layer                          │
-│  (React Components - ClientApp, CanvasWorkspace)        │
-├─────────────────────────────────────────────────────────┤
-│              Application Layer                           │
-│     (Hooks: useShader, useCanvasExport)                 │
-├─────────────────────────────────────────────────────────┤
-│               Domain Layer                               │
-│  (Models: Image | Value Objects: Dimensions, Color)     │
-├─────────────────────────────────────────────────────────┤
-│              Service Layer                               │
-│  (Shader Library, ShaderBuilder, TextureAdapter)        │
-├─────────────────────────────────────────────────────────┤
-│           Infrastructure Layer                           │
-│        (Three.js, WebGL, Canvas API)                    │
-└─────────────────────────────────────────────────────────┘
-```
+**How to use this document.** Before adding a subsystem, read the patterns it
+touches. When you change an architectural boundary, update the pattern here in the
+same commit. When you find the code has outgrown a pattern, amend the pattern —
+this file is versioned code, not scripture.
 
 ---
 
-## Architectural Layers
+## The shape of the whole
 
-### 1. Domain Layer (`src/domain/`)
+Luminframe is a **hexagonal (ports-and-adapters) architecture**. Dependencies point
+*inward*: infrastructure knows about the application, the application knows about the
+domain, and the domain knows about nothing but itself.
 
-**Purpose:** Core business logic and domain models - independent of frameworks
-
-**Components:**
-- **Value Objects** - Immutable objects representing domain concepts
-  - `Dimensions` - Width/height with validation
-  - `Color` - RGB color with conversion utilities
-
-- **Domain Models** - Entities with behavior
-  - `Image` - Image data with dimensions and metadata
-
-**Rules:**
-- ✅ No external dependencies (React, Three.js, etc.)
-- ✅ Fully testable in isolation
-- ✅ Immutable value objects
-- ✅ Rich domain behavior
-
-**Example:**
-```typescript
-// Domain model with behavior
-export class Image {
-  constructor(
-    public readonly id: string,
-    public readonly dimensions: Dimensions,
-    public readonly data: ImageData
-  ) {}
-
-  getAspectRatio(): number {
-    return this.dimensions.getAspectRatio();
-  }
-
-  static async fromFile(file: File): Promise<Image> {
-    // Domain logic for creating Image from File
-  }
-}
 ```
+        ┌───────────────────────────────────────────────────────────┐
+        │  Presentation — React (ClientApp, components/, hooks/)      │
+        │  owns state orchestration + rendering; talks to the app     │
+        │  through the ApplicationContext and a few small hooks.      │
+        ├───────────────────────────────────────────────────────────┤
+        │  Application — src/application/                              │
+        │  ports/ (interfaces) + usecases/ (orchestration) +          │
+        │  ApplicationContext (the DI container).                     │
+        ├───────────────────────────────────────────────────────────┤
+        │  Domain — src/domain/                                        │
+        │  models/ (Image, EditPipeline) + value-objects/             │
+        │  (Color, Dimensions, ImageFormat). No framework imports.    │
+        ├───────────────────────────────────────────────────────────┤
+        │  Infrastructure — src/infrastructure/                       │
+        │  adapters/ (Three.js, browser FS, AT Protocol publish) +    │
+        │  atproto/ (OAuth). Implements the ports; hides the engines. │
+        └───────────────────────────────────────────────────────────┘
+```
+
+Supporting the layers: `src/parameters/` (the control-rendering registry),
+`src/lib/shaders/` (the effect library + its curated catalog), and `src/lib/`
+(pure helpers: history, session serialization, export).
 
 ---
 
-### 2. Service Layer (`src/lib/`, `src/adapters/`)
+## A · The layers and their boundaries
 
-**Purpose:** Application services and infrastructure adapters
+### 1. The Dependency Rule
 
-**Components:**
+*Context:* every module in the tree.
 
-#### Shader Services (`src/lib/shaders/`)
-- **Shader Library** - Registry of all shader effects
-- **Shader Builder** - GLSL code generation
-- **Shader Effects** - Individual effect definitions
-- **Shader Functions** - Reusable GLSL utilities
+**Left unchecked, a rendering library or a network SDK creeps into the domain, and
+the core can no longer be reasoned about or tested without a GPU or a logged-in user.**
 
-#### Adapters (`src/adapters/`)
-- **TextureAdapter** - Converts domain `Image` to Three.js `Texture`
-- Abstracts infrastructure from domain
+**Therefore:** dependencies point inward only. `src/domain/` imports nothing from
+`application`, `infrastructure`, `hooks`, or `components`, and never imports Three.js
+or `@atproto/*`. The application layer (`src/application/`) depends on the domain and
+on *port interfaces* — never on a concrete adapter. Only `src/infrastructure/` and the
+composition root touch Three.js and the AT Protocol SDK.
 
-**Rules:**
-- ✅ Can depend on domain layer
-- ✅ Abstracts external libraries
-- ✅ Provides clean interfaces
+*Grounded in:* [src/domain/](src/domain) (zero framework imports),
+[src/application/usecases/RenderEditUseCase.ts](src/application/usecases/RenderEditUseCase.ts)
+(depends on `RenderingPort` + `ShaderRepositoryPort`, not on `ThreeJSRenderingAdapter`).
 
-**Example:**
-```typescript
-// Adapter pattern - hides Three.js from domain
-export class TextureAdapter {
-  createTexture(image: Image): TextureHandle {
-    const texture = this.textureLoader.load(image.data.url);
-    return { id: image.id, texture, source: image };
-  }
-}
-```
+*Related:* §2, §3, §4.
 
----
+### 2. Ports Are Earned, Not Speculative
 
-### 3. Application Layer (`src/hooks/`)
+*Context:* the interfaces in [src/application/ports/](src/application/ports).
 
-**Purpose:** Use cases and application logic
+**A port added "for flexibility" but wired to nothing is decorative structure: it
+implies a boundary that isn't load-bearing, and the reader trusts a seam that would
+tear the moment it was leaned on.**
 
-**Components:**
-- `useShader` - Shader state management
-- `useCanvasExport` - Canvas export logic
-- `useWindowSize` - Window dimensions tracking
+**Therefore:** a port exists only when it has *both* a live implementation *and* a
+live caller. Every method on a port is exercised by a use case or hook. When a port
+loses its last caller, delete the port — do not keep it "in case."
 
-**Rules:**
-- ✅ Orchestrates domain and services
-- ✅ React-specific logic
-- ✅ Reusable business logic
+*Grounded in:* the live ports — `RenderingPort`, `ShaderRepositoryPort`,
+`ImageLoaderPort`, `ImageExportPort`, `PublishPort` — each with an adapter and a
+caller. The counter-example is instructive: `TexturePort` was deleted because nothing
+implemented it and its Three.js-hiding purpose was unfulfilled (texture handling is an
+*internal* detail of [ThreeJSRenderingAdapter](src/infrastructure/adapters/ThreeJSRenderingAdapter.ts),
+not an application boundary). `ShaderRepositoryPort` was cut from eight methods to two
+(`getShader`, `getAvailableTypes`) when the metadata/search surface proved unreachable.
 
-**Example:**
-```typescript
-export function useShader(effectType: ShaderType) {
-  const windowSize = useWindowSize();
-  const effect = shaderLibrary[effectType];
+*Related:* §15 (No Dead Code).
 
-  // Business logic: calculate resolution from image or window
-  const resolution = imageOne instanceof Image
-    ? imageOne.getDimensions().toArray()
-    : windowSize.toArray();
+### 3. One Container Wires the Graph
 
-  return { shader, varValues, updateVarValue, effect };
-}
-```
+*Context:* object construction across the app.
 
----
+**If components `new` up their own adapters, the wiring is scattered, the singletons
+multiply, and swapping an implementation means a search-and-replace.**
 
-### 4. Presentation Layer (`src/ClientApp/`, `src/components/`)
+**Therefore:** [ApplicationContext](src/application/ApplicationContext.ts) is the single
+place adapters and use cases are constructed. It is a singleton; components reach it
+through [useRenderingEngine](src/hooks/useRenderingEngine.ts), which hands back a small,
+named surface (`renderEdit`, `saveCanvasAsInput`, `downloadImage`, `updateDimensions`).
 
-**Purpose:** UI components and user interaction
+*The one sanctioned exception:* the offscreen thumbnail renderer
+([src/lib/effectThumbnails.ts](src/lib/effectThumbnails.ts)) constructs its *own*
+`ThreeJSRenderingAdapter` because it genuinely needs a **separate** offscreen canvas.
+When you must build outside the container, say why in a comment — a second wiring site
+is a deliberate act, not an accident.
 
-**Components:**
+*Related:* §12 (One Engine, One Door).
 
-#### Application Shell
-- `ClientApp` - Main application container
-- `HeaderBar` - Application header
-- `CanvasWorkspace` - Canvas rendering area
+### 4. Infrastructure Hides Behind Adapters
 
-#### Feature Components
-- `EffectPicker` - Shader selection
-- `ShaderControls` - Dynamic parameter controls
-- `ImageUpload` - File upload
-- `AspectRatioPicker` - Dimension selection
-- `ColorPicker` - Color input
+*Context:* Three.js, the Canvas API, the AT Protocol SDK.
 
-#### Rendering
-- `ImageScene` - Three.js canvas wrapper (only component touching Three.js)
+**Every place that touches a concrete engine directly is a place coupled to it; let
+that spread and the engine becomes unremovable.**
 
-**Rules:**
-- ✅ No business logic
-- ✅ Uses hooks for state/logic
-- ✅ Presentational focus
-- ✅ Only ImageScene touches Three.js
+**Therefore:** each external system is reached only through an adapter that implements
+a port. Three.js lives behind [ThreeJSRenderingAdapter](src/infrastructure/adapters/ThreeJSRenderingAdapter.ts)
+and [TextureAdapter](src/infrastructure/adapters/TextureAdapter.ts); the browser file
+system behind [BrowserFileSystemAdapter](src/infrastructure/adapters/BrowserFileSystemAdapter.ts);
+the network publish behind the `PublishPort` adapters (§19). Within infrastructure,
+adapters may share concrete types freely (e.g. `TextureAdapter` hands a live
+`THREE.Texture` to the rendering adapter) — the boundary that matters is the one the
+*application* sees, and it sees only ports.
+
+*Related:* §1, §19.
 
 ---
 
-### 5. Infrastructure Layer
+## B · One source of truth
 
-**Purpose:** External libraries and frameworks
+### 5. Every Concept Has a Single Home
 
-**Components:**
-- Three.js - 3D rendering
-- React Three Fiber - React renderer for Three.js
-- WebGL - GPU acceleration
-- Canvas API - Image export
+*Context:* any fact the code repeats — the effect taxonomy, an input's shape, a URL
+format.
 
-**Rules:**
-- ⚠️ Only accessed through adapters
-- ⚠️ Never imported directly in domain/services
+**When the same fact is stated in two places, they drift; one becomes a quiet lie,
+and no test necessarily catches it.**
 
----
+**Therefore:** each concept is stated once and read from that home everywhere.
 
-## Directory Structure
+- The **effect taxonomy** (which family each effect belongs to, its one-line blurb)
+  lives once in [src/lib/shaders/catalog.ts](src/lib/shaders/catalog.ts). The picker,
+  the sidebar, and the repository all read it; none re-derive categories from string
+  heuristics.
+- The **shape of a shader input** lives once as the discriminated union
+  `ShaderInputDefinition` in [src/types/shader.ts](src/types/shader.ts). The builder
+  produces it, `ShaderEffect.inputs` holds it, the renderers consume it.
 
-```
-src/
-├── domain/                      # Domain Layer
-│   ├── models/                  # Domain entities
-│   │   ├── Image.ts            # Image domain model
-│   │   └── index.ts
-│   └── value-objects/          # Immutable value objects
-│       ├── Dimensions.ts       # Width/height value object
-│       ├── Color.ts            # RGB color value object
-│       └── index.ts
-│
-├── adapters/                    # Infrastructure Adapters
-│   ├── TextureAdapter.ts       # Image → Three.js Texture
-│   └── index.ts
-│
-├── hooks/                       # Application Logic (React Hooks)
-│   ├── useShader.ts            # Shader state management
-│   ├── useCanvasExport.ts      # Canvas export logic
-│   └── useWindowSize.ts        # Window dimensions
-│
-├── lib/                         # Services & Utilities
-│   ├── shaders/                # Shader system
-│   │   ├── index.ts            # Shader library registry
-│   │   ├── effects/            # Individual shader effects (16 total)
-│   │   │   ├── black-and-white.ts
-│   │   │   ├── color-tint.ts
-│   │   │   └── ...
-│   │   ├── shader-functions/   # Reusable GLSL utilities
-│   │   │   ├── color.ts        # Color manipulation
-│   │   │   └── uv.ts           # UV transforms
-│   │   └── constants.ts        # Shared constants
-│   ├── shaderConfig.ts         # Shader configuration builder
-│   └── utils.ts                # General utilities
-│
-├── shaders/                     # Shader Infrastructure
-│   ├── shaderBuilder.ts        # GLSL code generator
-│   └── types.d.ts              # Shader type definitions
-│
-├── components/                  # Presentational Components
-│   ├── ui/                     # Base UI components (shadcn/ui)
-│   ├── CanvasWorkspace.tsx     # Canvas rendering area
-│   ├── ColorPicker.tsx         # Color input
-│   ├── effect-picker.tsx       # Shader selection
-│   ├── aspect-ratio-picker.tsx # Dimension selector
-│   └── header-bar.tsx          # App header
-│
-├── ClientApp/                   # Application Shell
-│   ├── ClientApp.tsx           # Main app container
-│   ├── shader-controls.tsx     # Dynamic shader controls
-│   └── image-upload.tsx        # File upload
-│
-├── ImageScene.tsx               # Three.js canvas wrapper
-├── types/                       # Type definitions
-│   └── shader.ts               # Shader types
-├── App.tsx                      # Root component
-└── main.tsx                     # Application entry point
-```
+*Grounded in:* [catalog.test.ts](src/lib/shaders/catalog.test.ts) pins the invariant
+that *every* registered shader sits in exactly one family — so a concept's single home
+cannot silently lose an entry.
 
----
+*Related:* §6, §7, §8.
 
-## Domain Models
+### 6. Preserve the Discriminant
 
-### Image
+*Context:* union types that flow across a boundary.
 
-**Location:** `src/domain/models/Image.ts`
+**A discriminated union widened to a loose shape (`{ type: string; min?: number }`)
+throws away the very information that lets a consumer act safely — which then has to be
+clawed back with an `as` cast, an unchecked assertion that rots the moment the union
+changes.**
 
-**Purpose:** Represents an image with dimensions and data
+**Therefore:** carry the precise discriminated type all the way to its consumer; never
+widen it at a boundary and re-narrow it with a cast. A consumer recovers the specific
+member with a `param.type === '…'` guard, which the compiler checks.
 
-```typescript
-class Image {
-  constructor(
-    public readonly id: string,
-    public readonly dimensions: Dimensions,
-    public readonly data: ImageData
-  )
+*Grounded in:* `ShaderInputDefinition` stays discriminated from the builder
+([shaderConfig.ts](src/lib/shaderConfig.ts)) through `ShaderEffect.inputs` to the
+renderers, where
+[RangeRenderer](src/parameters/renderers/RangeRenderer.tsx) narrows with
+`if (param.type !== 'range') return null` instead of `param as RangeParameterDefinition`.
 
-  // Methods
-  getAspectRatio(): number
-  getDimensions(): Dimensions
-  dispose(): void
+*Related:* §5, §7.
 
-  // Factory methods
-  static async fromFile(file: File): Promise<Image>
-  static async fromUrl(url: string): Promise<Image>
-}
-```
+### 7. The Registry Routes, the Members Narrow
 
-**Usage:**
-```typescript
-const image = await Image.fromFile(file);
-console.log(image.getDimensions()); // Dimensions(1920, 1080)
-console.log(image.getAspectRatio()); // 1.777...
-```
+*Context:* rendering a control for each parameter type.
+
+**A giant `if/else` over parameter types in one component couples every control to
+every other and grows unboundedly; but a registry that erases types forces casts.**
+
+**Therefore:** [ParameterRegistry](src/parameters/ParameterRegistry.ts) maps an input
+`type` to a `ParameterRenderer`. Each renderer declares the value type it handles
+(`ParameterRenderer<number>`, `<Color>`, …) and narrows the descriptor by its
+discriminant inside `render`. The registry holds them type-erased
+(`ParameterRenderer<any>`) because it is inherently heterogeneous — the single honest
+`any` is at the registry, not smeared across every call site. Wiring lives once in
+[defaultRegistry.ts](src/parameters/defaultRegistry.ts).
+
+*Related:* §6, §17 (Don't Guard Impossible States).
+
+### 8. The Builder Is the Only Door to a Descriptor
+
+*Context:* how the sixteen effects declare their inputs.
+
+**If each effect hand-writes raw input-descriptor objects, the shape is restated
+sixteen times and drifts sixteen ways.**
+
+**Therefore:** effects declare inputs through the fluent builder in
+[src/lib/shaderConfig.ts](src/lib/shaderConfig.ts) —
+`createShaderVariable('amplitude').asRange('Amplitude', 0.02, 0, 0.1, 0.001)`. The
+builder is the sole producer of `ShaderInputDefinition` values and the sole owner of
+cross-cutting seams like the automatic per-effect `opacity` uniform
+(`wrapBodyWithOpacity`). No effect file writes a raw `{ type: '…' }` literal.
+
+*Related:* §5, §24 (Adding an Effect).
 
 ---
 
-### Dimensions
+## C · The domain speaks for itself
 
-**Location:** `src/domain/value-objects/Dimensions.ts`
+### 9. Immutable Models, Operations Return New Values
 
-**Purpose:** Immutable width/height with validation
+*Context:* the domain models.
 
-```typescript
-class Dimensions {
-  constructor(
-    public readonly width: number,
-    public readonly height: number
-  )
+**Mutating a shared model in place makes change action-at-a-distance; two holders of
+the same object surprise each other, and undo/redo becomes impossible to reason about.**
 
-  // Methods
-  getAspectRatio(): number
-  scale(factor: number): Dimensions
-  equals(other: Dimensions): boolean
-  toArray(): [number, number]
-  toString(): string
+**Therefore:** domain models are immutable; every operation returns a new value.
+[EditPipeline](src/domain/models/EditPipeline.ts) has a private constructor and
+`append`/`removeAt`/`move`/`withSource` each return a fresh pipeline. This is exactly
+what lets undo/redo be a plain [history](src/lib/history.ts) of past presents.
 
-  // Factory
-  static fromArray([width, height]: [number, number]): Dimensions
-}
-```
+*Related:* §11.
 
-**Usage:**
-```typescript
-const dims = new Dimensions(1920, 1080);
-const scaled = dims.scale(0.5); // Dimensions(960, 540)
-const ratio = dims.getAspectRatio(); // 1.777...
-```
+### 10. Value Objects Trimmed to Their Reachable Identity
 
----
+*Context:* `Color`, `Dimensions`, `ImageFormat`, `Image`.
 
-### Color
+**A value object that advertises a rich vocabulary the app never speaks is a
+dishonest abstraction — and worse, its tests vouch for surface nothing uses, lending
+false wholeness.**
 
-**Location:** `src/domain/value-objects/Color.ts`
+**Therefore:** a value object carries only the surface its role needs. `Color` is
+hex↔float conversion for the picker and the GPU. `Dimensions` is validated width/height
+plus `toArray`. Keep an abstraction *one wire from use* only when the seam is real —
+e.g. `ImageFormat` keeps PNG/JPEG/WEBP because the export path is genuinely
+parameterized by format, even though only PNG is wired today. Latent *data* on a live
+seam is acceptable; unreachable *behavior* is not.
 
-**Purpose:** RGB color with conversion utilities
+*Related:* §2, §15.
 
-```typescript
-class Color {
-  constructor(
-    public readonly r: number, // 0-1
-    public readonly g: number, // 0-1
-    public readonly b: number  // 0-1
-  )
+### 11. The Pipeline Is the Center
 
-  // Conversions
-  toFloat32Array(): Float32Array
-  toHex(): string
-  toRGBObject(): { r: number; g: number; b: number }
+*Context:* how an edit is modelled.
 
-  // Factory methods
-  static fromRGB(r: number, g: number, b: number): Color
-  static fromHex(hex: string): Color
-  static fromFloat32Array(arr: Float32Array): Color
-}
-```
+**If "apply an effect," "undo," "reorder," and "before/after" are each built as a
+separate feature, they fight; each new view needs its own bespoke state.**
 
-**Usage:**
-```typescript
-const color = Color.fromHex('#FF5733');
-const rgb = color.toRGBObject(); // { r: 1, g: 0.341, b: 0.2 }
-const array = color.toFloat32Array(); // Float32Array[1, 0.341, 0.2]
-```
+**Therefore:** the edit is one structure — a source image with an ordered pipeline of
+committed effects folded over it ([EditPipeline](src/domain/models/EditPipeline.ts)) —
+and every capability is a *view* onto it. The live "draft" effect renders on top of the
+committed fold; "Apply" appends the draft; undo/redo step the pipeline's history;
+reorder is `move`. New capabilities should become views onto the pipeline, not parallel
+state.
+
+*Related:* §9, §12.
 
 ---
 
-## Core Concepts
+## D · One engine, one door
 
-### 1. Shader Effect System
+### 12. A Single Rendering Path
 
-Shaders are defined using a **declarative builder API**:
+*Context:* everything that draws to a canvas.
 
-```typescript
-import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
+**Two rendering paths drift: a fix or a feature lands in one and not the other, and the
+offscreen path quietly diverges from the on-screen one.**
 
-export const myEffect = createShaderRecord({
-  name: "My Effect",
-  variables: [
-    createShaderVariable('imageTexture').asImage('Source Image'),
-    createShaderVariable('intensity').asRange('Intensity', 0.5, 0, 1, 0.01),
-    createShaderVariable('color').asVec3('Tint Color', 1, 0, 0),
-  ],
-  body: `
-    void main() {
-      vec2 uv = vUv;
-      vec4 texColor = texture2D(imageTexture, uv);
-      vec3 tinted = mix(texColor.rgb, color, intensity);
-      gl_FragColor = vec4(tinted, texColor.a);
-    }
-  `
-});
-```
+**Therefore:** all rendering flows through
+[RenderEditUseCase](src/application/usecases/RenderEditUseCase.ts) → the port's
+`renderChain`. The live editor and the offscreen thumbnail renderer render the *same
+way* (an `EditPipeline` + a draft effect); the thumbnail case is just an empty committed
+pipeline with the effect as the lone pass. There is no second "single-effect" entry
+point.
 
-**Benefits:**
-- Type-safe parameter definitions
-- Automatic UI generation
-- Centralized shader registry
-- Easy to add new effects
+*Related:* §3, §13.
 
----
+### 13. Plans as Pure Data
 
-### 2. Texture Adapter Pattern
+*Context:* the multi-pass GPU pipeline.
 
-Converts domain `Image` to infrastructure `Texture`:
+**Correctness logic entangled with GPU calls can only be verified by running the GPU —
+so it usually isn't verified at all.**
 
-```typescript
-// Domain → Infrastructure conversion
-const textureAdapter = new TextureAdapter();
-const handle = textureAdapter.createTexture(image);
-// handle.texture is Three.js Texture
-// handle.source is domain Image
-```
+**Therefore:** express the correctness of a mechanism as pure data that can be tested
+without the engine. [renderChainPlan.ts](src/infrastructure/adapters/renderChainPlan.ts)
+computes the ping-pong of framebuffers (first pass reads the source, each later pass
+reads the previous pass's output, only the last draws to the canvas) as a plain array,
+tested in isolation. The adapter then merely executes the plan.
 
-**Why?**
-- Decouples domain from Three.js
-- Enables texture caching
-- Makes testing easier
-- Could swap rendering library
+*Related:* §12, §18.
+
+### 14. Hooks Orchestrate, Components Present
+
+*Context:* the React tree.
+
+**Business logic inside a presentational component cannot be reused or tested, and the
+component stops being about what the user sees.**
+
+**Therefore:** orchestration lives in hooks; components render props.
+[useShaderEditor](src/ClientApp/useShaderEditor.ts) owns the editor's state machine
+(selected effect, params, history, render wiring) and hands
+[ClientApp](src/ClientApp/ClientApp.tsx) a flat prop bag; `ClientApp` and
+[EditorSidebar](src/ClientApp/EditorSidebar.tsx) stay presentational. Cross-cutting
+async concerns get their own small hooks:
+[useAsyncStatus](src/hooks/useAsyncStatus.ts) is the single loading-state primitive;
+[useImageLoader](src/hooks/useImageLoader.ts) is the single door for loading a source.
+
+*Related:* §3, §7.
 
 ---
 
-### 3. React Ref Pattern for Canvas Access
+## E · Honesty — no dead or lying code
 
-ImageScene exposes controlled API via ref:
+### 15. No Dead Code — Every Part Has a Live Caller
 
-```typescript
-// ImageScene provides handle
-export interface ImageSceneHandle {
-  getCanvas(): HTMLCanvasElement | null;
-}
+*Context:* the whole tree.
 
-// Parent component uses ref
-const sceneRef = useRef<ImageSceneHandle>(null);
-const canvas = sceneRef.current?.getCanvas();
-```
+**Dead code reads as intentional. A method with no caller, a returned value nothing
+destructures, a component nothing mounts — each invites a reader to build on a thing
+that is already severed from the fabric.**
 
-**Benefits:**
-- No DOM queries (`document.querySelector`)
-- Type-safe API
-- Controlled interface
-- Testable
+**Therefore:** if a symbol has no live production caller, delete it (and the tests that
+only exist to keep it green). Verify reachability against the *compiler*, not a hasty
+grep — the grep that "proved" `Image.dispose` dead had excluded the adapter file where
+its real caller lived; `tsc` caught it. Measure before you cut (§23).
 
----
+*Related:* §2, §10, §18, §23.
 
-## Data Flow
+### 16. Comments Describe the Present
 
-### Image Upload Flow
+*Context:* every doc comment.
 
-```
-1. User selects file
-   ↓
-2. ImageUpload component receives File
-   ↓
-3. Image.fromFile(file) creates domain Image
-   ↓
-4. onChange callback passes Image to parent
-   ↓
-5. updateVarValue stores Image in state
-   ↓
-6. ImageScene receives Image via props
-   ↓
-7. TextureAdapter converts Image → Texture
-   ↓
-8. Three.js renders with Texture
-```
+**A comment that names a vanished API (`useShader`, `ImageScene`, `renderScene`) is
+worse than none — it hands the next reader a false map with the authority of intent.**
 
-### Shader Parameter Update Flow
+**Therefore:** comments describe what *is*. When you remove or rename something, fix the
+comments that named it in the same commit. A comment's job is to explain the *why* the
+code can't state itself — never to preserve a memory of the code that used to be here.
 
-```
-1. User adjusts slider/picker
-   ↓
-2. ShaderControls calls onChange(key, value)
-   ↓
-3. updateVarValue updates varValues state
-   ↓
-4. useShader recompiles shader (memoized)
-   ↓
-5. ImageScene receives new varValues
-   ↓
-6. Uniforms updated in Three.js material
-   ↓
-7. Shader re-renders with new values
-```
+*Related:* §15. (This document is itself bound by this rule.)
 
-### Canvas Export Flow
+### 17. Don't Guard Impossible States
 
-```
-1. User clicks "Save as Input"
-   ↓
-2. handleSaveImage callback fires
-   ↓
-3. imageSceneRef.current.getCanvas() retrieves canvas
-   ↓
-4. useCanvasExport.exportCanvasAsImage(canvas)
-   ↓
-5. Canvas → Blob → File → Image conversion
-   ↓
-6. updateVarValue stores new Image
-   ↓
-7. Cycle repeats - Image rendered on canvas
-```
+*Context:* defensive branches.
+
+**A guard against a state the type system and every producer forbid is a lie about the
+code's real shape: it implies a danger that cannot occur, and the reader wastes trust
+deciphering it.**
+
+**Therefore:** trust the types the boundary guarantees. Once the parameter vocabulary
+was unified (§6), `ColorRenderer` no longer coerces arrays or falls back to a "safe"
+black — its value *is* a `Color`, from the defaults, the picker, and session-restore
+alike. Where a runtime value genuinely is untyped (a value from the store), narrow it
+honestly at that one point; do not sprinkle impossible-case guards everywhere.
+
+*Related:* §6, §7.
+
+### 18. Tests Catch Real Bug Classes
+
+*Context:* the test suite (see the project's `unit-tests` guidance).
+
+**Coverage is a vanity metric; a test that would still pass under a plausible bug, or
+that only re-states the implementation, is noise that dilutes the signal of real
+failures.**
+
+**Therefore:** every test earns its keep on one of three grounds — it catches a
+regression a typo would introduce, it documents a deliberate decision, or it pins math
+the reader can't eyeball. Prefer pure logic over jsdom; pure functions need no mocks;
+one assertion per test; parallel test names within a `describe`. The keystone tests
+([catalog.test.ts](src/lib/shaders/catalog.test.ts),
+[renderChainPlan](src/infrastructure/adapters/renderChainPlan.ts) tests) are the safety
+nets that let the structure change without silently losing a part.
+
+*Related:* §5, §13, §15.
 
 ---
 
-## Key Patterns
+## F · Identity and the network
 
-### 1. Builder Pattern
+### 19. One Identity, Many Targets
 
-**Used in:** Shader configuration
+*Context:* publishing a finished render.
 
-```typescript
-createShaderVariable('intensity')
-  .asRange('Intensity', 0.5, 0, 1, 0.01)
-```
+**Baking one network's API into the publish flow makes a second network a rewrite.**
 
-**Benefits:**
-- Fluent API
-- Type-safe construction
-- Reduces boilerplate
+**Therefore:** publishing is a [PublishPort](src/application/ports/PublishPort.ts) — the
+caller hands over bytes + metadata and gets back a record URI. Each network is an adapter
+behind it ([BlueskyPublishAdapter](src/infrastructure/adapters/BlueskyPublishAdapter.ts),
+[GrainPublishAdapter](src/infrastructure/adapters/GrainPublishAdapter.ts)), and
+[usePublish](src/hooks/usePublish.ts) picks the adapter by target and maps the result
+URI to a human web URL. Record-building is pure and separately tested
+([grainRecords.ts](src/infrastructure/adapters/grainRecords.ts),
+[blueskyPostRecord.ts](src/infrastructure/adapters/blueskyPostRecord.ts)).
 
----
+*Related:* §4, §20.
 
-### 2. Adapter Pattern
+### 20. Least-Privilege Scopes
 
-**Used in:** TextureAdapter, ImageScene
+*Context:* the OAuth request.
 
-```typescript
-class TextureAdapter {
-  createTexture(image: Image): TextureHandle
-}
-```
+**A broad `transition:generic` scope asks the user to trust the app with more than it
+needs, and hides what the app actually does.**
 
-**Benefits:**
-- Decouples domain from infrastructure
-- Enables swapping implementations
-- Clean abstraction boundaries
+**Therefore:** the requested scope is the exact set of collections and actions the app
+writes, stated once in [scope.ts](src/infrastructure/atproto/scope.ts) and shared by the
+runtime client and the build-time client-metadata generation. Adding a publish target
+means adding its `repo:<collection>?action=create` — nothing wider. (Changing the scope
+set forces re-consent for signed-in users; treat it as a visible act.)
 
----
+*Related:* §19.
 
-### 3. Registry Pattern
+### 21. Survive the Redirect
 
-**Used in:** Shader library
+*Context:* an in-progress edit when the user signs in.
 
-```typescript
-export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
-  blackAndWhite,
-  colorTint,
-  // ...
-};
-```
+**OAuth navigates the page away; an edit held only in React state is lost on return.**
 
-**Benefits:**
-- Central registration
-- Type-safe lookup
-- Easy plugin system
+**Therefore:** the edit is serialized to `localStorage` before the sign-in redirect and
+rehydrated once on return ([editorSession.ts](src/lib/editorSession.ts), consumed in
+[useShaderEditor](src/ClientApp/useShaderEditor.ts)). Serialization is versioned: a
+snapshot from an older shape is discarded rather than rehydrated into a dead effect key.
+
+*Related:* §9.
 
 ---
 
-### 4. Value Object Pattern
+## G · How the whole grows
 
-**Used in:** Dimensions, Color
+### 22. Piecemeal, Verified Growth
 
-```typescript
-const dims = new Dimensions(1920, 1080);
-const scaled = dims.scale(0.5); // Returns new Dimensions
-```
+*Context:* every change to this codebase.
 
-**Benefits:**
-- Immutability
-- Validation at construction
-- Rich behavior
-- Type safety
+**A large unverified change lands as a cliff: when it breaks, the cause is buried
+somewhere in the whole of it.**
 
----
+**Therefore:** grow in the smallest coherent, independently-shippable slices. Each slice
+is its own commit, leaves `tsc` clean and the suite green, and — when the change is
+observable — is verified in the browser (`preview_*`), not assumed. A commit whose
+subject is a single honest sentence is a commit that did one thing.
 
-### 5. Factory Pattern
+*Related:* §18, §23.
 
-**Used in:** Image creation
+### 23. Measure Twice, Cut Once
 
-```typescript
-const imageFromFile = await Image.fromFile(file);
-const imageFromUrl = await Image.fromUrl(url);
-```
+*Context:* before deleting or restructuring.
 
-**Benefits:**
-- Encapsulates complex creation
-- Multiple construction methods
-- Validation
+**Confidence from a quick grep is how live code gets deleted (see §15's `dispose`
+near-miss).**
 
----
+**Therefore:** reconnoiter before you cut. Confirm callers with the compiler and a
+whole-tree search; read the target before overwriting it; when the target contradicts
+how it was described, surface that rather than proceeding. The four-agent audit that
+produced this document is the pattern at scale: read widely, verify each claim, then act.
 
-## Adding New Features
+*Related:* §15, §22.
 
-### Adding a New Shader Effect
+### 24. The Recipes — Adding to the Library
 
-1. **Create effect file:** `src/lib/shaders/effects/my-effect.ts`
+*Adding an effect:*
+1. Create `src/lib/shaders/effects/<name>.ts` using the builder (§8).
+2. Register it in `shaderLibrary` ([src/lib/shaders/index.ts](src/lib/shaders/index.ts)).
+3. Add its key to `registeredShaders` ([src/types/shader.ts](src/types/shader.ts)).
+4. Place it in a family and give it a blurb in
+   [catalog.ts](src/lib/shaders/catalog.ts). **The keystone test enforces this step** —
+   an effect not placed in exactly one family fails `catalog.test.ts`.
+5. Add a fallback glyph in `shaderIcons`
+   ([effect-picker.tsx](src/components/effect-picker.tsx)); the live per-effect
+   thumbnail replaces it once rendered.
 
-```typescript
-import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
+*Adding a parameter type:*
+1. Add a member to the `ShaderInputDefinition` union
+   ([src/types/shader.ts](src/types/shader.ts)) — keep it discriminated (§6).
+2. Add a builder method in [shaderConfig.ts](src/lib/shaderConfig.ts) (§8).
+3. Add a `ParameterRenderer` that narrows by `param.type`, and register it in
+   [defaultRegistry.ts](src/parameters/defaultRegistry.ts) (§7).
+4. Map its value → GPU uniform in `convertToUniforms`
+   ([ThreeJSRenderingAdapter](src/infrastructure/adapters/ThreeJSRenderingAdapter.ts)).
 
-export const myEffect = createShaderRecord({
-  name: "My Effect",
-  variables: [
-    createShaderVariable('imageTexture').asImage('Source Image'),
-    createShaderVariable('strength').asRange('Strength', 1.0, 0, 2, 0.1),
-  ],
-  body: `
-    void main() {
-      vec2 uv = vUv;
-      vec4 color = texture2D(imageTexture, uv);
-      // Your shader code here
-      gl_FragColor = color * strength;
-    }
-  `
-});
-```
-
-2. **Register in library:** `src/lib/shaders/index.ts`
-
-```typescript
-import { myEffect } from './effects/my-effect';
-
-export const shaderLibrary = {
-  // ... existing effects
-  myEffect,
-};
-```
-
-3. **Add to type union:** `src/types/shader.ts`
-
-```typescript
-export const registeredShaders = [
-  // ... existing
-  'myEffect',
-] as const;
-```
-
-4. **Add icon (optional):** `src/components/effect-picker.tsx`
-
-```typescript
-const shaderIcons: Record<ShaderType, React.ReactNode> = {
-  // ... existing
-  myEffect: <Sparkles className="h-6 w-6" />,
-};
-```
-
-**That's it!** The effect will automatically appear in the UI with generated controls.
+*Adding a publish target:* implement [PublishPort](src/application/ports/PublishPort.ts)
+as a new adapter, add its scopes to [scope.ts](src/infrastructure/atproto/scope.ts) (§20),
+and wire it into [usePublish](src/hooks/usePublish.ts) (§19).
 
 ---
 
-### Adding a New Parameter Type
+## Amending this document
 
-1. **Update type definition:** `src/types/shader.ts`
-
-```typescript
-export type ShaderInputDefinition = {
-  type: 'range' | 'vec2' | 'vec3' | 'image' | 'boolean' | 'YOUR_TYPE'
-  // ... additional fields
-}
-```
-
-2. **Add builder helper:** `src/lib/shaderConfig.ts`
-
-```typescript
-export const createShaderVariable = (name: string) => ({
-  // ... existing helpers
-  asYourType: (label: string, defaultValue: YourType) =>
-    createVariable(name, 'glsl_type', defaultValue, { type: 'YOUR_TYPE', label }),
-});
-```
-
-3. **Add control rendering:** `src/ClientApp/shader-controls.tsx`
-
-```typescript
-{input.type === 'YOUR_TYPE' ? (
-  <YourCustomControl
-    value={values[key]}
-    onChange={(value) => onChange(key, value)}
-  />
-) : /* ... other types */}
-```
-
-4. **Add uniform conversion:** `src/ImageScene.tsx`
-
-```typescript
-if (value instanceof YourType) {
-  acc[key] = { value: value.toThreeJsType() };
-}
-```
-
----
-
-## Testing Strategy
-
-### Unit Tests
-
-**Domain Layer:**
-```typescript
-// domain/value-objects/Dimensions.test.ts
-describe('Dimensions', () => {
-  it('should calculate aspect ratio correctly', () => {
-    const dims = new Dimensions(1920, 1080);
-    expect(dims.getAspectRatio()).toBeCloseTo(1.777);
-  });
-});
-```
-
-**Services:**
-```typescript
-// lib/shaderConfig.test.ts
-describe('createShaderRecord', () => {
-  it('should create shader with correct structure', () => {
-    const shader = createShaderRecord({...});
-    expect(shader.declarationVars).toBeDefined();
-  });
-});
-```
-
----
-
-### Integration Tests
-
-**Hooks:**
-```typescript
-// hooks/useShader.test.ts
-describe('useShader', () => {
-  it('should update varValues when parameter changes', () => {
-    const { result } = renderHook(() => useShader('blackAndWhite'));
-    act(() => {
-      result.current.updateVarValue('contrast', 1.5);
-    });
-    expect(result.current.varValues.contrast).toBe(1.5);
-  });
-});
-```
-
----
-
-### Component Tests
-
-```typescript
-// components/ColorPicker.test.tsx
-describe('ColorPicker', () => {
-  it('should call setColor when hex input changes', () => {
-    const setColor = jest.fn();
-    render(<ColorPicker color={Color.fromRGB(1,0,0)} setColor={setColor} />);
-    // ... test interaction
-  });
-});
-```
-
----
-
-## Performance Considerations
-
-### 1. Texture Caching
-
-TextureAdapter caches textures by Image ID:
-```typescript
-createTexture(image: Image): TextureHandle {
-  const cached = this.textureCache.get(image.id);
-  if (cached) return cached; // ✅ Avoid recreation
-  // ... create new texture
-}
-```
-
----
-
-### 2. Memoization
-
-Shader compilation is memoized:
-```typescript
-const shader = useMemo(() => shaderBuilder({
-  vars: effect.declarationVars,
-  getBody: effect.getBody,
-}), [effect, varValues]); // ✅ Only recompile when needed
-```
-
----
-
-### 3. Callback Stability
-
-Event handlers use `useCallback`:
-```typescript
-const handleSaveImage = useCallback(async (target) => {
-  // ... export logic
-}, [exportCanvasAsImage, updateVarValue]); // ✅ Stable reference
-```
-
----
-
-### 4. Lazy Loading (Future)
-
-Shader effects could be code-split:
-```typescript
-// Future optimization
-const effect = await import(`./effects/${effectName}.ts`);
-```
-
----
-
-## Best Practices
-
-### ✅ Do
-
-- Use domain models for business logic
-- Keep components presentational
-- Use hooks for reusable logic
-- Validate at domain boundaries
-- Write tests for domain layer
-- Use TypeScript strictly
-- Follow Single Responsibility Principle
-
-### ❌ Don't
-
-- Import Three.js in domain layer
-- Put business logic in components
-- Use `any` type
-- Query DOM directly
-- Skip error handling
-- Mix concerns in one file
-- Bypass type safety with `@ts-ignore`
-
----
-
-## Troubleshooting
-
-### Issue: Shader not appearing in effect picker
-
-**Check:**
-1. Effect registered in `shaderLibrary`?
-2. Effect name in `registeredShaders` array?
-3. Icon defined in `effect-picker.tsx`?
-
----
-
-### Issue: Parameter control not rendering
-
-**Check:**
-1. Parameter type supported in `shader-controls.tsx`?
-2. Variable created with correct helper (`.asRange()`, etc.)?
-3. Default value provided?
-
----
-
-### Issue: Texture not loading
-
-**Check:**
-1. Image blob URL created correctly?
-2. TextureAdapter converting Image to Texture?
-3. ImageScene receiving Image via props?
-4. Check browser console for CORS errors
-
----
-
-## Future Improvements
-
-See `PHASE_1_TODOS.md` for completed tasks and `ARCHITECTURE_AUDIT.md` for Phase 2/3 roadmap:
-
-- **Phase 2:** Rendering adapter abstraction, parameter plugin system
-- **Phase 3:** Full hexagonal architecture, command pattern for undo/redo
-
----
-
-## Resources
-
-- [Three.js Documentation](https://threejs.org/docs/)
-- [GLSL Reference](https://www.khronos.org/opengl/wiki/OpenGL_Shading_Language)
-- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/)
-- [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
-
----
-
-**Questions?** Check `ARCHITECTURE_AUDIT.md` for detailed architectural analysis.
+This file is versioned code. When an architectural boundary changes, change the pattern
+here in the same commit that changes the code. When the code has outgrown a pattern,
+rewrite the pattern — do not leave it stale (§16). If you find a pattern the code
+follows but this document doesn't name yet, add it. The goal is not fidelity to this
+text; it is a codebase that is whole, and a map that always tells the truth about it.
