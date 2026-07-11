@@ -17,15 +17,6 @@ export interface ImageLoaderPort {
   loadFromFile(file: File): Promise<Image>;
 
   /**
-   * Load an image from a URL
-   *
-   * @param url - The URL to load the image from
-   * @returns Promise resolving to a domain Image object
-   * @throws Error if URL is invalid or loading fails
-   */
-  loadFromUrl(url: string): Promise<Image>;
-
-  /**
    * Validate that a file is a valid image
    *
    * @param file - The file to validate

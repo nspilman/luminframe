@@ -36,21 +36,6 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
   }
 
   /**
-   * Load an image from a URL
-   */
-  async loadFromUrl(url: string): Promise<Image> {
-    // Validate URL
-    try {
-      new URL(url); // Will throw if invalid
-    } catch (error) {
-      throw new Error(`Invalid URL: ${url}`);
-    }
-
-    // Use domain model's factory method
-    return await Image.fromUrl(url);
-  }
-
-  /**
    * Check if a file is a valid image
    */
   isValidImageFile(file: File): boolean {

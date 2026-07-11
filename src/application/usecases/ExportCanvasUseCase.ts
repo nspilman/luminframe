@@ -39,17 +39,4 @@ export class ExportCanvasUseCase {
     // Trigger download
     this.imageExport.download(blob, filename);
   }
-
-  /**
-   * Get the current canvas as a blob without downloading
-   */
-  async getBlob(format: ImageFormat = ImageFormat.PNG): Promise<Blob> {
-    const canvas = this.renderingPort.getCanvas();
-    if (!canvas) {
-      throw new Error('No canvas available for export');
-    }
-
-    const dimensions = new Dimensions(canvas.width, canvas.height);
-    return await this.renderingPort.exportCanvas(dimensions, format);
-  }
 }

@@ -82,24 +82,10 @@ export class ApplicationContext {
   }
 
   /**
-   * Get the rendering adapter (for direct access if needed)
+   * Get the rendering adapter (for updateDimensions / canvas access)
    */
   getRenderingAdapter(): RenderingPort {
     return this.renderingAdapter;
-  }
-
-  /**
-   * Get the shader repository (for direct access if needed)
-   */
-  getShaderRepository(): ShaderRepositoryPort {
-    return this.shaderRepository;
-  }
-
-  /**
-   * Get the file system adapter (for direct access if needed)
-   */
-  getFileSystemAdapter(): ImageLoaderPort & ImageExportPort {
-    return this.fileSystemAdapter;
   }
 
   /**
@@ -128,12 +114,5 @@ export class ApplicationContext {
    */
   getSaveCanvasAsInputUseCase(): SaveCanvasAsInputUseCase {
     return this.saveCanvasAsInputUseCase;
-  }
-
-  /**
-   * Clean up resources when the application is destroyed
-   */
-  dispose(): void {
-    this.renderingAdapter.dispose();
   }
 }
