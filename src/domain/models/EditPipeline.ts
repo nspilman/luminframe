@@ -62,12 +62,4 @@ export class EditPipeline {
     next.splice(to, 0, moved);
     return new EditPipeline(this.source, next);
   }
-
-  get isEmpty(): boolean {
-    return this.effects.length === 0;
-  }
-
-  get length(): number {
-    return this.effects.length;
-  }
 }

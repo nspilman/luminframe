@@ -27,13 +27,6 @@ export class Image {
   }
 
   /**
-   * Get the aspect ratio of the image
-   */
-  getAspectRatio(): number {
-    return this.dimensions.getAspectRatio();
-  }
-
-  /**
    * Get the dimensions of the image
    */
   getDimensions(): Dimensions {
@@ -107,19 +100,14 @@ export class Image {
   }
 
   /**
-   * Dispose of the image and clean up resources
+   * Dispose of the image and clean up resources. Called by the texture cache
+   * when it evicts this image (see TextureAdapter), so the blob URL we created
+   * is revoked rather than leaked.
    */
   dispose(): void {
     // Only revoke blob URLs (ones we created)
     if (this.data.blob && this.data.url.startsWith('blob:')) {
       URL.revokeObjectURL(this.data.url);
     }
-  }
-
-  /**
-   * String representation
-   */
-  toString(): string {
-    return `Image(${this.id}, ${this.dimensions.toString()})`;
   }
 }

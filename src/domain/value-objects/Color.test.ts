@@ -65,28 +65,6 @@ describe('Color', () => {
     });
   });
 
-  describe('toRGB255', () => {
-    it('should convert to 0-255 RGB object', () => {
-      const color = Color.fromRGB(1, 0.5, 0);
-      const rgb = color.toRGB255();
-      expect(rgb).toEqual({ r: 255, g: 128, b: 0 });
-    });
-  });
-
-  describe('equals', () => {
-    it('should return true for equal colors', () => {
-      const color1 = Color.fromRGB(0.5, 0.5, 0.5);
-      const color2 = Color.fromRGB(0.5, 0.5, 0.5);
-      expect(color1.equals(color2)).toBe(true);
-    });
-
-    it('should return false for different colors', () => {
-      const color1 = Color.fromRGB(0.5, 0.5, 0.5);
-      const color2 = Color.fromRGB(0.6, 0.5, 0.5);
-      expect(color1.equals(color2)).toBe(false);
-    });
-  });
-
   describe('fromHex', () => {
     it('should create color from hex string', () => {
       const color = Color.fromHex('#ff0000');
@@ -144,39 +122,4 @@ describe('Color', () => {
     });
   });
 
-  describe('fromRGB255', () => {
-    it('should create color from 0-255 values', () => {
-      const color = Color.fromRGB255(255, 128, 0);
-      expect(color.r).toBe(1);
-      expect(color.g).toBeCloseTo(128 / 255);
-      expect(color.b).toBe(0);
-    });
-  });
-
-  describe('constants', () => {
-    it('should have BLACK constant', () => {
-      expect(Color.BLACK.r).toBe(0);
-      expect(Color.BLACK.g).toBe(0);
-      expect(Color.BLACK.b).toBe(0);
-    });
-
-    it('should have WHITE constant', () => {
-      expect(Color.WHITE.r).toBe(1);
-      expect(Color.WHITE.g).toBe(1);
-      expect(Color.WHITE.b).toBe(1);
-    });
-
-    it('should have RED constant', () => {
-      expect(Color.RED.r).toBe(1);
-      expect(Color.RED.g).toBe(0);
-      expect(Color.RED.b).toBe(0);
-    });
-  });
-
-  describe('toString', () => {
-    it('should return hex representation', () => {
-      const color = Color.fromRGB(1, 0, 0);
-      expect(color.toString()).toBe('#ff0000');
-    });
-  });
 });

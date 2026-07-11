@@ -47,24 +47,6 @@ export class Color {
   }
 
   /**
-   * Convert color to RGB object with 0-255 values
-   */
-  toRGB255(): { r: number; g: number; b: number } {
-    return {
-      r: Math.round(this.r * 255),
-      g: Math.round(this.g * 255),
-      b: Math.round(this.b * 255)
-    };
-  }
-
-  /**
-   * Check equality with another Color
-   */
-  equals(other: Color): boolean {
-    return this.r === other.r && this.g === other.g && this.b === other.b;
-  }
-
-  /**
    * Create Color from RGB values (0-1)
    */
   static fromRGB(r: number, g: number, b: number): Color {
@@ -101,28 +83,5 @@ export class Color {
       throw new Error('Array must have at least 3 elements');
     }
     return new Color(arr[0], arr[1], arr[2]);
-  }
-
-  /**
-   * Create Color from RGB255 values (0-255)
-   */
-  static fromRGB255(r: number, g: number, b: number): Color {
-    return new Color(r / 255, g / 255, b / 255);
-  }
-
-  /**
-   * Common color constants
-   */
-  static readonly BLACK = new Color(0, 0, 0);
-  static readonly WHITE = new Color(1, 1, 1);
-  static readonly RED = new Color(1, 0, 0);
-  static readonly GREEN = new Color(0, 1, 0);
-  static readonly BLUE = new Color(0, 0, 1);
-
-  /**
-   * String representation
-   */
-  toString(): string {
-    return this.toHex();
   }
 }

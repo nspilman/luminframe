@@ -13,9 +13,7 @@ describe('EditPipeline', () => {
     });
 
     it('has no effects', () => {
-      const pipeline = EditPipeline.empty();
-      expect(pipeline.isEmpty).toBe(true);
-      expect(pipeline.length).toBe(0);
+      expect(EditPipeline.empty().effects).toHaveLength(0);
     });
   });
 
@@ -33,7 +31,7 @@ describe('EditPipeline', () => {
 
     it('keeps the committed effects', () => {
       const pipeline = EditPipeline.empty().append('colorTint' as ShaderType, {});
-      expect(pipeline.withSource(makeImage()).length).toBe(1);
+      expect(pipeline.withSource(makeImage()).effects).toHaveLength(1);
     });
   });
 
@@ -54,7 +52,7 @@ describe('EditPipeline', () => {
     it('does not mutate the original', () => {
       const original = EditPipeline.empty();
       original.append('colorTint' as ShaderType, {});
-      expect(original.length).toBe(0);
+      expect(original.effects).toHaveLength(0);
     });
   });
 
@@ -78,7 +76,7 @@ describe('EditPipeline', () => {
     it('does not mutate the original', () => {
       const original = threeEffects();
       original.removeAt(0);
-      expect(original.length).toBe(3);
+      expect(original.effects).toHaveLength(3);
     });
   });
 

@@ -25,15 +25,6 @@ describe('Image', () => {
     });
   });
 
-  describe('getAspectRatio', () => {
-    it('should return aspect ratio', () => {
-      const dimensions = new Dimensions(1920, 1080);
-      const image = new Image('test-id', dimensions, { url: 'test.jpg' });
-
-      expect(image.getAspectRatio()).toBeCloseTo(16 / 9);
-    });
-  });
-
   describe('getDimensions', () => {
     it('should return dimensions', () => {
       const dimensions = new Dimensions(100, 100);
@@ -226,15 +217,6 @@ describe('Image', () => {
 
       expect(mockRevoke).not.toHaveBeenCalled();
       URL.revokeObjectURL = originalRevoke;
-    });
-  });
-
-  describe('toString', () => {
-    it('should return string representation', () => {
-      const dimensions = new Dimensions(1920, 1080);
-      const image = new Image('test-id', dimensions, { url: 'test.jpg' });
-
-      expect(image.toString()).toBe('Image(test-id, 1920x1080)');
     });
   });
 });
