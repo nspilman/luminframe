@@ -1,0 +1,184 @@
+/**
+ * Reads com.luminframe.image records back out of the network — one repo's worth
+ * (a person's gallery) or the whole network (everyone who has ever saved one).
+ *
+ * Everything here is a *public* read over plain XRPC GETs — no auth, no agent —
+ * so the gallery works signed-out. Two building blocks:
+ *
+ *   - listReposByCollection (on a relay) enumerates every DID in the network with
+ *     a com.luminframe.image record — the official, complete way to find them all.
+ *   - listRecords (on each DID's PDS) returns that repo's records.
+ *
+ * Identities (DID → PDS host + handle) resolve via plc.directory, cached for the
+ * session. Blobs render straight from their PDS's getBlob endpoint.
+ *
+ * The pure shapers — building a blob URL, reading a PDS/handle out of a DID
+ * document, turning a raw record into a view — are separated from the fetches and
+ * tested in luminframeFeed.test.ts, since they're where a typo silently breaks a
+ * link or a missing field blanks an image.
+ */
+
+export const LUMINFRAME_COLLECTION = 'com.luminframe.image'
+const DEFAULT_RELAY = 'https://relay1.us-west.bsky.network'
+const PLC_DIRECTORY = 'https://plc.directory'
+
+/** A com.luminframe.image record resolved into everything the UI needs to show it. */
+export interface LuminframeImageView {
+  /** at://did/com.luminframe.image/rkey */
+  uri: string
+  rkey: string
+  did: string
+  /** The author's handle, e.g. alice.bsky.social; null if it couldn't be resolved. */
+  handle: string | null
+  /** getBlob URL for the image, or null if the record carried no blob. */
+  imageUrl: string | null
+  aspectRatio: { width: number; height: number }
+  alt?: string
+  title?: string
+  /** Effect keys applied, in order (the edit recipe). */
+  effects: string[]
+  createdAt: string
+}
+
+/** The PDS host and handle for a DID, read out of its DID document. */
+export interface Identity {
+  pds: string | null
+  handle: string | null
+}
+
+interface RawRecord {
+  uri: string
+  value: {
+    image?: { ref?: { $link?: string } }
+    aspectRatio?: { width: number; height: number }
+    alt?: string
+    title?: string
+    effects?: unknown
+    createdAt?: string
+  }
+}
+
+// ── Pure shapers (tested) ─────────────────────────────────────────────────────
+
+/** The public getBlob URL for a blob CID in a given repo on a given PDS. */
+export function getBlobUrl(pds: string, did: string, cid: string): string {
+  return `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`
+}
+
+/** Read the atproto PDS endpoint and handle out of a DID document. */
+export function parseIdentity(didDoc: {
+  service?: { id: string; type?: string; serviceEndpoint?: string }[]
+  alsoKnownAs?: string[]
+}): Identity {
+  const pds =
+    didDoc.service?.find((s) => s.id.endsWith('atproto_pds'))?.serviceEndpoint ?? null
+  const aka = didDoc.alsoKnownAs?.find((a) => a.startsWith('at://'))
+  const handle = aka ? aka.slice('at://'.length) : null
+  return { pds, handle }
+}
+
+/** Turn one raw listRecords entry into a view, given its author's resolved identity. */
+export function recordToView(record: RawRecord, did: string, pds: string, handle: string | null): LuminframeImageView {
+  const value = record.value ?? {}
+  const cid = value.image?.ref?.$link
+  const rkey = record.uri.split('/').pop() ?? ''
+  return {
+    uri: record.uri,
+    rkey,
+    did,
+    handle,
+    imageUrl: cid ? getBlobUrl(pds, did, cid) : null,
+    aspectRatio: value.aspectRatio ?? { width: 1, height: 1 },
+    alt: value.alt,
+    title: value.title,
+    effects: Array.isArray(value.effects) ? value.effects.filter((e): e is string => typeof e === 'string') : [],
+    createdAt: value.createdAt ?? '',
+  }
+}
+
+// ── Fetches ───────────────────────────────────────────────────────────────────
+
+const identityCache = new Map<string, Identity>()
+
+/** Resolve a DID to its PDS host + handle (did:plc via plc.directory), cached. */
+export async function resolveIdentity(did: string): Promise<Identity> {
+  const cached = identityCache.get(did)
+  if (cached) return cached
+  let identity: Identity = { pds: null, handle: null }
+  try {
+    const res = await fetch(`${PLC_DIRECTORY}/${encodeURIComponent(did)}`)
+    if (res.ok) identity = parseIdentity(await res.json())
+  } catch {
+    // Leave the null identity; the caller skips repos it can't reach.
+  }
+  identityCache.set(did, identity)
+  return identity
+}
+
+/** One page of DIDs that have a com.luminframe.image record, network-wide. */
+export async function listNetworkDids(
+  cursor?: string,
+  relay: string = DEFAULT_RELAY
+): Promise<{ dids: string[]; cursor?: string }> {
+  const params = new URLSearchParams({ collection: LUMINFRAME_COLLECTION, limit: '1000' })
+  if (cursor) params.set('cursor', cursor)
+  const res = await fetch(`${relay}/xrpc/com.atproto.sync.listReposByCollection?${params}`)
+  if (!res.ok) throw new Error(`listReposByCollection failed: ${res.status}`)
+  const data = await res.json()
+  const dids = Array.isArray(data.repos)
+    ? data.repos.map((r: { did: string }) => r.did).filter(Boolean)
+    : []
+  return { dids, cursor: data.cursor }
+}
+
+/** Run `task` over `items` with at most `limit` in flight; failures resolve to []. */
+async function mapWithConcurrency<T>(
+  items: string[],
+  limit: number,
+  task: (item: string) => Promise<T[]>
+): Promise<T[]> {
+  const results: T[][] = []
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++
+      try {
+        results[index] = await task(items[index])
+      } catch {
+        results[index] = []
+      }
+    }
+  })
+  await Promise.all(workers)
+  return results.flat()
+}
+
+/**
+ * Every com.luminframe.image across the network, newest first. Enumerates the
+ * DIDs that have the collection (capped so a huge network can't fan out
+ * unbounded), fetches each repo's records with bounded concurrency, and sorts by
+ * time. `maxRepos` bounds the fan-out; raising it (or a backend index) is the
+ * scaling path as the lexicon grows.
+ */
+export async function fetchNetworkImages(maxRepos = 200): Promise<LuminframeImageView[]> {
+  const { dids } = await listNetworkDids()
+  const views = await mapWithConcurrency(dids.slice(0, maxRepos), 8, fetchRepoImages)
+  return views.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/** Every com.luminframe.image record in one repo, newest first, resolved to views. */
+export async function fetchRepoImages(did: string): Promise<LuminframeImageView[]> {
+  const identity = await resolveIdentity(did)
+  if (!identity.pds) return []
+  const params = new URLSearchParams({
+    repo: did,
+    collection: LUMINFRAME_COLLECTION,
+    limit: '100',
+    reverse: 'true', // newest first
+  })
+  const res = await fetch(`${identity.pds}/xrpc/com.atproto.repo.listRecords?${params}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  const records: RawRecord[] = Array.isArray(data.records) ? data.records : []
+  return records.map((r) => recordToView(r, did, identity.pds!, identity.handle))
+}
