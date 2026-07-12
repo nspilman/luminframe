@@ -1,32 +1,23 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X, ExternalLink, Calendar } from 'lucide-react'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
-import { shaderLibrary } from '@/lib/shaders'
-import { ShaderType } from '@/types/shader'
+import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
 
 interface ImageLightboxProps {
   image: LuminframeImageView
   onClose: () => void
 }
 
-/** Effect key → display name, falling back to the raw key for anything unknown. */
-function effectLabel(key: string): string {
-  return shaderLibrary[key as ShaderType]?.name ?? key
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { dateStyle: 'medium' })
-}
-
 /**
  * Full-size in-app viewer for a single Luminframe record. Opening this — not a
  * jump to pdsls.dev — is the primary click from the gallery grid; the record page
  * is demoted to a secondary link in the info panel. Closes on Escape, backdrop
- * click, or the X. Locks body scroll while open.
+ * click, or the X. Locks body scroll while open, moves focus into the dialog on
+ * open, and restores it to whatever opened it on close.
  */
 export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -34,14 +25,21 @@ export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+
+    // Pull focus into the dialog so the keyboard lands inside it, and hand focus
+    // back to the triggering element when we close so the user keeps their place.
+    const opener = document.activeElement as HTMLElement | null
+    closeRef.current?.focus()
+
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      opener?.focus?.()
     }
   }, [onClose])
 
-  const profileUrl = `https://bsky.app/profile/${image.handle ?? image.did}`
-  const date = formatDate(image.createdAt)
+  const profileUrl = bskyProfileUrl(image)
+  const date = formatDate(image.createdAt, 'medium')
 
   return (
     <div
@@ -52,6 +50,7 @@ export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm md:p-8"
     >
       <button
+        ref={closeRef}
         type="button"
         onClick={onClose}
         aria-label="Close"
@@ -96,7 +95,13 @@ export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
             </div>
           )}
 
-          {image.alt && <p className="text-sm leading-relaxed text-zinc-400">{image.alt}</p>}
+          {/* The image already carries `alt` as its accessible description, so this
+              visible echo is hidden from AT to avoid announcing it twice. */}
+          {image.alt && (
+            <p aria-hidden className="text-sm leading-relaxed text-zinc-400">
+              {image.alt}
+            </p>
+          )}
 
           {image.effects.length > 0 && (
             <div className="space-y-1.5">

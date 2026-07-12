@@ -4,8 +4,7 @@ import { Spinner } from './ui/spinner'
 import { ImageLightbox } from './ImageLightbox'
 import { useLuminframeFeed, FeedTab } from '@/hooks/useLuminframeFeed'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
-import { shaderLibrary } from '@/lib/shaders'
-import { ShaderType } from '@/types/shader'
+import { effectLabel, formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
 
 interface GalleryPageProps {
   /** The signed-in user's DID, or null when signed out (gates the "mine" tab). */
@@ -17,19 +16,8 @@ const TABS: { value: FeedTab; label: string }[] = [
   { value: 'network', label: 'Network' },
 ]
 
-/** Effect key → display name, falling back to the raw key for anything unknown. */
-function effectLabel(key: string): string {
-  return shaderLibrary[key as ShaderType]?.name ?? key
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString()
-}
-
 function ImageCard({ image, onOpen }: { image: LuminframeImageView; onOpen: () => void }) {
-  const profileUrl = `https://bsky.app/profile/${image.handle ?? image.did}`
+  const profileUrl = bskyProfileUrl(image)
   return (
     <div className="group overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/30">
       <button
