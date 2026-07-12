@@ -9,6 +9,7 @@ import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 import { effectFamilies } from '@/lib/shaders/catalog'
+import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
 import {
   History,
   initHistory,
@@ -142,6 +143,19 @@ export function useShaderEditor() {
   )
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
+  // Effects the user has committed to (applied or downloaded), most-recent
+  // first, seeded from and mirrored back to localStorage so they persist across
+  // visits. Recording is deliberate — see recordRecent's callers, not selection.
+  const [recentShaders, setRecentShaders] = useState<ShaderType[]>(() => loadRecents())
+  const recordRecent = useCallback((type: ShaderType) => {
+    setRecentShaders((prev) => pushRecent(prev, type))
+  }, [])
+  // Mirror recents to storage whenever they change (the initial write-back of the
+  // loaded value is idempotent), keeping the persistence out of the state updater.
+  useEffect(() => {
+    saveRecents(recentShaders)
+  }, [recentShaders])
+
   // The committed pipeline lives inside an undo/redo history. Every commit-level
   // action (apply, remove, reorder) pushes a new present; undo/redo step through
   // them. The live draft (selectedShader/varValues) is deliberately outside the
@@ -265,7 +279,8 @@ export function useShaderEditor() {
     setVarValues(prev =>
       freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
     )
-  }, [selectedShader, varValues])
+    recordRecent(selectedShader)
+  }, [selectedShader, varValues, recordRecent])
 
   const handleRemoveEffect = useCallback((index: number) => {
     setHistory(h => pushHistory(h, h.present.removeAt(index)))
@@ -314,10 +329,11 @@ export function useShaderEditor() {
   const handleDownload = useCallback(async () => {
     try {
       await downloadImage(`luminframe-${selectedShader}.png`)
+      recordRecent(selectedShader)
     } catch (error) {
       console.error('Failed to download image:', error)
     }
-  }, [downloadImage, selectedShader])
+  }, [downloadImage, selectedShader, recordRecent])
 
   // Loading a source is the slowest first-contact in the editor, so it is the
   // first surface to adopt the app's loading-state SoT: useAsyncStatus tracks the
@@ -339,6 +355,7 @@ export function useShaderEditor() {
     selectedShader,
     setSelectedShader,
     setPreviewShader,
+    recentShaders,
     effect,
     varValues,
     resolution,

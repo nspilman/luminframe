@@ -14,6 +14,7 @@ type EditorSidebarProps = {
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
   onShaderPreview: (shader: ShaderType | null) => void
+  recentShaders: readonly ShaderType[]
   effect: ShaderEffect
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -36,6 +37,7 @@ export function EditorSidebar({
   selectedShader,
   onShaderSelect,
   onShaderPreview,
+  recentShaders,
   effect,
   values,
   onChange,
@@ -68,6 +70,7 @@ export function EditorSidebar({
           selectedShader={selectedShader}
           onShaderSelect={onShaderSelect}
           onShaderPreview={onShaderPreview}
+          recentShaders={recentShaders}
           source={source}
         />
 

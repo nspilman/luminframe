@@ -59,8 +59,12 @@ type EffectPickerProps = {
   onShaderSelect: (shader: ShaderType) => void
   /** Preview an effect live on the canvas while the pointer rests on it; null reverts. */
   onShaderPreview: (shader: ShaderType | null) => void
+  /** Recently-used effects, most-recent first, surfaced as a section on top. */
+  recentShaders: readonly ShaderType[]
   source: Image | null
 }
+
+type PickerSection = { id: string; label: string; effects: readonly ShaderType[] }
 
 // A hover settles for this long before it previews, so gliding the pointer
 // across tiles on the way to one doesn't strobe the canvas through every effect
@@ -76,7 +80,7 @@ const PREVIEW_SETTLE_MS = 60
  * Order and grouping come from the curated catalog, so adding an effect there
  * places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, recentShaders, source }: EffectPickerProps) {
   const thumbnails = useEffectThumbnails(source)
 
   // Debounce the hover into a preview; keep the latest callback in a ref so the
@@ -107,6 +111,16 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
   const [query, setQuery] = useState('')
   const families = useMemo(() => filterEffectFamilies(query), [query])
   const topMatch = families[0]?.effects[0]
+
+  // While browsing (no query), lead with a Recent section so a look the user
+  // just used is one click away — recognition over recall for the returning
+  // hand. During a search the results stand alone; recents would only be noise.
+  const sections = useMemo<PickerSection[]>(() => {
+    if (query.trim() === '' && recentShaders.length > 0) {
+      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...families]
+    }
+    return families
+  }, [query, recentShaders, families])
 
   // A keyboard shortcut to the search line: '/' when not already typing, or ⌘/Ctrl-K
   // anywhere — the command-palette reflex, so the search is reachable without the mouse.
@@ -175,7 +189,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
             className="max-h-[420px] space-y-4 overflow-y-auto pr-1"
             onMouseLeave={clearPreview}
           >
-            {families.map((family) => (
+            {sections.map((family) => (
               <div key={family.id} className="space-y-2">
                 <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                   {family.label}
