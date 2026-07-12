@@ -17,12 +17,14 @@ interface PublishDialogProps {
 const TARGETS: { value: PublishTarget; label: string }[] = [
   { value: 'bluesky', label: 'Bluesky' },
   { value: 'grain', label: 'Grain' },
+  { value: 'luminframe', label: 'My PDS' },
 ]
 
 /** Per-target wording: what the published thing is called, and where it lands. */
 const TARGET_COPY: Record<PublishTarget, { noun: string; done: string }> = {
   bluesky: { noun: 'post', done: 'Posted to Bluesky.' },
   grain: { noun: 'gallery', done: 'Published to Grain.' },
+  luminframe: { noun: 'record', done: 'Saved to your PDS as a Luminframe record.' },
 }
 
 /**

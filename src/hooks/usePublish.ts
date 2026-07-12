@@ -3,11 +3,15 @@ import { AtprotoSession } from './useAtprotoSession'
 import { PublishPort } from '@/application/ports/PublishPort'
 import { BlueskyPublishAdapter } from '@/infrastructure/adapters/BlueskyPublishAdapter'
 import { GrainPublishAdapter } from '@/infrastructure/adapters/GrainPublishAdapter'
+import { LuminframePublishAdapter } from '@/infrastructure/adapters/LuminframePublishAdapter'
 import { exportCanvasForUpload } from '@/lib/exportCanvasForUpload'
 import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
 
-/** The networks an image can be published to, both over the same AT identity. */
-export type PublishTarget = 'bluesky' | 'grain'
+/**
+ * Where an image can go, all over the same AT identity: the two social networks,
+ * or the user's own PDS as a first-class Luminframe record.
+ */
+export type PublishTarget = 'bluesky' | 'grain' | 'luminframe'
 
 export type PublishPhase = 'idle' | 'publishing' | 'success' | 'error'
 
@@ -48,10 +52,36 @@ function toGrainUrl(uri: string): string | null {
   return `https://grain.social/profile/${did}/gallery/${rkey}`
 }
 
+/**
+ * A com.luminframe.image record has no first-party viewer yet, so we link to
+ * pdsls.dev — a generic AT Protocol record browser — so the user can see the
+ * record they just wrote to their repo.
+ */
+function toLuminframeUrl(uri: string): string | null {
+  if (!uri.startsWith('at://')) return null
+  return `https://pdsls.dev/${uri}`
+}
+
 function adapterFor(target: PublishTarget, agent: NonNullable<AtprotoSession['agent']>): PublishPort {
-  return target === 'grain'
-    ? new GrainPublishAdapter(agent)
-    : new BlueskyPublishAdapter(agent)
+  switch (target) {
+    case 'grain':
+      return new GrainPublishAdapter(agent)
+    case 'luminframe':
+      return new LuminframePublishAdapter(agent)
+    default:
+      return new BlueskyPublishAdapter(agent)
+  }
+}
+
+function toPostUrl(target: PublishTarget, uri: string, handle: string | null): string | null {
+  switch (target) {
+    case 'grain':
+      return toGrainUrl(uri)
+    case 'luminframe':
+      return toLuminframeUrl(uri)
+    default:
+      return toBlueskyUrl(uri, handle)
+  }
 }
 
 /**
@@ -65,7 +95,8 @@ function adapterFor(target: PublishTarget, agent: NonNullable<AtprotoSession['ag
  */
 export function usePublish(
   session: AtprotoSession,
-  canvasRef: RefObject<HTMLCanvasElement>
+  canvasRef: RefObject<HTMLCanvasElement>,
+  effects: readonly string[] = []
 ): Publisher {
   const [state, setState] = useState<PublishState>({
     phase: 'idle',
@@ -89,9 +120,8 @@ export function usePublish(
       try {
         const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
         const adapter = adapterFor(target, session.agent)
-        const result = await adapter.publishImage({ bytes, mimeType, alt, caption, aspectRatio })
-        const postUrl =
-          target === 'grain' ? toGrainUrl(result.uri) : toBlueskyUrl(result.uri, session.handle)
+        const result = await adapter.publishImage({ bytes, mimeType, alt, caption, aspectRatio, effects })
+        const postUrl = toPostUrl(target, result.uri, session.handle)
         setState({ phase: 'success', postUrl, error: null })
       } catch (err) {
         console.error('Publish failed:', err)
@@ -114,7 +144,7 @@ export function usePublish(
         })
       }
     },
-    [session.agent, session.handle, session.clearSession, canvasRef]
+    [session.agent, session.handle, session.clearSession, canvasRef, effects]
   )
 
   const reset = useCallback(

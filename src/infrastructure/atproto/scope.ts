@@ -10,7 +10,8 @@
  *  - `repo:social.grain.photo?action=create`        Grain: create the photo…
  *  - `repo:social.grain.gallery?action=create`      …its gallery…
  *  - `repo:social.grain.gallery.item?action=create` …and the join between them
- *  - `blob:image/*`                                 upload image blobs (both targets)
+ *  - `repo:com.luminframe.image?action=create`      Luminframe: save an image to the user's PDS
+ *  - `blob:image/*`                                 upload image blobs (all targets)
  *  - `rpc:app.bsky.actor.getProfile?aud=…`          read the profile, only to show
  *                                                   the signed-in user's handle
  *
@@ -18,6 +19,10 @@
  * or any other record type. Shared by the runtime OAuth client and the
  * build-time client-metadata generator so the requested scope and the declared
  * scope can never drift.
+ *
+ * Note: adding a collection here widens the requested scope, so sessions
+ * authorized before the change won't carry the new grant — a user must
+ * re-authenticate once before they can write the newly-added collection.
  *
  * Note: we intentionally do NOT request an identity RPC for resolving
  * @mentions, so caption facet detection is best-effort (see BlueskyPublishAdapter).
@@ -28,6 +33,7 @@ export const ATPROTO_OAUTH_SCOPE = [
   'repo:social.grain.photo?action=create',
   'repo:social.grain.gallery?action=create',
   'repo:social.grain.gallery.item?action=create',
+  'repo:com.luminframe.image?action=create',
   'blob:image/*',
   'rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app#bsky_appview',
 ].join(' ')

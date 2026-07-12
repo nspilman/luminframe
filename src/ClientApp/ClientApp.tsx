@@ -39,7 +39,11 @@ export function ClientApp(): JSX.Element {
     captureSession,
   } = useShaderEditor()
 
-  const publish = usePublish(session, canvasRef)
+  // The edit recipe recorded on a saved Luminframe record: the committed effect
+  // stack, in order. The live draft is deliberately excluded — the recipe is the
+  // effects the user applied, not the one they're mid-tuning.
+  const publishEffects = useMemo(() => appliedEffects.map((e) => e.type), [appliedEffects])
+  const publish = usePublish(session, canvasRef, publishEffects)
 
   // Persist the in-progress edit before sign-in navigates away to Bluesky, so it
   // restores when the user lands back here. Other session methods pass through.
