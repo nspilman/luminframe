@@ -35,6 +35,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     passes: ReadonlyArray<RenderPass>;
     resolution: [number, number];
   } | null = null;
+  // The animation clock. When the current chain has a time-dependent effect, a
+  // requestAnimationFrame loop re-draws it each frame with an advancing `time`
+  // uniform; static chains draw once and the loop stays off, so the GPU idles.
+  private animationFrameId: number | null = null;
+  private clockStartMs: number | null = null;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -128,7 +133,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    */
   private convertToUniforms(inputVars: ShaderInputVars): Record<string, { value: any }> {
     const uniforms: Record<string, { value: any }> = {
-      time: { value: 0 }, // Will be updated in animation loop if needed
+      time: { value: this.elapsedSeconds() }, // advances while the animation loop runs
     };
 
     for (const [key, value] of Object.entries(inputVars)) {
@@ -196,9 +201,24 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     passes: ReadonlyArray<RenderPass>,
     resolution: [number, number]
   ): void {
-    // Remember the chain so a late-arriving texture can replay it (see the
-    // texture-load callback wired in the constructor).
+    // Remember the chain so a late-arriving texture (or the animation loop) can
+    // replay it. See the texture-load callback wired in the constructor.
     this.lastChainParams = { source, passes, resolution };
+    this.drawChain();
+    this.syncAnimation();
+  }
+
+  /**
+   * Draw the remembered chain once, at the current clock time. Splitting this
+   * out of renderChain lets the animation loop redraw the same chain each frame
+   * (advancing `time`) without re-running the start/stop bookkeeping.
+   */
+  private drawChain(): void {
+    const params = this.lastChainParams;
+    if (!params) {
+      return;
+    }
+    const { source, passes, resolution } = params;
 
     if (!this.renderer || !this.scene || !this.camera) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
@@ -240,6 +260,46 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
 
     // Leave the renderer pointed at the canvas for any external draws.
     this.renderer.setRenderTarget(null);
+  }
+
+  /** Seconds since the animation loop started; 0 while it is stopped. */
+  private elapsedSeconds(): number {
+    return this.clockStartMs === null
+      ? 0
+      : (performance.now() - this.clockStartMs) / 1000;
+  }
+
+  /**
+   * Start or stop the animation loop to match the current chain. A chain is
+   * animated when any of its effect bodies reference the `time` uniform; static
+   * chains leave the loop off so the GPU isn't redrawing an unchanging frame.
+   */
+  private syncAnimation(): void {
+    const animated =
+      !!this.lastChainParams &&
+      this.lastChainParams.passes.some((p) => /\btime\b/.test(p.effect.getBody()));
+
+    if (animated) {
+      if (this.animationFrameId === null) {
+        this.clockStartMs = performance.now();
+        this.animationFrameId = requestAnimationFrame(this.tickAnimation);
+      }
+    } else {
+      this.stopAnimation();
+    }
+  }
+
+  private tickAnimation = (): void => {
+    this.drawChain();
+    this.animationFrameId = requestAnimationFrame(this.tickAnimation);
+  };
+
+  private stopAnimation(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+      this.clockStartMs = null;
+    }
   }
 
   /**
@@ -376,6 +436,9 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * Clean up Three.js resources
    */
   dispose(): void {
+    // Stop the animation loop before tearing down the renderer it draws into.
+    this.stopAnimation();
+
     // Dispose mesh
     if (this.mesh) {
       this.mesh.geometry.dispose();
