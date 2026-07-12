@@ -1,4 +1,14 @@
-import { tabFromPath, pathForTab, isGalleryPath } from './galleryRoute'
+import { tabFromPath, pathForTab, isGalleryPath, editorRemixPath } from './galleryRoute'
+
+describe('editorRemixPath', () => {
+  it('builds an editor URL with the AT-URI encoded into ?remix', () => {
+    // Encoding is load-bearing: an unencoded at:// URI's slashes would be read
+    // as path segments and the remix link would point nowhere.
+    expect(editorRemixPath('at://did:plc:abc/com.luminframe.image/xyz')).toBe(
+      '/?remix=at%3A%2F%2Fdid%3Aplc%3Aabc%2Fcom.luminframe.image%2Fxyz'
+    )
+  })
+})
 
 describe('tabFromPath', () => {
   it('/gallery/mine → mine', () => {

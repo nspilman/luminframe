@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { X, ExternalLink, Calendar } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { X, ExternalLink, Calendar, Wand2 } from 'lucide-react'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
+import { editorRemixPath } from '@/lib/galleryRoute'
 
 interface ImageLightboxProps {
   image: LuminframeImageView
@@ -119,9 +121,16 @@ export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
             </div>
           )}
 
-          <div className="mt-auto flex flex-col gap-2 pt-2">
+          <div className="mt-auto flex flex-col gap-3 pt-2">
+            <Link
+              to={editorRemixPath(image.uri)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+            >
+              <Wand2 className="h-4 w-4" />
+              Open in editor
+            </Link>
             <a
-              href={`https://pdsls.dev/${image.uri}`}
+              href={pdslsUrl(image)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"

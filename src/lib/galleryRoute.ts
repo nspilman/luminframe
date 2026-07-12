@@ -32,3 +32,15 @@ export function isGalleryPath(pathname: string): boolean {
 
 /** The search-param key under which the open image's AT-URI travels. */
 export const IMAGE_PARAM = 'image'
+
+/**
+ * The search-param key that asks the editor to open a network image as its
+ * source — a "remix." Like the others, it lives in the URL so the action is a
+ * plain link (and a shared /?remix=<uri> works for anyone).
+ */
+export const REMIX_PARAM = 'remix'
+
+/** The editor address that loads a given image (by AT-URI) as the working source. */
+export function editorRemixPath(uri: string): string {
+  return `/?${REMIX_PARAM}=${encodeURIComponent(uri)}`
+}

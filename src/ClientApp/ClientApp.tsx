@@ -9,6 +9,7 @@ import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
+import { useRemix } from '@/hooks/useRemix'
 import { isGalleryPath } from '@/lib/galleryRoute'
 
 export function ClientApp(): JSX.Element {
@@ -48,6 +49,10 @@ export function ClientApp(): JSX.Element {
   // effects the user applied, not the one they're mid-tuning.
   const publishEffects = useMemo(() => appliedEffects.map((e) => e.type), [appliedEffects])
   const publish = usePublish(session, canvasRef, publishEffects)
+
+  // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
+  // that image into the editor as a fresh source, wherever it's clicked from.
+  useRemix(handleImageDrop)
 
   // Persist the in-progress edit before sign-in navigates away to Bluesky, so it
   // restores when the user lands back here. Other session methods pass through.
