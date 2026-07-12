@@ -130,6 +130,12 @@ export function useShaderEditor() {
   const { loadFromFile } = useImageLoader()
   const windowSize = useWindowSize()
 
+  // Remix provenance: the record the current source was remixed from, or null.
+  // Lives next to the source because that's what it describes. Set only when a
+  // remix loads the source; cleared whenever the source is replaced by any other
+  // load, so a fresh image can never inherit a false parent.
+  const [remixParent, setRemixParent] = useState<{ uri: string; cid: string } | null>(null)
+
   const effect = shaderLibrary[selectedShader]
   const hasImage =
     'imageTexture' in varValues && varValues.imageTexture instanceof Image
@@ -225,6 +231,9 @@ export function useShaderEditor() {
   const updateVarValue = useCallback(
     (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => {
       setVarValues(prev => ({ ...prev, [key]: value }))
+      // Swapping the source image (e.g. via the sidebar) is not a remix — drop
+      // any lineage so it isn't wrongly attributed to the new source.
+      if (key === 'imageTexture') setRemixParent(null)
     },
     []
   )
@@ -300,14 +309,22 @@ export function useShaderEditor() {
   // Both entry points — canvas drop and click-to-choose — funnel through this one
   // task, the same slot the sidebar's upload fills (one door, two doorways).
   const loadImage = useAsyncStatus(
-    useCallback(async (file: File) => {
+    useCallback(async (file: File, parent?: { uri: string; cid: string }) => {
       const image = await loadFromFile(file)
       // A new source is a fresh edit — the prior stack belonged to the old image.
       setHistory(initHistory(EditPipeline.empty()))
-      updateVarValue('imageTexture', image)
-    }, [loadFromFile, updateVarValue])
+      // Set the source directly (not via updateVarValue, whose imageTexture clear
+      // would wipe the provenance we set here for a remix). A plain load passes no
+      // parent, so provenance clears; a remix passes the record it came from.
+      setVarValues(prev => ({ ...prev, imageTexture: image }))
+      setRemixParent(parent ?? null)
+    }, [loadFromFile])
   )
-  const handleImageDrop = loadImage.run
+  const handleImageDrop = useCallback((file: File) => loadImage.run(file), [loadImage.run])
+  const handleRemixLoad = useCallback(
+    (file: File, parent?: { uri: string; cid: string }) => loadImage.run(file, parent),
+    [loadImage.run]
+  )
 
   return {
     canvasRef,
@@ -334,6 +351,8 @@ export function useShaderEditor() {
     handleSaveAsSecondImage,
     handleDownload,
     handleImageDrop,
+    handleRemixLoad,
+    remixParent,
     handleCanvasResize,
     captureSession,
   }

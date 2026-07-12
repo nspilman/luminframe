@@ -46,6 +46,8 @@ export function ClientApp(): JSX.Element {
     handleSaveAsSecondImage,
     handleDownload,
     handleImageDrop,
+    handleRemixLoad,
+    remixParent,
     handleCanvasResize,
     captureSession,
   } = useShaderEditor()
@@ -59,14 +61,16 @@ export function ClientApp(): JSX.Element {
     () => ({
       effects: appliedEffects.map((e) => e.type),
       recipe: serializeRecipe(appliedEffects),
+      remixOf: remixParent ?? undefined,
     }),
-    [appliedEffects]
+    [appliedEffects, remixParent]
   )
   const publish = usePublish(session, canvasRef, publishEdit)
 
   // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
-  // that image into the editor as a fresh source, wherever it's clicked from.
-  useRemix(handleImageDrop)
+  // that image into the editor as a fresh source (carrying its {uri, cid} so a
+  // save records the lineage), wherever it's clicked from.
+  useRemix(handleRemixLoad)
 
   const deleteImage = useLuminframeDelete(session.agent)
 

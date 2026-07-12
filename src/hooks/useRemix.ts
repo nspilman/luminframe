@@ -28,19 +28,20 @@ async function urlToFile(url: string): Promise<File | null> {
 
 /**
  * Honors the editor's ?remix=<at-uri> address: resolves the record, pulls its
- * image into a File, and hands it to the editor's image door as a fresh source —
- * then clears the param so a reload or Back doesn't re-trigger the load. This is
- * how a gallery image is "opened in the editor" without threading a callback
- * through the component tree: the action is just a link to this address.
+ * image into a File, and hands it to the editor's remix door as a fresh source —
+ * carrying the record's {uri, cid} as provenance so a subsequent save records the
+ * lineage — then clears the param so a reload or Back doesn't re-trigger the load.
+ * This is how a gallery image is "opened in the editor" without threading a
+ * callback through the component tree: the action is just a link to this address.
  */
-export function useRemix(loadFile: (file: File) => void): void {
+export function useRemix(loadRemix: (file: File, parent?: { uri: string; cid: string }) => void): void {
   const [searchParams, setSearchParams] = useSearchParams()
   const remixUri = searchParams.get(REMIX_PARAM)
 
   // Hold the loader in a ref so the effect depends only on the URI, not on the
   // loader's identity — we want it to fire once per remix, not on every render.
-  const loadRef = useRef(loadFile)
-  loadRef.current = loadFile
+  const loadRef = useRef(loadRemix)
+  loadRef.current = loadRemix
 
   useEffect(() => {
     if (!remixUri) return
@@ -59,7 +60,12 @@ export function useRemix(loadFile: (file: File) => void): void {
       const view = await fetchImageByUri(remixUri)
       const file = view?.imageUrl ? await urlToFile(view.imageUrl) : null
       if (!active) return
-      if (file) loadRef.current(file)
+      // Always load the image if we got it; carry provenance only when the record
+      // resolved with a CID (needed for a strong ref), else claim no lineage.
+      if (file) {
+        const parent = view && view.cid ? { uri: view.uri, cid: view.cid } : undefined
+        loadRef.current(file, parent)
+      }
       clearParam()
     })()
 
