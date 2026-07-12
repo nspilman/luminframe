@@ -311,6 +311,28 @@ describe('shader library contract', () => {
       "type": "color",
     },
   },
+  "echo": {
+    "feedback": {
+      "default": 0.85,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "rotate": {
+      "default": 0,
+      "type": "range",
+    },
+    "zoom": {
+      "default": 0.98,
+      "type": "range",
+    },
+  },
   "filmGrain": {
     "amount": {
       "default": 0.12,

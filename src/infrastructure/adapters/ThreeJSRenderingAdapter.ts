@@ -40,6 +40,10 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   // uniform; static chains draw once and the loop stays off, so the GPU idles.
   private animationFrameId: number | null = null;
   private clockStartMs: number | null = null;
+  // Holds the previous frame's canvas output, exposed to effects as `prevFrame`
+  // so they can feed back on themselves (trails, tunnels). Written after each
+  // frame that uses feedback; read at the top of the next. null until first use.
+  private feedbackTexture: THREE.FramebufferTexture | null = null;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -239,6 +243,16 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
           )
         : null;
 
+    // Feedback: ensure last frame's texture exists *before* the draw so effects
+    // that sample `prevFrame` bind to it (black on the very first frame).
+    const usesFeedback = this.chainUsesFeedback(passes);
+    if (usesFeedback) {
+      this.ensureFeedbackTexture(
+        this.currentDimensions.width,
+        this.currentDimensions.height
+      );
+    }
+
     for (let i = 0; i < passes.length; i++) {
       const step = plan[i];
       const inputTexture =
@@ -260,6 +274,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
 
     // Leave the renderer pointed at the canvas for any external draws.
     this.renderer.setRenderTarget(null);
+
+    // Capture this frame's canvas so the next frame can read it as `prevFrame`.
+    if (usesFeedback && this.feedbackTexture) {
+      this.renderer.copyFramebufferToTexture(this.feedbackTexture);
+    }
   }
 
   /** Seconds since the animation loop started; 0 while it is stopped. */
@@ -269,17 +288,31 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       : (performance.now() - this.clockStartMs) / 1000;
   }
 
+  /** Whether an effect samples last frame's output (`prevFrame`). */
+  private effectUsesFeedback(effect: ShaderEffect): boolean {
+    return /\bprevFrame\b/.test(effect.getBody());
+  }
+
+  /** Whether any pass in the chain feeds back on the previous frame. */
+  private chainUsesFeedback(passes: ReadonlyArray<RenderPass>): boolean {
+    return passes.some((p) => this.effectUsesFeedback(p.effect));
+  }
+
   /**
-   * Start or stop the animation loop to match the current chain. A chain is
-   * animated when any of its effect bodies reference the `time` uniform; static
-   * chains leave the loop off so the GPU isn't redrawing an unchanging frame.
+   * Start or stop the animation loop to match the current chain. The loop is
+   * needed when an effect advances with `time` OR feeds back on the previous
+   * frame (`prevFrame`) — both require continuous re-rendering. A purely static
+   * chain leaves the loop off so the GPU isn't redrawing an unchanging frame.
    */
   private syncAnimation(): void {
-    const animated =
+    const needsLoop =
       !!this.lastChainParams &&
-      this.lastChainParams.passes.some((p) => /\btime\b/.test(p.effect.getBody()));
+      this.lastChainParams.passes.some((p) => {
+        const body = p.effect.getBody();
+        return /\btime\b/.test(body) || /\bprevFrame\b/.test(body);
+      });
 
-    if (animated) {
+    if (needsLoop) {
       if (this.animationFrameId === null) {
         this.clockStartMs = performance.now();
         this.animationFrameId = requestAnimationFrame(this.tickAnimation);
@@ -319,6 +352,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     const uniforms = this.convertToUniforms(rest);
     uniforms.imageTexture = { value: inputTexture };
     uniforms.resolution = { value: new THREE.Vector2(resolution[0], resolution[1]) };
+
+    // A feedback effect reads last frame's output; bind it when present.
+    if (this.feedbackTexture && this.effectUsesFeedback(effect)) {
+      uniforms.prevFrame = { value: this.feedbackTexture };
+    }
 
     const fragmentShader = shaderBuilder({
       vars: effect.declarationVars,
@@ -377,6 +415,25 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       });
     this.renderTargets = [make(), make()];
     return this.renderTargets;
+  }
+
+  /**
+   * Lazily create (and resize) the texture that holds the previous frame's
+   * output for feedback effects. Reused across frames — its content *is* the
+   * history — and rebuilt only when the canvas size changes.
+   */
+  private ensureFeedbackTexture(width: number, height: number): THREE.FramebufferTexture {
+    const existing = this.feedbackTexture;
+    if (existing && existing.image.width === width && existing.image.height === height) {
+      return existing;
+    }
+
+    existing?.dispose();
+    const tex = new THREE.FramebufferTexture(width, height);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    this.feedbackTexture = tex;
+    return tex;
   }
 
   /**
@@ -468,6 +525,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     if (this.renderTargets) {
       this.renderTargets.forEach((rt) => rt.dispose());
       this.renderTargets = null;
+    }
+
+    if (this.feedbackTexture) {
+      this.feedbackTexture.dispose();
+      this.feedbackTexture = null;
     }
     this.lastChainParams = null;
 

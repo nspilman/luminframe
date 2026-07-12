@@ -102,7 +102,8 @@ export const registeredShaders = [
      'crossHatch',
      'liquify',
      'crystallize',
-     'displacement'
+     'displacement',
+     'echo'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

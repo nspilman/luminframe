@@ -9,7 +9,7 @@ describe('shaderBuilder', () => {
       getBody: () => 'void main() { gl_FragColor = vec4(1.0); }'
     })
 
-    expect(shader).toBe('varying vec2 vUv;\nuniform float time;\nuniform float uTime;\nvoid main() { gl_FragColor = vec4(1.0); }')
+    expect(shader).toBe('varying vec2 vUv;\nuniform float time;\nuniform sampler2D prevFrame;\nuniform float uTime;\nvoid main() { gl_FragColor = vec4(1.0); }')
   })
 
   it('should correctly build shader with multiple uniform variables', () => {
@@ -25,6 +25,7 @@ describe('shaderBuilder', () => {
     expect(shader).toBe(
       'varying vec2 vUv;\n' +
       'uniform float time;\n' +
+      'uniform sampler2D prevFrame;\n' +
       'uniform float uTime;\n' +
       'uniform vec2 uResolution;\n' +
       'uniform vec3 uColor;\n' +
@@ -38,6 +39,6 @@ describe('shaderBuilder', () => {
       getBody: () => 'void main() { gl_FragColor = vec4(1.0); }'
     })
 
-    expect(shader).toBe('varying vec2 vUv;\nuniform float time;\n\nvoid main() { gl_FragColor = vec4(1.0); }')
+    expect(shader).toBe('varying vec2 vUv;\nuniform float time;\nuniform sampler2D prevFrame;\n\nvoid main() { gl_FragColor = vec4(1.0); }')
   })
 }) 

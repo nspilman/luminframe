@@ -36,6 +36,7 @@ import { crossHatch } from './effects/cross-hatch';
 import { liquify } from './effects/liquify';
 import { crystallize } from './effects/crystallize';
 import { displacement } from './effects/displacement';
+import { echo } from './effects/echo';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -75,4 +76,5 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   liquify,
   crystallize,
   displacement,
+  echo,
 };

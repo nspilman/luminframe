@@ -27,6 +27,7 @@ export type EffectCategory =
   | 'light'
   | 'texture'
   | 'composite'
+  | 'time'
 
 export interface EffectFamily {
   id: EffectCategory
@@ -98,6 +99,13 @@ export const effectFamilies: EffectFamily[] = [
     label: 'Composite',
     effects: ['blend', 'displacement'],
   },
+  {
+    // The temporal dimension — effects that read the previous frame and feed
+    // back on themselves, accumulating over time.
+    id: 'time',
+    label: 'Time',
+    effects: ['echo'],
+  },
 ]
 
 /**
@@ -129,6 +137,7 @@ export const effectBlurbs: Record<ShaderType, string> = {
   liquify: 'Melt with flowing noise',
   crystallize: 'Shatter into glass cells',
   displacement: 'Warp through a second image',
+  echo: 'Trail and tunnel over time',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',
