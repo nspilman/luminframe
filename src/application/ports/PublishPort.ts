@@ -1,3 +1,6 @@
+import { StrongRef } from '@/types/atproto'
+import { RecipeStep } from '@/types/recipe'
+
 /**
  * Everything needed to publish one processed image, expressed without any
  * network/SDK detail. Keeps the application boundary clean: callers hand over
@@ -24,9 +27,9 @@ export interface PublishImageInput {
    * The executable effect stack with parameters (already serialized to plain
    * JSON). Luminframe's own record stores it; the social targets ignore it.
    */
-  recipe?: ReadonlyArray<{ type: string; params?: Record<string, number | string | boolean | number[]> }>
+  recipe?: readonly RecipeStep[]
   /** The record this image was remixed from, if any — its lineage. */
-  remixOf?: { uri: string; cid: string }
+  remixOf?: StrongRef
 }
 
 export interface PublishResult {

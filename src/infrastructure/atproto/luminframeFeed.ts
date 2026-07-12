@@ -18,15 +18,12 @@
  * link or a missing field blanks an image.
  */
 
+import { StrongRef } from '@/types/atproto'
+import { RawRecipeStep } from '@/types/recipe'
+
 export const LUMINFRAME_COLLECTION = 'com.luminframe.image'
 const DEFAULT_RELAY = 'https://relay1.us-west.bsky.network'
 const PLC_DIRECTORY = 'https://plc.directory'
-
-/** An immutable pointer to another record (com.atproto.repo.strongRef). */
-export interface StrongRef {
-  uri: string
-  cid: string
-}
 
 /** A com.luminframe.image record resolved into everything the UI needs to show it. */
 export interface LuminframeImageView {
@@ -46,7 +43,7 @@ export interface LuminframeImageView {
   /** Effect keys applied, in order (the edit recipe). */
   effects: string[]
   /** The executable effect stack with params — the applyable recipe (v2), if stored. */
-  recipe?: { type: string; params?: Record<string, unknown> }[]
+  recipe?: RawRecipeStep[]
   /** The record this image was remixed from, if any — its lineage (v2). */
   remixOf?: StrongRef
   createdAt: string
@@ -83,10 +80,10 @@ function parseStrongRef(value: unknown): StrongRef | undefined {
 }
 
 /** Read the recipe (steps with a string `type`) out of freeform record data. */
-function parseRecipe(value: unknown): { type: string; params?: Record<string, unknown> }[] | undefined {
+function parseRecipe(value: unknown): RawRecipeStep[] | undefined {
   if (!Array.isArray(value)) return undefined
   const steps = value
-    .filter((s): s is { type: string; params?: Record<string, unknown> } =>
+    .filter((s): s is RawRecipeStep =>
       !!s && typeof s === 'object' && typeof (s as { type?: unknown }).type === 'string'
     )
     .map((s) => (s.params && typeof s.params === 'object' ? { type: s.type, params: s.params } : { type: s.type }))

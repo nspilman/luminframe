@@ -7,6 +7,8 @@ import { LuminframePublishAdapter } from '@/infrastructure/adapters/LuminframePu
 import { exportCanvasForUpload } from '@/lib/exportCanvasForUpload'
 import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
 import { PublishTarget, ShareTarget, toLuminframeUrl, publicUrlFor } from '@/lib/publishUrls'
+import { StrongRef } from '@/types/atproto'
+import { RecipeStep } from '@/types/recipe'
 
 export type { PublishTarget, ShareTarget } from '@/lib/publishUrls'
 
@@ -51,9 +53,9 @@ export interface PublishEdit {
   /** Effect keys, in order — the lightweight recipe (display + backward compat). */
   effects: readonly string[]
   /** The executable effect stack with params (already serialized). */
-  recipe?: ReadonlyArray<{ type: string; params?: Record<string, number | string | boolean | number[]> }>
+  recipe?: readonly RecipeStep[]
   /** The parent record, when this edit descends from a remixed image. */
-  remixOf?: { uri: string; cid: string }
+  remixOf?: StrongRef
 }
 
 export interface Publisher extends PublishState {

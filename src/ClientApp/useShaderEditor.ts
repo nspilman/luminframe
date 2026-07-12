@@ -9,6 +9,7 @@ import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
+import { StrongRef } from '@/types/atproto'
 import { effectFamilies } from '@/lib/shaders/catalog'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
 import {
@@ -135,7 +136,7 @@ export function useShaderEditor() {
   // Lives next to the source because that's what it describes. Set only when a
   // remix loads the source; cleared whenever the source is replaced by any other
   // load, so a fresh image can never inherit a false parent.
-  const [remixParent, setRemixParent] = useState<{ uri: string; cid: string } | null>(null)
+  const [remixParent, setRemixParent] = useState<StrongRef | null>(null)
 
   // A recipe applied before any image was loaded, waiting to land on the first
   // source. A ref (not state) — it's consumed inside the load task and needs no render.
@@ -314,7 +315,7 @@ export function useShaderEditor() {
   // Both entry points — canvas drop and click-to-choose — funnel through this one
   // task, the same slot the sidebar's upload fills (one door, two doorways).
   const loadImage = useAsyncStatus(
-    useCallback(async (file: File, parent?: { uri: string; cid: string }) => {
+    useCallback(async (file: File, parent?: StrongRef) => {
       const image = await loadFromFile(file)
       // A new source is a fresh edit — the prior stack belonged to the old image.
       // The exception: a recipe applied before any image was loaded is waiting to
@@ -334,7 +335,7 @@ export function useShaderEditor() {
   )
   const handleImageDrop = useCallback((file: File) => loadImage.run(file), [loadImage.run])
   const handleRemixLoad = useCallback(
-    (file: File, parent?: { uri: string; cid: string }) => loadImage.run(file, parent),
+    (file: File, parent?: StrongRef) => loadImage.run(file, parent),
     [loadImage.run]
   )
 

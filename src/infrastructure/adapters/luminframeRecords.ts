@@ -1,4 +1,6 @@
 import type { BlobRef } from '@atproto/api'
+import { StrongRef } from '@/types/atproto'
+import { RecipeStep } from '@/types/recipe'
 
 /**
  * Luminframe's own lexicon: `com.luminframe.image`. The authority segment
@@ -22,18 +24,6 @@ import type { BlobRef } from '@atproto/api'
 
 export const LUMINFRAME_IMAGE_COLLECTION = 'com.luminframe.image'
 
-/** One effect in the recipe: its key and the parameters it was applied with. */
-export interface EffectStep {
-  type: string
-  params?: Record<string, unknown>
-}
-
-/** An immutable pointer to another record (com.atproto.repo.strongRef). */
-export interface StrongRef {
-  uri: string
-  cid: string
-}
-
 export interface LuminframeImageRecord {
   $type: 'com.luminframe.image'
   /** The rendered image blob, from `uploadBlob`. */
@@ -49,7 +39,7 @@ export interface LuminframeImageRecord {
   /** The effect keys applied, in order. Kept for display + backward compat; `recipe` is the executable form. */
   effects?: string[]
   /** The ordered effect stack with parameters — the executable edit. */
-  recipe?: EffectStep[]
+  recipe?: RecipeStep[]
   /** The record this image was remixed from, if any — its lineage. */
   remixOf?: StrongRef
 }
@@ -64,7 +54,7 @@ export interface LuminframeImageParts {
   title?: string
   effects?: readonly string[]
   /** The executable effect stack (v2). Only sent once the published schema knows it. */
-  recipe?: readonly EffectStep[]
+  recipe?: readonly RecipeStep[]
   /** The parent record, when this was remixed from another (v2). */
   remixOf?: StrongRef
 }

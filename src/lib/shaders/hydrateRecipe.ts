@@ -2,6 +2,7 @@ import { Color } from '@/domain/value-objects/Color'
 import { Image } from '@/domain/models/Image'
 import { shaderLibrary } from '@/lib/shaders'
 import { ShaderType, ShaderInputVars } from '@/types/shader'
+import { RawRecipeStep } from '@/types/recipe'
 
 /**
  * The inverse of serializeRecipe: turns a stored recipe (plain JSON effect steps)
@@ -48,9 +49,7 @@ export function coerceToDefault(stored: unknown, sample: unknown): unknown {
   return stored ?? sample
 }
 
-export function hydrateRecipe(
-  recipe: ReadonlyArray<{ type: string; params?: Record<string, unknown> }>
-): HydratedStep[] {
+export function hydrateRecipe(recipe: ReadonlyArray<RawRecipeStep>): HydratedStep[] {
   const steps: HydratedStep[] = []
   for (const step of recipe) {
     if (!(step.type in shaderLibrary)) continue // effect this build doesn't know — drop it

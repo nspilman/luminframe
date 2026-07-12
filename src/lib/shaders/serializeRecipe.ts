@@ -1,5 +1,8 @@
 import { Color } from '@/domain/value-objects/Color'
 import { Image } from '@/domain/models/Image'
+import { RecipeParamValue, RecipeStep } from '@/types/recipe'
+
+export type { RecipeParamValue, RecipeStep } from '@/types/recipe'
 
 /**
  * Turns the committed effect stack into the plain-JSON `recipe` stored on a
@@ -14,13 +17,6 @@ import { Image } from '@/domain/models/Image'
  * Pure and exhaustively tested — this is the boundary where a wrong case would
  * either bloat the record with an image or silently lose a parameter.
  */
-
-export type RecipeParamValue = number | string | boolean | number[]
-
-export interface RecipeStep {
-  type: string
-  params?: Record<string, RecipeParamValue>
-}
 
 /** Serialize one param value to JSON, or undefined if it isn't recipe data. */
 export function serializeParamValue(value: unknown): RecipeParamValue | undefined {

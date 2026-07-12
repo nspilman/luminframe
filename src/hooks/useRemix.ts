@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchImageByUri } from '@/infrastructure/atproto/luminframeFeed'
 import { REMIX_PARAM } from '@/lib/galleryRoute'
+import { StrongRef } from '@/types/atproto'
 
 /** A rough extension for a blob's MIME type, for a friendlier File name. */
 function extFor(mime: string): string {
@@ -34,7 +35,7 @@ async function urlToFile(url: string): Promise<File | null> {
  * This is how a gallery image is "opened in the editor" without threading a
  * callback through the component tree: the action is just a link to this address.
  */
-export function useRemix(loadRemix: (file: File, parent?: { uri: string; cid: string }) => void): void {
+export function useRemix(loadRemix: (file: File, parent?: StrongRef) => void): void {
   const [searchParams, setSearchParams] = useSearchParams()
   const remixUri = searchParams.get(REMIX_PARAM)
 
