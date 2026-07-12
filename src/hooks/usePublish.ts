@@ -12,11 +12,18 @@ export type { PublishTarget, ShareTarget } from '@/lib/publishUrls'
 
 export type PublishPhase = 'idle' | 'publishing' | 'success' | 'error'
 
-/** The result of writing to one destination. */
+/**
+ * Where a single destination is in the save. `pending` is queued-but-not-started,
+ * `active` is in flight — together they let the dialog show live progress rather
+ * than one opaque spinner for the whole (slow) multi-target write.
+ */
+export type OutcomeStatus = 'pending' | 'active' | 'ok' | 'failed'
+
+/** The live status of writing to one destination. */
 export interface PublishOutcome {
   target: PublishTarget
-  status: 'ok' | 'failed'
-  /** Web URL to the created record, when it succeeded. */
+  status: OutcomeStatus
+  /** Web URL to the created record, once it succeeded. */
   url: string | null
 }
 
@@ -86,7 +93,24 @@ export function usePublish(
       }
       const agent = session.agent
 
-      setState({ phase: 'publishing', outcomes: [], error: null })
+      // Patch one destination's row in place, so the dialog reflects each step
+      // the moment it happens instead of only at the end.
+      const patch = (target: PublishTarget, next: Partial<PublishOutcome>) =>
+        setState((prev) => ({
+          ...prev,
+          outcomes: prev.outcomes.map((o) => (o.target === target ? { ...o, ...next } : o)),
+        }))
+
+      // Seed the live checklist: the save is up first (active), shares queued.
+      setState({
+        phase: 'publishing',
+        outcomes: [
+          { target: 'luminframe', status: 'active', url: null },
+          ...shareTo.map((target): PublishOutcome => ({ target, status: 'pending', url: null })),
+        ],
+        error: null,
+      })
+
       try {
         const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
         const input = { bytes, mimeType, alt, caption, aspectRatio, effects }
@@ -94,29 +118,25 @@ export function usePublish(
         // Primary: always save to the user's PDS. A failure here means nothing
         // was written — surface it and stop before attempting any share.
         const save = await new LuminframePublishAdapter(agent).publishImage(input)
-        const outcomes: PublishOutcome[] = [
-          { target: 'luminframe', status: 'ok', url: toLuminframeUrl(save.uri) },
-        ]
+        patch('luminframe', { status: 'ok', url: toLuminframeUrl(save.uri) })
 
-        // Secondary: opt-in cross-posts, in parallel, each independently fallible.
-        const shares = await Promise.allSettled(
-          shareTo.map((target) => shareAdapterFor(target, agent).publishImage(input))
+        // Secondary: opt-in cross-posts, in parallel. Flip them all to active,
+        // then let each update its own row as it settles — one failing never
+        // fails another, nor the save.
+        shareTo.forEach((target) => patch(target, { status: 'active' }))
+        await Promise.all(
+          shareTo.map(async (target) => {
+            try {
+              const res = await shareAdapterFor(target, agent).publishImage(input)
+              patch(target, { status: 'ok', url: publicUrlFor(target, res.uri, session.handle) })
+            } catch (err) {
+              console.error(`Share to ${target} failed:`, err)
+              patch(target, { status: 'failed', url: null })
+            }
+          })
         )
-        shares.forEach((result, i) => {
-          const target = shareTo[i]
-          if (result.status === 'fulfilled') {
-            outcomes.push({
-              target,
-              status: 'ok',
-              url: publicUrlFor(target, result.value.uri, session.handle),
-            })
-          } else {
-            console.error(`Share to ${target} failed:`, result.reason)
-            outcomes.push({ target, status: 'failed', url: null })
-          }
-        })
 
-        setState({ phase: 'success', outcomes, error: null })
+        setState((prev) => ({ ...prev, phase: 'success' }))
       } catch (err) {
         console.error('Save failed:', err)
         // A dead session can only be discovered on a failed write (no

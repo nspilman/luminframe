@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, AlertCircle } from 'lucide-react'
+import { Check, AlertCircle, Circle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Switch } from './ui/switch'
@@ -22,27 +22,52 @@ const SHARES: { value: ShareTarget; label: string; blurb: string }[] = [
   { value: 'grain', label: 'Grain', blurb: 'Add it to your Grain gallery' },
 ]
 
-/** Per-destination result wording. */
-const TARGET_COPY: Record<PublishTarget, { ok: string; failed: string; link: string }> = {
-  luminframe: { ok: 'Saved to your PDS', failed: 'Couldn’t save to your PDS', link: 'View record' },
-  bluesky: { ok: 'Posted to Bluesky', failed: 'Couldn’t post to Bluesky', link: 'View post' },
-  grain: { ok: 'Published to Grain', failed: 'Couldn’t publish to Grain', link: 'View gallery' },
+/** Per-destination wording for each step of the write. */
+const TARGET_COPY: Record<
+  PublishTarget,
+  { pending: string; active: string; ok: string; failed: string; link: string }
+> = {
+  luminframe: {
+    pending: 'Save to your PDS',
+    active: 'Saving to your PDS…',
+    ok: 'Saved to your PDS',
+    failed: 'Couldn’t save to your PDS',
+    link: 'View record',
+  },
+  bluesky: {
+    pending: 'Share to Bluesky',
+    active: 'Posting to Bluesky…',
+    ok: 'Posted to Bluesky',
+    failed: 'Couldn’t post to Bluesky',
+    link: 'View post',
+  },
+  grain: {
+    pending: 'Share to Grain',
+    active: 'Publishing to Grain…',
+    ok: 'Published to Grain',
+    failed: 'Couldn’t publish to Grain',
+    link: 'View gallery',
+  },
+}
+
+/** Icon + text tint for each live status. */
+const STATUS_STYLE: Record<PublishOutcome['status'], { icon: JSX.Element; text: string }> = {
+  pending: { icon: <Circle className="h-4 w-4 text-zinc-600" />, text: 'text-zinc-500' },
+  active: { icon: <Spinner size="sm" className="text-violet-300" />, text: 'text-zinc-200' },
+  ok: { icon: <Check className="h-4 w-4 text-emerald-400" />, text: 'text-zinc-300' },
+  failed: { icon: <AlertCircle className="h-4 w-4 text-red-400" />, text: 'text-red-400' },
 }
 
 function OutcomeRow({ outcome }: { outcome: PublishOutcome }) {
   const copy = TARGET_COPY[outcome.target]
-  const ok = outcome.status === 'ok'
+  const style = STATUS_STYLE[outcome.status]
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className={`flex items-center gap-2 ${ok ? 'text-zinc-300' : 'text-red-400'}`}>
-        {ok ? (
-          <Check className="h-4 w-4 text-emerald-400" />
-        ) : (
-          <AlertCircle className="h-4 w-4" />
-        )}
-        {ok ? copy.ok : copy.failed}
+      <span className={`flex items-center gap-2 ${style.text}`}>
+        {style.icon}
+        {copy[outcome.status]}
       </span>
-      {ok && outcome.url && (
+      {outcome.status === 'ok' && outcome.url && (
         <a
           href={outcome.url}
           target="_blank"
@@ -84,6 +109,7 @@ export function PublishDialog({
 
   const publishing = phase === 'publishing'
   const succeeded = phase === 'success'
+  const inFlight = publishing || succeeded
   const anyShare = shares.bluesky || shares.grain
 
   const submit = () => {
@@ -106,15 +132,15 @@ export function PublishDialog({
           <p className="text-sm text-zinc-400">
             Sign in (top right) to save your image to your PDS.
           </p>
-        ) : succeeded ? (
+        ) : inFlight ? (
           <div className="space-y-3">
-            <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+            <div className="space-y-2.5 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
               {outcomes.map((o) => (
                 <OutcomeRow key={o.target} outcome={o} />
               ))}
             </div>
-            <Button className="w-full" variant="secondary" onClick={onClose}>
-              Done
+            <Button className="w-full" variant="secondary" onClick={onClose} disabled={publishing}>
+              {succeeded ? 'Done' : 'Working…'}
             </Button>
           </div>
         ) : (
