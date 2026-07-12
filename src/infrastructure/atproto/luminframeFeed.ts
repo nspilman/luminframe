@@ -22,10 +22,18 @@ export const LUMINFRAME_COLLECTION = 'com.luminframe.image'
 const DEFAULT_RELAY = 'https://relay1.us-west.bsky.network'
 const PLC_DIRECTORY = 'https://plc.directory'
 
+/** An immutable pointer to another record (com.atproto.repo.strongRef). */
+export interface StrongRef {
+  uri: string
+  cid: string
+}
+
 /** A com.luminframe.image record resolved into everything the UI needs to show it. */
 export interface LuminframeImageView {
   /** at://did/com.luminframe.image/rkey */
   uri: string
+  /** The record's own CID — needed to reference it as a strongRef (e.g. remix lineage). */
+  cid: string
   rkey: string
   did: string
   /** The author's handle, e.g. alice.bsky.social; null if it couldn't be resolved. */
@@ -37,6 +45,8 @@ export interface LuminframeImageView {
   title?: string
   /** Effect keys applied, in order (the edit recipe). */
   effects: string[]
+  /** The record this image was remixed from, if any — its lineage (v2). */
+  remixOf?: StrongRef
   createdAt: string
 }
 
@@ -48,14 +58,25 @@ export interface Identity {
 
 interface RawRecord {
   uri: string
+  /** The record's CID (present on listRecords/getRecord responses). */
+  cid?: string
   value: {
     image?: { ref?: { $link?: string } }
     aspectRatio?: { width: number; height: number }
     alt?: string
     title?: string
     effects?: unknown
+    remixOf?: unknown
     createdAt?: string
   }
+}
+
+/** Read a strongRef ({uri, cid}) out of freeform record data, or undefined if malformed. */
+function parseStrongRef(value: unknown): StrongRef | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const { uri, cid } = value as { uri?: unknown; cid?: unknown }
+  if (typeof uri === 'string' && typeof cid === 'string') return { uri, cid }
+  return undefined
 }
 
 // ── Pure shapers (tested) ─────────────────────────────────────────────────────
@@ -88,18 +109,20 @@ export function parseAtUri(uri: string): { did: string; collection: string; rkey
 /** Turn one raw listRecords entry into a view, given its author's resolved identity. */
 export function recordToView(record: RawRecord, did: string, pds: string, handle: string | null): LuminframeImageView {
   const value = record.value ?? {}
-  const cid = value.image?.ref?.$link
+  const blobCid = value.image?.ref?.$link
   const rkey = record.uri.split('/').pop() ?? ''
   return {
     uri: record.uri,
+    cid: record.cid ?? '',
     rkey,
     did,
     handle,
-    imageUrl: cid ? getBlobUrl(pds, did, cid) : null,
+    imageUrl: blobCid ? getBlobUrl(pds, did, blobCid) : null,
     aspectRatio: value.aspectRatio ?? { width: 1, height: 1 },
     alt: value.alt,
     title: value.title,
     effects: Array.isArray(value.effects) ? value.effects.filter((e): e is string => typeof e === 'string') : [],
+    remixOf: parseStrongRef(value.remixOf),
     createdAt: value.createdAt ?? '',
   }
 }

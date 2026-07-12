@@ -46,6 +46,7 @@ describe('parseIdentity', () => {
 describe('recordToView', () => {
   const record = {
     uri: 'at://did:plc:abc/com.luminframe.image/3krecordkey',
+    cid: 'bafrecordcid',
     value: {
       image: { ref: { $link: 'bafblob' } },
       aspectRatio: { width: 1600, height: 900 },
@@ -60,6 +61,7 @@ describe('recordToView', () => {
     const view = recordToView(record, 'did:plc:abc', 'https://pds.example', 'alice.bsky.social')
     expect(view).toEqual({
       uri: 'at://did:plc:abc/com.luminframe.image/3krecordkey',
+      cid: 'bafrecordcid',
       rkey: '3krecordkey',
       did: 'did:plc:abc',
       handle: 'alice.bsky.social',
@@ -68,8 +70,28 @@ describe('recordToView', () => {
       alt: 'a misty forest',
       title: 'Forest',
       effects: ['kaleidoscope', 'vignette'],
+      remixOf: undefined,
       createdAt: '2026-01-01T00:00:00.000Z',
     })
+  })
+
+  it('reads remixOf as a strong ref when present, and ignores a malformed one', () => {
+    const parent = { uri: 'at://did:plc:xyz/com.luminframe.image/parent', cid: 'bafparent' }
+    const withRef = recordToView(
+      { uri: 'at://x/y/z', cid: 'c', value: { remixOf: parent } as never },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(withRef.remixOf).toEqual(parent)
+
+    const malformed = recordToView(
+      { uri: 'at://x/y/z', cid: 'c', value: { remixOf: { uri: 'only-uri' } } as never },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(malformed.remixOf).toBeUndefined()
   })
 
   it('yields a null imageUrl when the record carries no blob', () => {

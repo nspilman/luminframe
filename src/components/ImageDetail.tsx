@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, Calendar, Wand2, Trash2, Maximize2 } from 'lucide-react'
-import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
+import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch } from 'lucide-react'
+import { LuminframeImageView, parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
-import { editorRemixPath } from '@/lib/galleryRoute'
+import { editorRemixPath, imagePagePath } from '@/lib/galleryRoute'
 import { Spinner } from './ui/spinner'
 
 interface ImageDetailProps {
@@ -43,6 +43,9 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
   }
 
   const date = formatDate(image.createdAt, 'medium')
+  // The parent this was remixed from — a link to its canonical page, when the
+  // lineage ref resolves to an image address.
+  const parent = image.remixOf ? parseAtUri(image.remixOf.uri) : null
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-950/80 md:flex-row">
@@ -75,6 +78,16 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
             <Calendar className="h-3.5 w-3.5" />
             <span className="tabular-nums">{date}</span>
           </div>
+        )}
+
+        {parent && (
+          <Link
+            to={imagePagePath(parent.did, parent.rkey)}
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            Remixed from another image
+          </Link>
         )}
 
         {/* The image already carries `alt` as its accessible description, so this
