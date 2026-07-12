@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ImageOff, LogIn, AlertCircle } from 'lucide-react'
 import { Spinner } from './ui/spinner'
+import { ImageLightbox } from './ImageLightbox'
 import { useLuminframeFeed, FeedTab } from '@/hooks/useLuminframeFeed'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { shaderLibrary } from '@/lib/shaders'
@@ -27,15 +28,15 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString()
 }
 
-function ImageCard({ image }: { image: LuminframeImageView }) {
+function ImageCard({ image, onOpen }: { image: LuminframeImageView; onOpen: () => void }) {
   const profileUrl = `https://bsky.app/profile/${image.handle ?? image.did}`
   return (
     <div className="group overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-900/30">
-      <a
-        href={`https://pdsls.dev/${image.uri}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block aspect-square overflow-hidden bg-black/40"
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={image.title ? `Open ${image.title}` : 'Open image'}
+        className="block aspect-square w-full overflow-hidden bg-black/40"
       >
         {image.imageUrl ? (
           <img
@@ -49,7 +50,7 @@ function ImageCard({ image }: { image: LuminframeImageView }) {
             <ImageOff className="h-6 w-6" />
           </span>
         )}
-      </a>
+      </button>
       <div className="space-y-2 p-3">
         {image.title && <p className="truncate text-sm font-medium text-zinc-200">{image.title}</p>}
         {image.effects.length > 0 && (
@@ -99,6 +100,7 @@ function CenterState({ icon, children }: { icon: React.ReactNode; children: Reac
  */
 export function GalleryPage({ did }: GalleryPageProps) {
   const [tab, setTab] = useState<FeedTab>('network')
+  const [openImage, setOpenImage] = useState<LuminframeImageView | null>(null)
   const feed = useLuminframeFeed(tab, did)
 
   return (
@@ -152,11 +154,13 @@ export function GalleryPage({ did }: GalleryPageProps) {
         {feed.status === 'loaded' && feed.images.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {feed.images.map((image) => (
-              <ImageCard key={image.uri} image={image} />
+              <ImageCard key={image.uri} image={image} onOpen={() => setOpenImage(image)} />
             ))}
           </div>
         )}
       </div>
+
+      {openImage && <ImageLightbox image={openImage} onClose={() => setOpenImage(null)} />}
     </div>
   )
 }
