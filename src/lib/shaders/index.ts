@@ -25,6 +25,10 @@ import { splitTone } from './effects/split-tone';
 import { bloom } from './effects/bloom';
 import { lightLeak } from './effects/light-leak';
 import { godRays } from './effects/god-rays';
+import { chromaticAberration } from './effects/chromatic-aberration';
+import { lensDistortion } from './effects/lens-distortion';
+import { swirl } from './effects/swirl';
+import { tiltShift } from './effects/tilt-shift';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -53,4 +57,8 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   bloom,
   lightLeak,
   godRays,
+  chromaticAberration,
+  lensDistortion,
+  swirl,
+  tiltShift,
 };

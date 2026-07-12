@@ -22,6 +22,7 @@ export type EffectCategory =
   | 'color'
   | 'soften'
   | 'distort'
+  | 'optics'
   | 'stylize'
   | 'light'
   | 'texture'
@@ -67,6 +68,13 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['wave', 'kaleidoscope', 'pixelate', 'rgbSplit'],
   },
   {
+    // Where Distort bends geometry, Optics bends light — the failures and
+    // curvature of a real lens: fringing, barrel, focus falloff, vortex.
+    id: 'optics',
+    label: 'Optics',
+    effects: ['chromaticAberration', 'lensDistortion', 'tiltShift', 'swirl'],
+  },
+  {
     id: 'stylize',
     label: 'Stylize',
     effects: ['neonGlow', 'glitch', 'outline'],
@@ -109,6 +117,10 @@ export const effectBlurbs: Record<ShaderType, string> = {
   bloom: 'Bloom the highlights into glow',
   lightLeak: 'Leak warm light across it',
   godRays: 'Cast light rays from a point',
+  chromaticAberration: 'Fringe color toward the edges',
+  lensDistortion: 'Bend through a curved lens',
+  swirl: 'Twist around the center',
+  tiltShift: 'Keep a sharp band, blur the rest',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',

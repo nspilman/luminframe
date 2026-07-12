@@ -127,6 +127,20 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "chromaticAberration": {
+    "amount": {
+      "default": 0.15,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+  },
   "colorQuantize": {
     "colorLevels": {
       "default": 8,
@@ -316,6 +330,20 @@ describe('shader library contract', () => {
     },
     "segments": {
       "default": 8,
+      "type": "range",
+    },
+  },
+  "lensDistortion": {
+    "amount": {
+      "default": 0.4,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
       "type": "range",
     },
   },
@@ -515,6 +543,46 @@ describe('shader library contract', () => {
     },
     "strength": {
       "default": 0.5,
+      "type": "range",
+    },
+  },
+  "swirl": {
+    "amount": {
+      "default": 3,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "radius": {
+      "default": 0.5,
+      "type": "range",
+    },
+  },
+  "tiltShift": {
+    "bandWidth": {
+      "default": 0.15,
+      "type": "range",
+    },
+    "blurAmount": {
+      "default": 4,
+      "type": "range",
+    },
+    "focusY": {
+      "default": 0.5,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
       "type": "range",
     },
   },
