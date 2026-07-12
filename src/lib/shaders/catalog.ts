@@ -65,7 +65,7 @@ export const effectFamilies: EffectFamily[] = [
   {
     id: 'distort',
     label: 'Distort',
-    effects: ['wave', 'kaleidoscope', 'pixelate', 'rgbSplit'],
+    effects: ['wave', 'kaleidoscope', 'pixelate', 'rgbSplit', 'liquify'],
   },
   {
     // Where Distort bends geometry, Optics bends light — the failures and
@@ -77,7 +77,7 @@ export const effectFamilies: EffectFamily[] = [
   {
     id: 'stylize',
     label: 'Stylize',
-    effects: ['neonGlow', 'glitch', 'outline'],
+    effects: ['neonGlow', 'glitch', 'outline', 'crystallize'],
   },
   {
     // Additive light — glow, leaks, and shafts that add illumination rather than
@@ -96,7 +96,7 @@ export const effectFamilies: EffectFamily[] = [
   {
     id: 'composite',
     label: 'Composite',
-    effects: ['blend'],
+    effects: ['blend', 'displacement'],
   },
 ]
 
@@ -126,6 +126,9 @@ export const effectBlurbs: Record<ShaderType, string> = {
   dither: 'Dither to two tones',
   crt: 'Old CRT scanlines and curve',
   crossHatch: 'Sketch with pencil hatching',
+  liquify: 'Melt with flowing noise',
+  crystallize: 'Shatter into glass cells',
+  displacement: 'Warp through a second image',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',

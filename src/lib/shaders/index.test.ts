@@ -213,6 +213,42 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "crystallize": {
+    "border": {
+      "default": 0.06,
+      "type": "range",
+    },
+    "cellSize": {
+      "default": 20,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+  },
+  "displacement": {
+    "amount": {
+      "default": 0.1,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "imageTextureTwo": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+  },
   "dither": {
     "darkColor": {
       "default": "#000000",
@@ -472,6 +508,28 @@ describe('shader library contract', () => {
     },
     "threshold": {
       "default": 383,
+      "type": "range",
+    },
+  },
+  "liquify": {
+    "amount": {
+      "default": 0.05,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "scale": {
+      "default": 5,
+      "type": "range",
+    },
+    "speed": {
+      "default": 0.5,
       "type": "range",
     },
   },

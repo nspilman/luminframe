@@ -33,6 +33,9 @@ import { halftone } from './effects/halftone';
 import { dither } from './effects/dither';
 import { crt } from './effects/crt';
 import { crossHatch } from './effects/cross-hatch';
+import { liquify } from './effects/liquify';
+import { crystallize } from './effects/crystallize';
+import { displacement } from './effects/displacement';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -69,4 +72,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   dither,
   crt,
   crossHatch,
+  liquify,
+  crystallize,
+  displacement,
 };
