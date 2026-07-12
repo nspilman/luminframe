@@ -14,7 +14,6 @@ export function ClientApp(): JSX.Element {
     canvasRef,
     selectedShader,
     setSelectedShader,
-    setPreviewShader,
     recentShaders,
     effect,
     varValues,
@@ -62,7 +61,6 @@ export function ClientApp(): JSX.Element {
           source={source}
           selectedShader={selectedShader}
           onShaderSelect={setSelectedShader}
-          onShaderPreview={setPreviewShader}
           recentShaders={recentShaders}
           effect={effect}
           values={{ ...varValues, resolution }}

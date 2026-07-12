@@ -13,7 +13,6 @@ type EditorSidebarProps = {
   source: Image | null
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
-  onShaderPreview: (shader: ShaderType | null) => void
   recentShaders: readonly ShaderType[]
   effect: ShaderEffect
   values: ShaderInputVars
@@ -36,7 +35,6 @@ export function EditorSidebar({
   source,
   selectedShader,
   onShaderSelect,
-  onShaderPreview,
   recentShaders,
   effect,
   values,
@@ -69,7 +67,6 @@ export function EditorSidebar({
         <EffectPicker
           selectedShader={selectedShader}
           onShaderSelect={onShaderSelect}
-          onShaderPreview={onShaderPreview}
           recentShaders={recentShaders}
           source={source}
         />

@@ -1,7 +1,6 @@
-import { reconcileShaderParams, freshDraftParams, resolvePreviewDraft } from './useShaderEditor';
+import { reconcileShaderParams, freshDraftParams } from './useShaderEditor';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
-import { shaderLibrary } from '@/lib/shaders';
 
 // reconcileShaderParams decides which parameter values survive an effect
 // switch. The rule: new defaults fill the base, previous values win on top.
@@ -60,45 +59,5 @@ describe('freshDraftParams', () => {
     // starts clean — it must not inherit the previous value the way a switch does.
     const result = freshDraftParams({ intensity: 0.8 }, { intensity: 0.5 });
     expect(result.intensity).toBe(0.5);
-  });
-});
-
-// resolvePreviewDraft picks the effect the canvas draws as the live draft: the
-// hovered effect while previewing, otherwise the selected one. A preview renders
-// the hovered effect from its own defaults, carrying the source (and any second
-// composite image) so it isn't blank or black.
-describe('resolvePreviewDraft', () => {
-  it('draws the selected draft when nothing is previewed', () => {
-    const varValues = { imageTexture: new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' }), radius: 0.7 };
-    const result = resolvePreviewDraft('vignette', null, varValues);
-    expect(result).toEqual({ type: 'vignette', params: varValues });
-  });
-
-  it('draws the selected tuned draft when previewing the already-selected effect', () => {
-    // Hovering your current effect must not swap its tuned look for bare defaults.
-    const varValues = { radius: 0.7 };
-    const result = resolvePreviewDraft('vignette', 'vignette', varValues);
-    expect(result.params).toBe(varValues);
-  });
-
-  it('previews the hovered effect from its own defaults with the source carried', () => {
-    // The tuned values belong to the selected effect, not this passing one, so
-    // they are dropped — only the source is carried onto the hovered effect's
-    // defaults. Without that carry the preview would draw nothing.
-    const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' });
-    const result = resolvePreviewDraft('colorTint', 'vignette', { imageTexture: image, tint: [1, 0, 0] });
-    expect(result).toEqual({
-      type: 'vignette',
-      params: { ...shaderLibrary['vignette'].defaultValues, imageTexture: image },
-    });
-  });
-
-  it('carries the second composite image into the preview', () => {
-    // A composite effect samples imageTextureTwo; without carrying it the preview
-    // would draw black where the second image should be.
-    const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:a' });
-    const second = new Image('img-2', new Dimensions(4, 2), { url: 'blob:b' });
-    const result = resolvePreviewDraft('colorTint', 'blend', { imageTexture: image, imageTextureTwo: second });
-    expect(result.params.imageTextureTwo).toBe(second);
   });
 });

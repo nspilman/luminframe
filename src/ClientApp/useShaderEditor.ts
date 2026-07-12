@@ -63,42 +63,6 @@ export function reconcileShaderParams(
 }
 
 /**
- * Resolve which effect the canvas should draw as the live draft on top of the
- * committed pipeline — the committed effect *being previewed*, or the one
- * actually selected.
- *
- * Hover-preview is the picker's answer to "what will this do to my photo": while
- * the pointer rests on an effect tile, the full-size canvas shows that effect,
- * reverting the instant the pointer leaves. It reads as a transient overlay on
- * the real subject rather than a commitment — hover previews, click commits.
- *
- * A preview renders the hovered effect from its *own defaults* (the tuned values
- * in varValues belong to the selected effect, not this passing one), but carries
- * the source image and any second composite image forward — without the source a
- * preview would draw nothing, and without the second image a composite preview
- * would draw black. Previewing the already-selected effect is a no-op: it falls
- * back to the selected draft so hovering your current effect doesn't swap its
- * tuned look for bare defaults.
- */
-export function resolvePreviewDraft(
-  selectedShader: ShaderType,
-  previewShader: ShaderType | null,
-  varValues: ShaderInputVars
-): { type: ShaderType; params: ShaderInputVars } {
-  if (previewShader === null || previewShader === selectedShader) {
-    return { type: selectedShader, params: varValues }
-  }
-  const params: ShaderInputVars = { ...shaderLibrary[previewShader].defaultValues }
-  if (varValues.imageTexture instanceof Image) {
-    params.imageTexture = varValues.imageTexture
-  }
-  if (varValues.imageTextureTwo instanceof Image) {
-    params.imageTextureTwo = varValues.imageTextureTwo
-  }
-  return { type: previewShader, params }
-}
-
-/**
  * The parameters a fresh draft starts with after the current effect is applied:
  * the effect's own defaults, but with the source image carried forward.
  *
@@ -134,10 +98,6 @@ const LANDING_SHADER: ShaderType = effectFamilies[0].effects[0]
 
 export function useShaderEditor() {
   const [selectedShader, setSelectedShader] = useState<ShaderType>(LANDING_SHADER)
-  // The effect the pointer is resting on in the picker, previewed live on the
-  // canvas without committing. Null when nothing is hovered — the canvas then
-  // shows the actually-selected draft. Cleared on leave; see resolvePreviewDraft.
-  const [previewShader, setPreviewShader] = useState<ShaderType | null>(null)
   const [varValues, setVarValues] = useState<ShaderInputVars>(
     () => ({ ...shaderLibrary[selectedShader].defaultValues })
   )
@@ -252,9 +212,8 @@ export function useShaderEditor() {
     }
     const source = varValues.imageTexture as Image
     const committed = pipeline.withSource(source)
-    const draft = resolvePreviewDraft(selectedShader, previewShader, varValues)
-    renderEdit(committed, draft, resolution)
-  }, [isInitialized, selectedShader, previewShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
+    renderEdit(committed, { type: selectedShader, params: varValues }, resolution)
+  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
@@ -354,7 +313,6 @@ export function useShaderEditor() {
     canvasRef,
     selectedShader,
     setSelectedShader,
-    setPreviewShader,
     recentShaders,
     effect,
     varValues,

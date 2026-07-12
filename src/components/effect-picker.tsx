@@ -58,8 +58,6 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
 type EffectPickerProps = {
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
-  /** Preview an effect live on the canvas while the pointer rests on it; null reverts. */
-  onShaderPreview: (shader: ShaderType | null) => void
   /** Recently-used effects, most-recent first, surfaced as a section on top. */
   recentShaders: readonly ShaderType[]
   source: Image | null
@@ -67,45 +65,16 @@ type EffectPickerProps = {
 
 type PickerSection = { id: string; label: string; effects: readonly ShaderType[] }
 
-// A hover settles for this long before it previews, so gliding the pointer
-// across tiles on the way to one doesn't strobe the canvas through every effect
-// it crosses (the pitfall Lightroom's live-preview hit). Short enough to feel
-// immediate once the pointer comes to rest.
-const PREVIEW_SETTLE_MS = 60
-
 /**
- * The effect browser: a gallery grouped into families (Tone, Color, Soften, …)
- * so the eye learns the territory once and navigates by kind. Each tile leads
- * with a live preview of the *user's own image* under that effect — the truest
- * answer to "what will this do" — with the name and a plain-speech blurb beneath.
- * Order and grouping come from the curated catalog, so adding an effect there
- * places it here automatically.
+ * The effect browser: a gallery grouped into families (Tone, Color, Focus, …)
+ * so the eye learns the territory once and navigates by kind. Each row is a
+ * compact line — a small live sample of the *user's own image* under that
+ * effect beside its name and a plain-speech blurb — and clicking it selects the
+ * effect. Order and grouping come from the curated catalog, so adding an effect
+ * there places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, recentShaders, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, source }: EffectPickerProps) {
   const thumbnails = useEffectThumbnails(source)
-
-  // Debounce the hover into a preview; keep the latest callback in a ref so the
-  // unmount cleanup can revert the preview without re-subscribing on every render.
-  const settleTimer = useRef<number | null>(null)
-  const previewRef = useRef(onShaderPreview)
-  previewRef.current = onShaderPreview
-
-  const schedulePreview = useCallback((shader: ShaderType) => {
-    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current)
-    settleTimer.current = window.setTimeout(() => previewRef.current(shader), PREVIEW_SETTLE_MS)
-  }, [])
-
-  const clearPreview = useCallback(() => {
-    if (settleTimer.current !== null) {
-      window.clearTimeout(settleTimer.current)
-      settleTimer.current = null
-    }
-    previewRef.current(null)
-  }, [])
-
-  // Revert any live preview if the picker unmounts mid-hover (e.g. the source is
-  // cleared), so a stale effect can't linger as the canvas draft.
-  useEffect(() => clearPreview, [clearPreview])
 
   // Type-to-filter: narrows the families as the query is typed. Empty query
   // shows the full catalog, so search overlays browsing rather than replacing it.
@@ -199,10 +168,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
               No effects match “{query}”
             </p>
           ) : (
-          <div
-            className="max-h-[420px] space-y-4 overflow-y-auto pr-1"
-            onMouseLeave={clearPreview}
-          >
+          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
             {sections.map((family) => {
               const isCollapsed = !isSearching && collapsed.includes(family.id)
               return (
@@ -217,7 +183,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
                   {family.label}
                 </button>
                 {!isCollapsed && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
                   {family.effects.map((shader) => {
                     const thumb = thumbnails?.[shader]
                     const isSelected = selectedShader === shader
@@ -226,32 +192,29 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
                         key={shader}
                         type="button"
                         onClick={() => onShaderSelect(shader)}
-                        onMouseEnter={() => schedulePreview(shader)}
-                        onFocus={() => schedulePreview(shader)}
-                        onBlur={clearPreview}
                         aria-pressed={isSelected}
-                        className={`group flex flex-col overflow-hidden rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 ${
+                        className={`group flex w-full items-center gap-2.5 rounded-lg border p-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 ${
                           isSelected
                             ? 'border-violet-500 ring-1 ring-violet-500'
                             : 'border-zinc-800/60 hover:border-zinc-600'
                         }`}
                       >
-                        <span className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-black/30">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded bg-black/30">
                           {thumb ? (
                             <img src={thumb} alt="" className="h-full w-full object-cover" />
                           ) : (
                             <span className="text-zinc-500">{shaderIcons[shader]}</span>
                           )}
                         </span>
-                        <span className="px-2 py-1.5">
+                        <span className="min-w-0 flex-1">
                           <span
-                            className={`block text-xs font-medium ${
+                            className={`block truncate text-xs font-medium leading-tight ${
                               isSelected ? 'text-white' : 'text-zinc-200'
                             }`}
                           >
                             {shaderLibrary[shader].name}
                           </span>
-                          <span className="mt-0.5 block text-[10px] leading-tight text-zinc-500">
+                          <span className="block truncate text-[10px] leading-tight text-zinc-500">
                             {blurbOf(shader)}
                           </span>
                         </span>
