@@ -42,9 +42,29 @@
             "type": "array",
             "maxLength": 64,
             "items": { "type": "string", "maxLength": 128 },
-            "description": "The effect keys applied to produce this image, in order (the edit recipe)."
+            "description": "The effect keys applied, in order. Kept for lightweight display and backward compatibility; the executable form is `recipe`."
+          },
+          "recipe": {
+            "type": "array",
+            "maxLength": 64,
+            "items": { "type": "ref", "ref": "#effectStep" },
+            "description": "The ordered effect stack with parameters — the executable edit, so the look can be reconstructed or applied elsewhere."
+          },
+          "remixOf": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The record this image was remixed from, if any — its lineage."
           }
         }
+      }
+    },
+    "effectStep": {
+      "type": "object",
+      "description": "One effect in the recipe: its key and the parameters it was applied with.",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "maxLength": 128, "description": "The effect key." },
+        "params": { "type": "unknown", "description": "The effect's parameters (effect-specific freeform JSON)." }
       }
     },
     "aspectRatio": {

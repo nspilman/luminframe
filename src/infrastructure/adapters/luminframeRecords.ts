@@ -22,6 +22,18 @@ import type { BlobRef } from '@atproto/api'
 
 export const LUMINFRAME_IMAGE_COLLECTION = 'com.luminframe.image'
 
+/** One effect in the recipe: its key and the parameters it was applied with. */
+export interface EffectStep {
+  type: string
+  params?: Record<string, unknown>
+}
+
+/** An immutable pointer to another record (com.atproto.repo.strongRef). */
+export interface StrongRef {
+  uri: string
+  cid: string
+}
+
 export interface LuminframeImageRecord {
   $type: 'com.luminframe.image'
   /** The rendered image blob, from `uploadBlob`. */
@@ -34,8 +46,12 @@ export interface LuminframeImageRecord {
   alt?: string
   /** Short caption / label. */
   title?: string
-  /** The effect keys applied to produce this image, in order (the edit recipe). */
+  /** The effect keys applied, in order. Kept for display + backward compat; `recipe` is the executable form. */
   effects?: string[]
+  /** The ordered effect stack with parameters — the executable edit. */
+  recipe?: EffectStep[]
+  /** The record this image was remixed from, if any — its lineage. */
+  remixOf?: StrongRef
 }
 
 export interface LuminframeImageParts {
@@ -47,10 +63,14 @@ export interface LuminframeImageParts {
   alt?: string
   title?: string
   effects?: readonly string[]
+  /** The executable effect stack (v2). Only sent once the published schema knows it. */
+  recipe?: readonly EffectStep[]
+  /** The parent record, when this was remixed from another (v2). */
+  remixOf?: StrongRef
 }
 
 export function buildLuminframeImageRecord(parts: LuminframeImageParts): LuminframeImageRecord {
-  const { blob, aspectRatio, createdAt, alt, title, effects } = parts
+  const { blob, aspectRatio, createdAt, alt, title, effects, recipe, remixOf } = parts
 
   const record: LuminframeImageRecord = {
     $type: 'com.luminframe.image',
@@ -69,6 +89,14 @@ export function buildLuminframeImageRecord(parts: LuminframeImageParts): Luminfr
   }
   if (effects && effects.length > 0) {
     record.effects = [...effects]
+  }
+  if (recipe && recipe.length > 0) {
+    record.recipe = recipe.map((step) =>
+      step.params ? { type: step.type, params: step.params } : { type: step.type }
+    )
+  }
+  if (remixOf) {
+    record.remixOf = { uri: remixOf.uri, cid: remixOf.cid }
   }
 
   return record

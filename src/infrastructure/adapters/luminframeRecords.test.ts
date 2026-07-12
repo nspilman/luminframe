@@ -59,4 +59,46 @@ describe('buildLuminframeImageRecord', () => {
     expect(record.alt).toBe('a misty forest')
     expect('title' in record).toBe(false)
   })
+
+  it('attaches the executable recipe, keeping params only where present', () => {
+    const record = buildLuminframeImageRecord({
+      blob,
+      aspectRatio: { width: 1, height: 1 },
+      createdAt: ISO,
+      recipe: [
+        { type: 'vibrance', params: { amount: 0.4 } },
+        { type: 'blackAndWhite' },
+      ],
+    })
+
+    expect(record.recipe).toEqual([
+      { type: 'vibrance', params: { amount: 0.4 } },
+      { type: 'blackAndWhite' },
+    ])
+  })
+
+  it('omits recipe entirely when empty', () => {
+    const record = buildLuminframeImageRecord({
+      blob,
+      aspectRatio: { width: 1, height: 1 },
+      createdAt: ISO,
+      recipe: [],
+    })
+
+    expect('recipe' in record).toBe(false)
+  })
+
+  it('attaches remixOf as a strong ref when this image descends from another', () => {
+    const record = buildLuminframeImageRecord({
+      blob,
+      aspectRatio: { width: 1, height: 1 },
+      createdAt: ISO,
+      remixOf: { uri: 'at://did:plc:abc/com.luminframe.image/parent', cid: 'bafyparent' },
+    })
+
+    expect(record.remixOf).toEqual({
+      uri: 'at://did:plc:abc/com.luminframe.image/parent',
+      cid: 'bafyparent',
+    })
+  })
 })
