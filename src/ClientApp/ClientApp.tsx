@@ -75,8 +75,11 @@ export function ClientApp(): JSX.Element {
           canRedo={canRedo}
         />
 
-        {/* Main Content */}
-        <div className="relative flex-1">
+        {/* Main content. On desktop the canvas is pinned in view (sticky,
+            self-start so it keeps its own viewport height instead of stretching
+            to the taller sidebar) — the subject stays visible while the tools
+            scroll past it, so choosing an effect never scrolls the image away. */}
+        <div className="relative flex-1 md:sticky md:top-4 md:self-start md:h-[calc(100vh-2rem)]">
           <div className="h-[50vh] md:h-full">
             <CanvasWorkspace
               ref={canvasRef}
