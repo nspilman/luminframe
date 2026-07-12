@@ -13,6 +13,7 @@ type EditorSidebarProps = {
   source: Image | null
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
+  onShaderPreview: (shader: ShaderType | null) => void
   effect: ShaderEffect
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -34,6 +35,7 @@ export function EditorSidebar({
   source,
   selectedShader,
   onShaderSelect,
+  onShaderPreview,
   effect,
   values,
   onChange,
@@ -62,7 +64,12 @@ export function EditorSidebar({
   return (
     <div className={sidebarShell}>
       <div className="p-4 space-y-4 md:space-y-6">
-        <EffectPicker selectedShader={selectedShader} onShaderSelect={onShaderSelect} source={source} />
+        <EffectPicker
+          selectedShader={selectedShader}
+          onShaderSelect={onShaderSelect}
+          onShaderPreview={onShaderPreview}
+          source={source}
+        />
 
         <div className="space-y-1">
           <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>

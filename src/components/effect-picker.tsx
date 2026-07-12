@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useRef } from 'react'
 import { ShaderType } from '@/types/shader'
 import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
@@ -55,8 +56,16 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
 type EffectPickerProps = {
   selectedShader: ShaderType
   onShaderSelect: (shader: ShaderType) => void
+  /** Preview an effect live on the canvas while the pointer rests on it; null reverts. */
+  onShaderPreview: (shader: ShaderType | null) => void
   source: Image | null
 }
+
+// A hover settles for this long before it previews, so gliding the pointer
+// across tiles on the way to one doesn't strobe the canvas through every effect
+// it crosses (the pitfall Lightroom's live-preview hit). Short enough to feel
+// immediate once the pointer comes to rest.
+const PREVIEW_SETTLE_MS = 60
 
 /**
  * The effect browser: a gallery grouped into families (Tone, Color, Soften, …)
@@ -66,15 +75,41 @@ type EffectPickerProps = {
  * Order and grouping come from the curated catalog, so adding an effect there
  * places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, source }: EffectPickerProps) {
   const thumbnails = useEffectThumbnails(source)
+
+  // Debounce the hover into a preview; keep the latest callback in a ref so the
+  // unmount cleanup can revert the preview without re-subscribing on every render.
+  const settleTimer = useRef<number | null>(null)
+  const previewRef = useRef(onShaderPreview)
+  previewRef.current = onShaderPreview
+
+  const schedulePreview = useCallback((shader: ShaderType) => {
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current)
+    settleTimer.current = window.setTimeout(() => previewRef.current(shader), PREVIEW_SETTLE_MS)
+  }, [])
+
+  const clearPreview = useCallback(() => {
+    if (settleTimer.current !== null) {
+      window.clearTimeout(settleTimer.current)
+      settleTimer.current = null
+    }
+    previewRef.current(null)
+  }, [])
+
+  // Revert any live preview if the picker unmounts mid-hover (e.g. the source is
+  // cleared), so a stale effect can't linger as the canvas draft.
+  useEffect(() => clearPreview, [clearPreview])
 
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-zinc-400">Effects</h3>
       <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
         <CardContent className="p-3">
-          <div className="max-h-[440px] space-y-4 overflow-y-auto pr-1">
+          <div
+            className="max-h-[440px] space-y-4 overflow-y-auto pr-1"
+            onMouseLeave={clearPreview}
+          >
             {effectFamilies.map((family) => (
               <div key={family.id} className="space-y-2">
                 <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
@@ -89,6 +124,9 @@ export function EffectPicker({ selectedShader, onShaderSelect, source }: EffectP
                         key={shader}
                         type="button"
                         onClick={() => onShaderSelect(shader)}
+                        onMouseEnter={() => schedulePreview(shader)}
+                        onFocus={() => schedulePreview(shader)}
+                        onBlur={clearPreview}
                         aria-pressed={isSelected}
                         className={`group flex flex-col overflow-hidden rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 ${
                           isSelected
