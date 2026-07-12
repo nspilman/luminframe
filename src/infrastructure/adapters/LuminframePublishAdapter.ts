@@ -19,14 +19,13 @@ import {
  *   1. uploadBlob                → blob ref for the encoded render
  *   2. com.luminframe.image      the record carrying that blob + the edit recipe
  *
- * The `com.luminframe.image` lexicon is not published (no `_lexicon` DNS record /
- * schema doc), so we pass `validate: false`: a PDS that tries to resolve the
- * lexicon to validate the record would otherwise reject a write it can't verify.
- * `validate: false` stores the record as-is. The pure builder pins the record
- * structure (luminframeRecords.test.ts); the remaining guarantee is that the
- * record is well-formed, which the builder ensures. Publishing the schema later
- * would let this flip to server-side validation and make the records
- * discoverable/validatable by other apps.
+ * The `com.luminframe.image` lexicon is published: its schema lives as a
+ * `com.atproto.lexicon.schema` record in the authority repo, resolvable via the
+ * `_lexicon.luminframe.com` DNS record (see lexicons/com/luminframe/image.json
+ * and scripts/publish-lexicon.mjs). So the write uses the PDS's default
+ * validation — the server resolves the lexicon and validates the record against
+ * it, exactly like a Bluesky post. The pure builder (luminframeRecords.test.ts)
+ * still pins the record structure client-side.
  */
 export class LuminframePublishAdapter implements PublishPort {
   constructor(private readonly agent: Agent) {}
@@ -52,8 +51,6 @@ export class LuminframePublishAdapter implements PublishPort {
         effects: input.effects,
         createdAt,
       }),
-      // Our lexicon is unpublished, so the PDS cannot resolve it to validate.
-      validate: false,
     })
 
     return { uri: result.data.uri, cid: result.data.cid }

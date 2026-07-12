@@ -12,12 +12,12 @@ import type { BlobRef } from '@atproto/api'
  *   - the edit recipe: the effect keys applied, in order — what makes this a
  *     Luminframe record and not just a photo in a custom namespace
  *
- * The schema is not published yet (no `_lexicon` DNS record / lexicon doc), so
- * the adapter writes with `validate: false` — see LuminframePublishAdapter. That
- * means nothing validates these records against a schema; the builder is pure so
- * the `$type` discriminator and field shape a typo would break are pinned in
- * isolation (luminframeRecords.test.ts). All I/O — uploading the blob, stamping
- * the time, minting the AT-URI — lives in the adapter.
+ * The schema is published (see lexicons/com/luminframe/image.json and
+ * scripts/publish-lexicon.mjs), so the PDS validates these records server-side.
+ * The builder stays pure regardless, so the `$type` discriminator and field
+ * shape a typo would break are also pinned client-side (luminframeRecords.test.ts).
+ * All I/O — uploading the blob, stamping the time, minting the AT-URI — lives in
+ * the adapter.
  */
 
 export const LUMINFRAME_IMAGE_COLLECTION = 'com.luminframe.image'
