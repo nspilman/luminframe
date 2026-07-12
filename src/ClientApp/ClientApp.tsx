@@ -1,17 +1,19 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
-import { HeaderBar, AppView } from '@/components/header-bar'
+import { useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
+import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { GalleryPage } from '@/components/GalleryPage'
 import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
+import { isGalleryPath } from '@/lib/galleryRoute'
 
 export function ClientApp(): JSX.Element {
   const session = useAtprotoSession()
-  const [view, setView] = useState<AppView>('editor')
+  const onGallery = isGalleryPath(useLocation().pathname)
   const {
     canvasRef,
     selectedShader,
@@ -60,10 +62,12 @@ export function ClientApp(): JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030305]">
-      <HeaderBar session={headerSession} view={view} onNavigate={setView} />
+      <HeaderBar session={headerSession} />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
-          on every visit) — it's just hidden while the gallery is shown. */}
-      <div className={view === 'editor' ? 'flex flex-col md:flex-row flex-1' : 'hidden'}>
+          on every visit) — it's just hidden while the gallery is shown. Which view
+          is visible is read from the URL, not local state, so /gallery is a real,
+          bookmarkable address. */}
+      <div className={onGallery ? 'hidden' : 'flex flex-col md:flex-row flex-1'}>
         <EditorSidebar
           hasImage={hasImage}
           source={source}
@@ -106,7 +110,7 @@ export function ClientApp(): JSX.Element {
         </div>
       </div>
 
-      {view === 'gallery' && <GalleryPage did={session.did} />}
+      {onGallery && <GalleryPage did={session.did} />}
     </div>
   )
 }

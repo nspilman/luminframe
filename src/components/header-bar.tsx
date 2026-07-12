@@ -1,23 +1,20 @@
+import { NavLink } from 'react-router-dom'
 import { Button } from './ui/button'
 import { Github } from 'lucide-react'
 import { BlueskyAuth } from './BlueskyAuth'
 import { AtprotoSession } from '@/hooks/useAtprotoSession'
+import { GALLERY_ROOT } from '@/lib/galleryRoute'
 
-/** The top-level views the header switches between. */
-export type AppView = 'editor' | 'gallery'
-
-const NAV: { value: AppView; label: string }[] = [
-  { value: 'editor', label: 'Editor' },
-  { value: 'gallery', label: 'Gallery' },
+const NAV: { to: string; label: string; end: boolean }[] = [
+  { to: '/', label: 'Editor', end: true },
+  { to: GALLERY_ROOT, label: 'Gallery', end: false },
 ]
 
 interface HeaderBarProps {
   session: AtprotoSession
-  view: AppView
-  onNavigate: (view: AppView) => void
 }
 
-export function HeaderBar({ session, view, onNavigate }: HeaderBarProps) {
+export function HeaderBar({ session }: HeaderBarProps) {
   return (
     <header className="relative z-50 border-b border-zinc-800/50 bg-black/20 backdrop-blur-xl p-4">
       <div className="container mx-auto flex items-center justify-between">
@@ -31,17 +28,18 @@ export function HeaderBar({ session, view, onNavigate }: HeaderBarProps) {
         <nav className="flex items-center gap-4">
           <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-900/50 p-1">
             {NAV.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => onNavigate(item.value)}
-                aria-pressed={view === item.value}
-                className={`rounded px-3 py-1 text-sm transition-colors ${
-                  view === item.value ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:bg-white/5'
-                }`}
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `rounded px-3 py-1 text-sm transition-colors ${
+                    isActive ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:bg-white/5'
+                  }`
+                }
               >
                 {item.label}
-              </button>
+              </NavLink>
             ))}
           </div>
           <Button variant="ghost" size="sm" asChild>

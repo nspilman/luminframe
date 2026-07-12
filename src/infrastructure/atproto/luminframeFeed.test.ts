@@ -1,4 +1,23 @@
-import { getBlobUrl, parseIdentity, recordToView } from './luminframeFeed'
+import { getBlobUrl, parseIdentity, parseAtUri, recordToView } from './luminframeFeed'
+
+describe('parseAtUri', () => {
+  it('splits an at:// URI into did, collection, and rkey', () => {
+    expect(parseAtUri('at://did:plc:abc/com.luminframe.image/3krecordkey')).toEqual({
+      did: 'did:plc:abc',
+      collection: 'com.luminframe.image',
+      rkey: '3krecordkey',
+    })
+  })
+
+  it('returns null when the scheme is not at://', () => {
+    expect(parseAtUri('https://did:plc:abc/com.luminframe.image/x')).toBeNull()
+  })
+
+  it('returns null when a segment is missing', () => {
+    // A collection with no rkey is not addressable to a single record.
+    expect(parseAtUri('at://did:plc:abc/com.luminframe.image')).toBeNull()
+  })
+})
 
 describe('getBlobUrl', () => {
   it('builds a getBlob URL with encoded did and cid', () => {

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useLocation, useSearchParams, NavLink } from 'react-router-dom'
 import { ImageOff, LogIn, AlertCircle } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { ImageLightbox } from './ImageLightbox'
 import { useLuminframeFeed, FeedTab } from '@/hooks/useLuminframeFeed'
+import { useOpenImage } from '@/hooks/useOpenImage'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
+import { tabFromPath, pathForTab, IMAGE_PARAM } from '@/lib/galleryRoute'
 
 interface GalleryPageProps {
   /** The signed-in user's DID, or null when signed out (gates the "mine" tab). */
@@ -87,9 +89,27 @@ function CenterState({ icon, children }: { icon: React.ReactNode; children: Reac
  * A public read: the Network tab works signed-out; Mine asks for sign-in.
  */
 export function GalleryPage({ did }: GalleryPageProps) {
-  const [tab, setTab] = useState<FeedTab>('network')
-  const [openImage, setOpenImage] = useState<LuminframeImageView | null>(null)
+  // The URL is the source of truth: the scope is the path, the open image is a
+  // query param. Nothing about where you are lives in local state anymore.
+  const tab = tabFromPath(useLocation().pathname)
+  const [searchParams, setSearchParams] = useSearchParams()
   const feed = useLuminframeFeed(tab, did)
+  const openImage = useOpenImage(searchParams.get(IMAGE_PARAM), feed.images)
+
+  const openInLightbox = (image: LuminframeImageView) =>
+    setSearchParams((prev) => {
+      prev.set(IMAGE_PARAM, image.uri) // pushes history, so Back closes the viewer
+      return prev
+    })
+
+  const closeLightbox = () =>
+    setSearchParams(
+      (prev) => {
+        prev.delete(IMAGE_PARAM)
+        return prev
+      },
+      { replace: true } // replace, so Back doesn't reopen what you just closed
+    )
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -98,17 +118,16 @@ export function GalleryPage({ did }: GalleryPageProps) {
           <h2 className="text-lg font-semibold text-white">Gallery</h2>
           <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-900/50 p-1">
             {TABS.map((t) => (
-              <button
+              <NavLink
                 key={t.value}
-                type="button"
-                onClick={() => setTab(t.value)}
-                aria-pressed={tab === t.value}
+                to={pathForTab(t.value)}
+                end
                 className={`rounded px-4 py-1.5 text-sm transition-colors ${
                   tab === t.value ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:bg-white/5'
                 }`}
               >
                 {t.label}
-              </button>
+              </NavLink>
             ))}
           </div>
         </div>
@@ -142,13 +161,13 @@ export function GalleryPage({ did }: GalleryPageProps) {
         {feed.status === 'loaded' && feed.images.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {feed.images.map((image) => (
-              <ImageCard key={image.uri} image={image} onOpen={() => setOpenImage(image)} />
+              <ImageCard key={image.uri} image={image} onOpen={() => openInLightbox(image)} />
             ))}
           </div>
         )}
       </div>
 
-      {openImage && <ImageLightbox image={openImage} onClose={() => setOpenImage(null)} />}
+      {openImage && <ImageLightbox image={openImage} onClose={closeLightbox} />}
     </div>
   )
 }

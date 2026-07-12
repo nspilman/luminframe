@@ -77,6 +77,14 @@ export function parseIdentity(didDoc: {
   return { pds, handle }
 }
 
+/** The DID, collection, and rkey of an at:// URI, or null if it isn't one. */
+export function parseAtUri(uri: string): { did: string; collection: string; rkey: string } | null {
+  if (!uri.startsWith('at://')) return null
+  const [did, collection, rkey] = uri.slice('at://'.length).split('/')
+  if (!did || !collection || !rkey) return null
+  return { did, collection, rkey }
+}
+
 /** Turn one raw listRecords entry into a view, given its author's resolved identity. */
 export function recordToView(record: RawRecord, did: string, pds: string, handle: string | null): LuminframeImageView {
   const value = record.value ?? {}
@@ -164,6 +172,33 @@ export async function fetchNetworkImages(maxRepos = 200): Promise<LuminframeImag
   const { dids } = await listNetworkDids()
   const views = await mapWithConcurrency(dids.slice(0, maxRepos), 8, fetchRepoImages)
   return views.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/**
+ * Resolve a single image by its AT-URI, standalone — the path a deep link takes
+ * when the record isn't (or isn't yet) in the loaded feed. Reads the one record
+ * straight from its author's PDS. Returns null if the URI is malformed, the
+ * identity won't resolve, or the record is gone.
+ */
+export async function fetchImageByUri(uri: string): Promise<LuminframeImageView | null> {
+  const parsed = parseAtUri(uri)
+  if (!parsed) return null
+  const identity = await resolveIdentity(parsed.did)
+  if (!identity.pds) return null
+  const params = new URLSearchParams({
+    repo: parsed.did,
+    collection: parsed.collection,
+    rkey: parsed.rkey,
+  })
+  try {
+    const res = await fetch(`${identity.pds}/xrpc/com.atproto.repo.getRecord?${params}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data?.uri || !data?.value) return null
+    return recordToView(data, parsed.did, identity.pds, identity.handle)
+  } catch {
+    return null
+  }
 }
 
 /** Every com.luminframe.image record in one repo, newest first, resolved to views. */
