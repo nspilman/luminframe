@@ -23,6 +23,7 @@ export type EffectCategory =
   | 'soften'
   | 'distort'
   | 'stylize'
+  | 'light'
   | 'texture'
   | 'composite'
 
@@ -71,6 +72,13 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['neonGlow', 'glitch', 'outline'],
   },
   {
+    // Additive light — glow, leaks, and shafts that add illumination rather than
+    // recolor. Every one screens or adds, so it only ever brightens.
+    id: 'light',
+    label: 'Light',
+    effects: ['bloom', 'lightLeak', 'godRays'],
+  },
+  {
     // The analog, tactile layer — grain and grit laid over the image.
     id: 'texture',
     label: 'Texture',
@@ -98,6 +106,9 @@ export const effectBlurbs: Record<ShaderType, string> = {
   sepia: 'Age to warm brown tones',
   duotone: 'Map tones to two colors',
   splitTone: 'Warm the lights, cool the darks',
+  bloom: 'Bloom the highlights into glow',
+  lightLeak: 'Leak warm light across it',
+  godRays: 'Cast light rays from a point',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',

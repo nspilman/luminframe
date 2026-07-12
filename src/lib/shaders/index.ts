@@ -22,6 +22,9 @@ import { vibrance } from './effects/vibrance';
 import { sepia } from './effects/sepia';
 import { duotone } from './effects/duotone';
 import { splitTone } from './effects/split-tone';
+import { bloom } from './effects/bloom';
+import { lightLeak } from './effects/light-leak';
+import { godRays } from './effects/god-rays';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -47,4 +50,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   sepia,
   duotone,
   splitTone,
+  bloom,
+  lightLeak,
+  godRays,
 };

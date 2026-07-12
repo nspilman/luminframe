@@ -105,6 +105,28 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "bloom": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "intensity": {
+      "default": 1,
+      "type": "range",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "radius": {
+      "default": 8,
+      "type": "range",
+    },
+    "threshold": {
+      "default": 0.6,
+      "type": "range",
+    },
+  },
   "colorQuantize": {
     "colorLevels": {
       "default": 8,
@@ -235,6 +257,32 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "godRays": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "intensity": {
+      "default": 0.8,
+      "type": "range",
+    },
+    "lightX": {
+      "default": 0.5,
+      "type": "range",
+    },
+    "lightY": {
+      "default": 0.2,
+      "type": "range",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "threshold": {
+      "default": 0.6,
+      "type": "range",
+    },
+  },
   "hueSwap": {
     "imageTexture": {
       "default": null,
@@ -268,6 +316,28 @@ describe('shader library contract', () => {
     },
     "segments": {
       "default": 8,
+      "type": "range",
+    },
+  },
+  "lightLeak": {
+    "angle": {
+      "default": 0.8,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "intensity": {
+      "default": 0.8,
+      "type": "range",
+    },
+    "leakColor": {
+      "default": "#ff7333",
+      "type": "color",
+    },
+    "opacity": {
+      "default": 1,
       "type": "range",
     },
   },
