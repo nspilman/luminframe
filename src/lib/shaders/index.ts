@@ -18,6 +18,10 @@ import { luminanceQuantize } from './effects/luminance-quantize';
 import { sharpen } from './effects/sharpen';
 import { filmGrain } from './effects/film-grain';
 import { outline } from './effects/outline';
+import { vibrance } from './effects/vibrance';
+import { sepia } from './effects/sepia';
+import { duotone } from './effects/duotone';
+import { splitTone } from './effects/split-tone';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -39,4 +43,8 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   sharpen,
   filmGrain,
   outline,
+  vibrance,
+  sepia,
+  duotone,
+  splitTone,
 };

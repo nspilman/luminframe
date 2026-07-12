@@ -159,6 +159,24 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "duotone": {
+    "highlightColor": {
+      "default": "#ffdb85",
+      "type": "color",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "shadowColor": {
+      "default": "#1a0f4d",
+      "type": "color",
+    },
+  },
   "filmGrain": {
     "amount": {
       "default": 0.12,
@@ -376,6 +394,20 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "sepia": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "intensity": {
+      "default": 1,
+      "type": "range",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+  },
   "sharpen": {
     "amount": {
       "default": 1.2,
@@ -390,6 +422,42 @@ describe('shader library contract', () => {
       "type": "range",
     },
     "radius": {
+      "default": 1,
+      "type": "range",
+    },
+  },
+  "splitTone": {
+    "highlightColor": {
+      "default": "#ffc773",
+      "type": "color",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "shadowColor": {
+      "default": "#4d8ca6",
+      "type": "color",
+    },
+    "strength": {
+      "default": 0.5,
+      "type": "range",
+    },
+  },
+  "vibrance": {
+    "amount": {
+      "default": 0.6,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
       "default": 1,
       "type": "range",
     },

@@ -84,7 +84,11 @@ export const registeredShaders = [
      "luminanceQuantize",
      'sharpen',
      'filmGrain',
-     'outline'
+     'outline',
+     'vibrance',
+     'sepia',
+     'duotone',
+     'splitTone'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

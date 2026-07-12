@@ -1,7 +1,7 @@
 'use client'
 
 import { ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
 import { effectFamilies, blurbOf } from '@/lib/shaders/catalog'
@@ -31,6 +31,10 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   sharpen: <Aperture className="h-5 w-5" />,
   filmGrain: <Film className="h-5 w-5" />,
   outline: <PenTool className="h-5 w-5" />,
+  vibrance: <Droplets className="h-5 w-5" />,
+  sepia: <Coffee className="h-5 w-5" />,
+  duotone: <Blend className="h-5 w-5" />,
+  splitTone: <Sunrise className="h-5 w-5" />,
 }
 
 type EffectPickerProps = {

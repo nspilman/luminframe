@@ -46,9 +46,11 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['blackAndWhite', 'luminanceQuantize', 'lightThresholdSwap'],
   },
   {
+    // A grading suite ordered from subtle adjustment to full remap: boost, tint,
+    // grade, map to two colors, age, rotate, then reduce.
     id: 'color',
     label: 'Color',
-    effects: ['colorTint', 'hueSwap', 'colorQuantize'],
+    effects: ['vibrance', 'colorTint', 'splitTone', 'duotone', 'sepia', 'hueSwap', 'colorQuantize'],
   },
   {
     // Everything that governs sharpness and where the eye rests — a sharp-to-soft
@@ -92,6 +94,10 @@ export const effectBlurbs: Record<ShaderType, string> = {
   colorTint: 'Wash in one hue',
   hueSwap: 'Rotate the colors',
   colorQuantize: 'Reduce to a few colors',
+  vibrance: 'Boost the muted colors',
+  sepia: 'Age to warm brown tones',
+  duotone: 'Map tones to two colors',
+  splitTone: 'Warm the lights, cool the darks',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',
