@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
 import { blurbOf } from '@/lib/shaders/catalog'
 import { filterEffectFamilies } from '@/lib/shaders/effectSearch'
+import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/collapsedFamilies'
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 
@@ -122,6 +123,19 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
     return families
   }, [query, recentShaders, families])
 
+  // Collapsible families: the explorer can fold sections they don't use, keeping
+  // the picker short. The collapsed set is remembered across visits. Collapse is a
+  // browse-mode affordance — a search must never hide a match, so while searching
+  // every surviving section stays open regardless of what's remembered.
+  const isSearching = query.trim() !== ''
+  const [collapsed, setCollapsed] = useState<string[]>(() => loadCollapsed())
+  useEffect(() => {
+    saveCollapsed(collapsed)
+  }, [collapsed])
+  const toggleFamily = useCallback((id: string) => {
+    setCollapsed((prev) => toggleCollapsed(prev, id))
+  }, [])
+
   // A keyboard shortcut to the search line: '/' when not already typing, or ⌘/Ctrl-K
   // anywhere — the command-palette reflex, so the search is reachable without the mouse.
   const searchRef = useRef<HTMLInputElement>(null)
@@ -189,11 +203,20 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
             className="max-h-[420px] space-y-4 overflow-y-auto pr-1"
             onMouseLeave={clearPreview}
           >
-            {sections.map((family) => (
+            {sections.map((family) => {
+              const isCollapsed = !isSearching && collapsed.includes(family.id)
+              return (
               <div key={family.id} className="space-y-2">
-                <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                <button
+                  type="button"
+                  onClick={() => toggleFamily(family.id)}
+                  aria-expanded={!isCollapsed}
+                  className="flex w-full items-center gap-1 rounded text-[11px] font-medium uppercase tracking-wide text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+                >
+                  {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   {family.label}
-                </h4>
+                </button>
+                {!isCollapsed && (
                 <div className="grid grid-cols-2 gap-2">
                   {family.effects.map((shader) => {
                     const thumb = thumbnails?.[shader]
@@ -236,8 +259,10 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
                     )
                   })}
                 </div>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
           )}
         </CardContent>
