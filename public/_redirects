@@ -1,0 +1,6 @@
+# SPA fallback: serve the app shell for any path that isn't a real file, so
+# client-side routes like /gallery and /gallery/mine resolve instead of 404ing.
+# The 200 (rewrite, not redirect) keeps the URL intact for the router to read.
+# This rule is NOT forced, so real files (assets, /client-metadata.json) still
+# win — only non-existent paths fall through to index.html.
+/*  /index.html  200
