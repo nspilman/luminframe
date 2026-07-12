@@ -15,6 +15,9 @@ import { hueSwap } from './effects/hue-swap';
 import { blackAndWhite } from './effects/black-and-white';
 import { colorQuantize } from './effects/color-quantize';
 import { luminanceQuantize } from './effects/luminance-quantize';
+import { sharpen } from './effects/sharpen';
+import { filmGrain } from './effects/film-grain';
+import { outline } from './effects/outline';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -33,4 +36,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   lightThresholdSwap,
   gaussianBlur,
   hueSwap,
+  sharpen,
+  filmGrain,
+  outline,
 };

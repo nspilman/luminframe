@@ -23,6 +23,7 @@ export type EffectCategory =
   | 'soften'
   | 'distort'
   | 'stylize'
+  | 'texture'
   | 'composite'
 
 export interface EffectFamily {
@@ -50,9 +51,12 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['colorTint', 'hueSwap', 'colorQuantize'],
   },
   {
+    // Everything that governs sharpness and where the eye rests — a sharp-to-soft
+    // spectrum from crisp detail down to a dream, plus the vignette that steers
+    // attention inward.
     id: 'soften',
-    label: 'Soften',
-    effects: ['gaussianBlur', 'dream', 'vignette'],
+    label: 'Focus',
+    effects: ['sharpen', 'gaussianBlur', 'dream', 'vignette'],
   },
   {
     id: 'distort',
@@ -62,7 +66,13 @@ export const effectFamilies: EffectFamily[] = [
   {
     id: 'stylize',
     label: 'Stylize',
-    effects: ['neonGlow', 'glitch'],
+    effects: ['neonGlow', 'glitch', 'outline'],
+  },
+  {
+    // The analog, tactile layer — grain and grit laid over the image.
+    id: 'texture',
+    label: 'Texture',
+    effects: ['filmGrain'],
   },
   {
     id: 'composite',
@@ -91,6 +101,9 @@ export const effectBlurbs: Record<ShaderType, string> = {
   rgbSplit: 'Offset the color channels',
   neonGlow: 'Light up the bright areas',
   glitch: 'Tear with digital noise',
+  outline: 'Trace the edges',
+  filmGrain: 'Add analog film grain',
+  sharpen: 'Bring out fine detail',
   blend: 'Mix in a second image',
 }
 

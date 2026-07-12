@@ -159,6 +159,28 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "filmGrain": {
+    "amount": {
+      "default": 0.12,
+      "type": "range",
+    },
+    "colored": {
+      "default": false,
+      "type": "boolean",
+    },
+    "grainSize": {
+      "default": 1.5,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+  },
   "gaussianBlur": {
     "imageTexture": {
       "default": null,
@@ -289,6 +311,32 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "outline": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "lineColor": {
+      "default": "#ffffff",
+      "type": "color",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "overImage": {
+      "default": false,
+      "type": "boolean",
+    },
+    "thickness": {
+      "default": 1,
+      "type": "range",
+    },
+    "threshold": {
+      "default": 0.2,
+      "type": "range",
+    },
+  },
   "pixelate": {
     "imageTexture": {
       "default": null,
@@ -325,6 +373,24 @@ describe('shader library contract', () => {
     },
     "splitOffset": {
       "default": 0.005,
+      "type": "range",
+    },
+  },
+  "sharpen": {
+    "amount": {
+      "default": 1.2,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "radius": {
+      "default": 1,
       "type": "range",
     },
   },
