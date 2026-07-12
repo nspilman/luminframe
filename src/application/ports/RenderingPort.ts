@@ -39,16 +39,12 @@ export interface RenderingPort {
   ): void;
 
   /**
-   * Export the current canvas to a specific image format
+   * Export the current edit to a blob at the source's native resolution.
    *
-   * @param dimensions - The dimensions to export
    * @param format - The image format (PNG, JPEG, WebP)
    * @returns A blob containing the exported image
    */
-  exportCanvas(
-    dimensions: Dimensions,
-    format: ImageFormat
-  ): Promise<Blob>;
+  exportCanvas(format: ImageFormat): Promise<Blob>;
 
   /**
    * Get the current canvas element for external operations

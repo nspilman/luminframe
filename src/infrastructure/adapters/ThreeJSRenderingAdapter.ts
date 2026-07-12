@@ -9,6 +9,7 @@ import { Color } from '@/domain/value-objects/Color';
 import { TextureAdapter } from './TextureAdapter';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
 import { planPasses } from './renderChainPlan';
+import { scaleToLongestSide } from '@/lib/exportCanvasForUpload';
 
 /**
  * Three.js implementation of the RenderingPort.
@@ -437,27 +438,64 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
-   * Export the current canvas to a blob
+   * Export the current edit to a blob at the *source's* native resolution.
+   *
+   * The on-screen buffer is sized for display (fit-to-window × devicePixelRatio),
+   * which is smaller than a large source and larger than a small one — so
+   * capturing it directly would down- or up-sample the output. Instead we re-run
+   * the remembered chain into a source-sized buffer, encode that, then restore
+   * the display buffer. The result matches the source's real pixels (capped at
+   * the GPU's max texture size so an oversized photo can't fail the render).
+   *
+   * With no chain to replay (no image loaded) it falls back to the current canvas.
    */
-  async exportCanvas(
-    dimensions: Dimensions,
-    format: ImageFormat
-  ): Promise<Blob> {
+  async exportCanvas(format: ImageFormat): Promise<Blob> {
     if (!this.renderer) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
     }
 
     const canvas = this.renderer.domElement;
+    const params = this.lastChainParams;
+    if (!params) {
+      return this.encodeCanvas(canvas, format);
+    }
 
+    const [nativeWidth, nativeHeight] = this.exportBufferSize(params.source);
+    const displayDimensions = this.currentDimensions;
+    const wasAnimating = this.animationFrameId !== null;
+
+    // Freeze the animation loop so it can't redraw at display size between our
+    // native render and the async encode.
+    this.stopAnimation();
+    try {
+      this.currentDimensions = new Dimensions(nativeWidth, nativeHeight);
+      this.renderer.setSize(nativeWidth, nativeHeight, false);
+      this.drawChain();
+      return await this.encodeCanvas(canvas, format);
+    } finally {
+      this.currentDimensions = displayDimensions;
+      this.renderer.setSize(displayDimensions.width, displayDimensions.height, false);
+      this.drawChain();
+      if (wasAnimating) this.syncAnimation();
+    }
+  }
+
+  /**
+   * The source's native pixel dimensions, scaled down only if the longest side
+   * exceeds the GPU's max texture size (so an oversized photo renders instead of
+   * failing). Aspect ratio is preserved either way.
+   */
+  private exportBufferSize(source: Image): [number, number] {
+    const dims = source.getDimensions();
+    const max = this.renderer?.capabilities.maxTextureSize ?? 4096;
+    const { width, height } = scaleToLongestSide(dims.width, dims.height, max);
+    return [width, height];
+  }
+
+  private encodeCanvas(canvas: HTMLCanvasElement, format: ImageFormat): Promise<Blob> {
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error('Failed to create blob from canvas'));
-          }
-        },
+        (blob) => (blob ? resolve(blob) : reject(new Error('Failed to create blob from canvas'))),
         format.getMimeType(),
         format.getQuality()
       );

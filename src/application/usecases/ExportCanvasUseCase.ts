@@ -1,6 +1,5 @@
 import { RenderingPort } from '@/application/ports/RenderingPort';
 import { ImageExportPort } from '@/application/ports/ImageExportPort';
-import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
 
 /**
@@ -24,19 +23,13 @@ export class ExportCanvasUseCase {
    * @param format - Image format (PNG, JPEG, WebP)
    */
   async execute(filename: string, format: ImageFormat = ImageFormat.PNG): Promise<void> {
-    // Get canvas from renderer
-    const canvas = this.renderingPort.getCanvas();
-    if (!canvas) {
+    // Guard that a canvas exists before asking the renderer to encode it.
+    if (!this.renderingPort.getCanvas()) {
       throw new Error('No canvas available for export');
     }
 
-    // Get canvas dimensions
-    const dimensions = new Dimensions(canvas.width, canvas.height);
-
-    // Export canvas to blob
-    const blob = await this.renderingPort.exportCanvas(dimensions, format);
-
-    // Trigger download
+    // Encode at the source's native resolution, then trigger the download.
+    const blob = await this.renderingPort.exportCanvas(format);
     this.imageExport.download(blob, filename);
   }
 }
