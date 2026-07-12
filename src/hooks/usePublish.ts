@@ -46,6 +46,16 @@ export interface PublishInput {
   shareTo: ShareTarget[]
 }
 
+/** The edit being saved, beyond the pixels — recorded on the PDS record. */
+export interface PublishEdit {
+  /** Effect keys, in order — the lightweight recipe (display + backward compat). */
+  effects: readonly string[]
+  /** The executable effect stack with params (already serialized). */
+  recipe?: ReadonlyArray<{ type: string; params?: Record<string, number | string | boolean | number[]> }>
+  /** The parent record, when this edit descends from a remixed image. */
+  remixOf?: { uri: string; cid: string }
+}
+
 export interface Publisher extends PublishState {
   publish: (input: PublishInput) => Promise<void>
   reset: () => void
@@ -76,7 +86,7 @@ function shareAdapterFor(
 export function usePublish(
   session: AtprotoSession,
   canvasRef: RefObject<HTMLCanvasElement>,
-  effects: readonly string[] = []
+  edit: PublishEdit = { effects: [] }
 ): Publisher {
   const [state, setState] = useState<PublishState>(IDLE)
 
@@ -113,7 +123,16 @@ export function usePublish(
 
       try {
         const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
-        const input = { bytes, mimeType, alt, caption, aspectRatio, effects }
+        const input = {
+          bytes,
+          mimeType,
+          alt,
+          caption,
+          aspectRatio,
+          effects: edit.effects,
+          recipe: edit.recipe,
+          remixOf: edit.remixOf,
+        }
 
         // Primary: always save to the user's PDS. A failure here means nothing
         // was written — surface it and stop before attempting any share.
@@ -158,7 +177,7 @@ export function usePublish(
         })
       }
     },
-    [session.agent, session.handle, session.clearSession, canvasRef, effects]
+    [session.agent, session.handle, session.clearSession, canvasRef, edit]
   )
 
   const reset = useCallback(() => setState(IDLE), [])

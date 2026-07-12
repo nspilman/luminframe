@@ -49,6 +49,8 @@ export class LuminframePublishAdapter implements PublishPort {
         alt: input.alt,
         title: input.caption,
         effects: input.effects,
+        recipe: input.recipe,
+        remixOf: input.remixOf,
         createdAt,
       }),
     })

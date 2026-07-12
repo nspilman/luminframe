@@ -12,6 +12,7 @@ import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
 import { useRemix } from '@/hooks/useRemix'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
+import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 
 export function ClientApp(): JSX.Element {
@@ -49,11 +50,19 @@ export function ClientApp(): JSX.Element {
     captureSession,
   } = useShaderEditor()
 
-  // The edit recipe recorded on a saved Luminframe record: the committed effect
-  // stack, in order. The live draft is deliberately excluded — the recipe is the
-  // effects the user applied, not the one they're mid-tuning.
-  const publishEffects = useMemo(() => appliedEffects.map((e) => e.type), [appliedEffects])
-  const publish = usePublish(session, canvasRef, publishEffects)
+  // What's recorded on a saved Luminframe record beyond the pixels: the committed
+  // effect stack. `effects` is the lightweight name list (display/back-compat);
+  // `recipe` is the executable stack with params, serialized to plain JSON (source
+  // images dropped). The live draft is excluded — it's what the user applied, not
+  // what they're mid-tuning.
+  const publishEdit = useMemo(
+    () => ({
+      effects: appliedEffects.map((e) => e.type),
+      recipe: serializeRecipe(appliedEffects),
+    }),
+    [appliedEffects]
+  )
+  const publish = usePublish(session, canvasRef, publishEdit)
 
   // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
   // that image into the editor as a fresh source, wherever it's clicked from.

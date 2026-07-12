@@ -20,6 +20,13 @@ export interface PublishImageInput {
    * use it; the social targets ignore it.
    */
   effects?: readonly string[]
+  /**
+   * The executable effect stack with parameters (already serialized to plain
+   * JSON). Luminframe's own record stores it; the social targets ignore it.
+   */
+  recipe?: ReadonlyArray<{ type: string; params?: Record<string, number | string | boolean | number[]> }>
+  /** The record this image was remixed from, if any — its lineage. */
+  remixOf?: { uri: string; cid: string }
 }
 
 export interface PublishResult {
