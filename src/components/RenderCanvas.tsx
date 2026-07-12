@@ -1,5 +1,6 @@
-import { forwardRef, useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
+import { containFit } from '@/lib/containFit';
 
 interface RenderCanvasProps {
   dimensions: [number, number];
@@ -11,84 +12,80 @@ interface RenderCanvasProps {
 }
 
 /**
- * Simple canvas component for displaying rendered shader output. The actual
- * rendering is handled by the ThreeJSRenderingAdapter through the
- * useRenderingEngine hook; this component owns only the canvas element, its
- * responsive sizing box, and the hold-to-compare overlay.
+ * Displays the rendered shader output, fitting the image inside the available
+ * area with "contain" letterboxing — the whole image is always visible, centered
+ * on a neutral matte, never stretched or clipped at any aspect ratio. The actual
+ * pixels are drawn by the ThreeJSRenderingAdapter (via useRenderingEngine); this
+ * component owns the fit, the drawing-buffer sizing (CSS size × devicePixelRatio,
+ * for crisp output), and the hold-to-compare overlay.
  */
 export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
   ({ dimensions, className = '', onCanvasResize, overlayUrl = null }, ref) => {
-    const [width, height] = dimensions;
-    const aspectRatio = (height / width) * 100;
+    const [imageWidth, imageHeight] = dimensions;
     const containerRef = useRef<HTMLDivElement>(null);
-    const lastDimensionsRef = useRef<{ width: number; height: number } | null>(null);
+    const lastBufferRef = useRef<{ width: number; height: number } | null>(null);
     const onCanvasResizeRef = useRef(onCanvasResize);
 
-    // Keep callback ref up to date
+    // The letterboxed CSS size the canvas is displayed at; the drawing buffer is
+    // this × devicePixelRatio. Null until the container has been measured.
+    const [displaySize, setDisplaySize] = useState<{ width: number; height: number } | null>(null);
+
     useEffect(() => {
       onCanvasResizeRef.current = onCanvasResize;
     }, [onCanvasResize]);
 
-    // Update canvas size when container size changes
+    // Fit the image to the container and size the drawing buffer, re-running
+    // whenever the image ratio changes or the container is resized (panel
+    // collapse, window resize, sidebar toggle) via a ResizeObserver.
     useEffect(() => {
-      if (!containerRef.current || !ref || typeof ref === 'function') return;
-
       const container = containerRef.current;
-      const canvas = ref.current;
-      if (!canvas) return;
+      if (!container || !ref || typeof ref === 'function') return;
 
-      // Set canvas pixel dimensions to match container while preserving aspect ratio
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const measure = () => {
+        const canvas = ref.current;
+        if (!canvas) return;
+        const rect = container.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
 
-      // Calculate target aspect ratio from input dimensions
-      const targetAspect = width / height;
-      const containerAspect = rect.width / rect.height;
+        const fit = containFit(rect.width, rect.height, imageWidth, imageHeight);
+        if (fit.width <= 0 || fit.height <= 0) return;
+        setDisplaySize({ width: fit.width, height: fit.height });
 
-      let newWidth: number;
-      let newHeight: number;
+        // Drawing buffer = displayed CSS size × devicePixelRatio → crisp on
+        // HiDPI, and its ratio equals the image ratio so nothing is distorted.
+        const dpr = window.devicePixelRatio || 1;
+        const bufferWidth = Math.round(fit.width * dpr);
+        const bufferHeight = Math.round(fit.height * dpr);
+        if (lastBufferRef.current?.width === bufferWidth && lastBufferRef.current?.height === bufferHeight) {
+          return;
+        }
+        lastBufferRef.current = { width: bufferWidth, height: bufferHeight };
+        canvas.width = bufferWidth;
+        canvas.height = bufferHeight;
+        onCanvasResizeRef.current?.(new Dimensions(bufferWidth, bufferHeight));
+      };
 
-      // Check if aspects are close enough (within 0.1%)
-      if (Math.abs(targetAspect - containerAspect) < 0.001) {
-        // Aspects match, use container size directly
-        newWidth = Math.round(rect.width * dpr);
-        newHeight = Math.round(rect.height * dpr);
-      } else {
-        // Aspects don't match, calculate size that preserves target aspect
-        newWidth = Math.round(rect.width * dpr);
-        newHeight = Math.round(newWidth / targetAspect);
-      }
-
-      // Check if dimensions actually changed
-      if (lastDimensionsRef.current?.width === newWidth && lastDimensionsRef.current?.height === newHeight) {
-        return;
-      }
-
-      lastDimensionsRef.current = { width: newWidth, height: newHeight };
-
-      canvas.width = newWidth;
-      canvas.height = newHeight;
-
-      // Notify parent of actual canvas dimensions
-      if (onCanvasResizeRef.current) {
-        onCanvasResizeRef.current(new Dimensions(canvas.width, canvas.height));
-      }
-    }, [ref, width, height]);
+      measure();
+      const observer = new ResizeObserver(measure);
+      observer.observe(container);
+      return () => observer.disconnect();
+    }, [ref, imageWidth, imageHeight]);
 
     return (
-      <div className="w-full relative" style={{ paddingBottom: `${aspectRatio}%` }}>
-        <div ref={containerRef} className="absolute inset-0 bg-black">
-          <canvas
-            ref={ref}
-            className={`w-full h-full ${className}`}
-            style={{ display: 'block' }}
-          />
+      <div
+        ref={containerRef}
+        className="flex h-full w-full items-center justify-center overflow-hidden bg-black"
+      >
+        <div
+          className="relative"
+          style={{ width: displaySize?.width ?? 0, height: displaySize?.height ?? 0 }}
+        >
+          <canvas ref={ref} className={`block h-full w-full ${className}`} style={{ display: 'block' }} />
           {overlayUrl && (
             <img
               src={overlayUrl}
               alt="Original source"
-              className="absolute inset-0 w-full h-full"
-              style={{ display: 'block' }}
+              className="absolute inset-0 block h-full w-full"
             />
           )}
         </div>
