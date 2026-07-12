@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
-import { effectFamilies, blurbOf } from '@/lib/shaders/catalog'
+import { blurbOf } from '@/lib/shaders/catalog'
+import { filterEffectFamilies } from '@/lib/shaders/effectSearch'
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 
@@ -101,16 +102,80 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
   // cleared), so a stale effect can't linger as the canvas draft.
   useEffect(() => clearPreview, [clearPreview])
 
+  // Type-to-filter: narrows the families as the query is typed. Empty query
+  // shows the full catalog, so search overlays browsing rather than replacing it.
+  const [query, setQuery] = useState('')
+  const families = useMemo(() => filterEffectFamilies(query), [query])
+  const topMatch = families[0]?.effects[0]
+
+  // A keyboard shortcut to the search line: '/' when not already typing, or ⌘/Ctrl-K
+  // anywhere — the command-palette reflex, so the search is reachable without the mouse.
+  const searchRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement as HTMLElement | null
+      const typing =
+        el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || !!el?.isContentEditable
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      } else if (e.key === '/' && !typing) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-zinc-400">Effects</h3>
       <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
-        <CardContent className="p-3">
+        <CardContent className="space-y-3 p-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && topMatch) {
+                  onShaderSelect(topMatch)
+                } else if (e.key === 'Escape') {
+                  if (query) setQuery('')
+                  else searchRef.current?.blur()
+                }
+              }}
+              placeholder="Search effects"
+              aria-label="Search effects"
+              className="w-full rounded-lg border border-zinc-800/60 bg-black/30 py-2 pl-8 pr-8 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:border-violet-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('')
+                  searchRef.current?.focus()
+                }}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {families.length === 0 ? (
+            <p className="px-1 py-6 text-center text-xs text-zinc-500">
+              No effects match “{query}”
+            </p>
+          ) : (
           <div
-            className="max-h-[440px] space-y-4 overflow-y-auto pr-1"
+            className="max-h-[420px] space-y-4 overflow-y-auto pr-1"
             onMouseLeave={clearPreview}
           >
-            {effectFamilies.map((family) => (
+            {families.map((family) => (
               <div key={family.id} className="space-y-2">
                 <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                   {family.label}
@@ -160,6 +225,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, onShaderPreview, 
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>
