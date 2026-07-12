@@ -29,6 +29,17 @@ describe('reconcileShaderParams', () => {
     const result = reconcileShaderParams({ intensity: 0.8, splitOffset: 0.005 }, { intensity: 0.5 });
     expect('splitOffset' in result).toBe(false);
   });
+
+  it('clamps a carried number into the new effect range', () => {
+    // 'amount' is 3.0 in the effect being left but ranges -1..1 in the new one;
+    // the carried value is clamped so the slider stays honest.
+    const result = reconcileShaderParams(
+      { amount: 3.0 },
+      { amount: 0.4 },
+      { amount: { type: 'range', label: 'Amount', min: -1, max: 1, step: 0.01 } }
+    );
+    expect(result.amount).toBe(1);
+  });
 });
 
 // freshDraftParams builds the draft that opens right after an effect is applied.

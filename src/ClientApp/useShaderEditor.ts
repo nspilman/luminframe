@@ -3,7 +3,7 @@ import { useRenderingEngine } from '@/hooks/useRenderingEngine'
 import { useImageLoader } from '@/hooks/useImageLoader'
 import { useWindowSize } from '@/hooks/useWindowSize'
 import { useAsyncStatus } from '@/hooks/useAsyncStatus'
-import { ShaderType, ShaderInputVars } from '@/types/shader'
+import { ShaderType, ShaderInputVars, ShaderInputDefinition } from '@/types/shader'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
@@ -35,15 +35,27 @@ import {
  * effect. Settings unique to the effect being left are intentionally forgotten,
  * so the resulting params mirror the active effect's surface exactly (no stale
  * keys reaching the renderer as phantom uniforms).
+ *
+ * A shared name means different things in different effects, though — one
+ * effect's `amount` ranges 0–0.6, another's -8–8. So a carried number is clamped
+ * into the *new* effect's range (via newInputs), keeping the slider honest and
+ * the value in-bounds rather than pinned off the end of its own track.
  */
 export function reconcileShaderParams(
   prev: ShaderInputVars,
-  newDefaults: ShaderInputVars
+  newDefaults: ShaderInputVars,
+  newInputs: Record<string, ShaderInputDefinition> = {}
 ): ShaderInputVars {
   const reconciled: ShaderInputVars = { ...newDefaults }
   for (const [key, value] of Object.entries(prev)) {
-    if (key in newDefaults || value instanceof Image) {
+    if (value instanceof Image) {
       reconciled[key] = value
+    } else if (key in newDefaults) {
+      const input = newInputs[key]
+      reconciled[key] =
+        input?.type === 'range' && typeof value === 'number'
+          ? Math.min(input.max, Math.max(input.min, value))
+          : value
     }
   }
   return reconciled
@@ -174,7 +186,7 @@ export function useShaderEditor() {
 
   // Reconcile parameters when the selected effect changes.
   useEffect(() => {
-    setVarValues(prev => reconcileShaderParams(prev, effect.defaultValues))
+    setVarValues(prev => reconcileShaderParams(prev, effect.defaultValues, effect.inputs))
   }, [selectedShader])
 
   // Render whenever the committed pipeline, the live draft effect, its
