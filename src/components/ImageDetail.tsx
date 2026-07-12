@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch, Sparkles } from 'lucide-react'
-import { LuminframeImageView, parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
+import { LuminframeImageView, parseAtUri, LUMINFRAME_COLLECTION } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
 import { editorRemixPath, editorApplyRecipePath, imagePagePath } from '@/lib/galleryRoute'
 import { Spinner } from './ui/spinner'
@@ -43,9 +43,11 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
   }
 
   const date = formatDate(image.createdAt, 'medium')
-  // The parent this was remixed from — a link to its canonical page, when the
-  // lineage ref resolves to an image address.
-  const parent = image.remixOf ? parseAtUri(image.remixOf.uri) : null
+  // The parent this was remixed from — a link to its canonical page. The image
+  // page addresses com.luminframe.image alone, so only link a lineage ref that
+  // points at one (today it always does; this states and enforces that).
+  const parentRef = image.remixOf ? parseAtUri(image.remixOf.uri) : null
+  const parent = parentRef?.collection === LUMINFRAME_COLLECTION ? parentRef : null
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-950/80 md:flex-row">
