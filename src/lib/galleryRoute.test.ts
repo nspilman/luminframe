@@ -3,10 +3,19 @@ import {
   pathForTab,
   isGalleryPath,
   editorRemixPath,
+  editorApplyRecipePath,
   imagePagePath,
   parseImagePath,
   isImagePath,
 } from './galleryRoute'
+
+describe('editorApplyRecipePath', () => {
+  it('builds an editor URL with the AT-URI encoded into ?recipe', () => {
+    expect(editorApplyRecipePath('at://did:plc:abc/com.luminframe.image/xyz')).toBe(
+      '/?recipe=at%3A%2F%2Fdid%3Aplc%3Aabc%2Fcom.luminframe.image%2Fxyz'
+    )
+  })
+})
 
 describe('imagePagePath / parseImagePath', () => {
   it('builds an image-page path with did and rkey encoded', () => {

@@ -11,6 +11,7 @@ import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
 import { useRemix } from '@/hooks/useRemix'
+import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
@@ -47,6 +48,7 @@ export function ClientApp(): JSX.Element {
     handleDownload,
     handleImageDrop,
     handleRemixLoad,
+    applyRecipe,
     remixParent,
     handleCanvasResize,
     captureSession,
@@ -71,6 +73,10 @@ export function ClientApp(): JSX.Element {
   // that image into the editor as a fresh source (carrying its {uri, cid} so a
   // save records the lineage), wherever it's clicked from.
   useRemix(handleRemixLoad)
+
+  // "Apply this recipe" from the gallery is /?recipe=<at-uri>: bring the saved
+  // look (its effect stack) onto the current image, wherever it's clicked from.
+  useApplyRecipe(applyRecipe)
 
   const deleteImage = useLuminframeDelete(session.agent)
 

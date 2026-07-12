@@ -45,6 +45,8 @@ export interface LuminframeImageView {
   title?: string
   /** Effect keys applied, in order (the edit recipe). */
   effects: string[]
+  /** The executable effect stack with params — the applyable recipe (v2), if stored. */
+  recipe?: { type: string; params?: Record<string, unknown> }[]
   /** The record this image was remixed from, if any — its lineage (v2). */
   remixOf?: StrongRef
   createdAt: string
@@ -66,6 +68,7 @@ interface RawRecord {
     alt?: string
     title?: string
     effects?: unknown
+    recipe?: unknown
     remixOf?: unknown
     createdAt?: string
   }
@@ -77,6 +80,17 @@ function parseStrongRef(value: unknown): StrongRef | undefined {
   const { uri, cid } = value as { uri?: unknown; cid?: unknown }
   if (typeof uri === 'string' && typeof cid === 'string') return { uri, cid }
   return undefined
+}
+
+/** Read the recipe (steps with a string `type`) out of freeform record data. */
+function parseRecipe(value: unknown): { type: string; params?: Record<string, unknown> }[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const steps = value
+    .filter((s): s is { type: string; params?: Record<string, unknown> } =>
+      !!s && typeof s === 'object' && typeof (s as { type?: unknown }).type === 'string'
+    )
+    .map((s) => (s.params && typeof s.params === 'object' ? { type: s.type, params: s.params } : { type: s.type }))
+  return steps.length > 0 ? steps : undefined
 }
 
 // ── Pure shapers (tested) ─────────────────────────────────────────────────────
@@ -122,6 +136,7 @@ export function recordToView(record: RawRecord, did: string, pds: string, handle
     alt: value.alt,
     title: value.title,
     effects: Array.isArray(value.effects) ? value.effects.filter((e): e is string => typeof e === 'string') : [],
+    recipe: parseRecipe(value.recipe),
     remixOf: parseStrongRef(value.remixOf),
     createdAt: value.createdAt ?? '',
   }

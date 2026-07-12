@@ -52,6 +52,17 @@ export function editorRemixPath(uri: string): string {
   return `/?${REMIX_PARAM}=${encodeURIComponent(uri)}`
 }
 
+/**
+ * The search-param key that asks the editor to apply a record's saved recipe (its
+ * effect stack) to the current image — the "use this look as a filter" address.
+ */
+export const RECIPE_PARAM = 'recipe'
+
+/** The editor address that applies a given record's recipe to the working image. */
+export function editorApplyRecipePath(uri: string): string {
+  return `/?${RECIPE_PARAM}=${encodeURIComponent(uri)}`
+}
+
 const IMAGE_PAGE_PREFIX = '/image'
 
 /** The canonical page for one image, keyed by its author DID and record key. */

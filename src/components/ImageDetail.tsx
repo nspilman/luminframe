@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch } from 'lucide-react'
+import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch, Sparkles } from 'lucide-react'
 import { LuminframeImageView, parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
-import { editorRemixPath, imagePagePath } from '@/lib/galleryRoute'
+import { editorRemixPath, editorApplyRecipePath, imagePagePath } from '@/lib/galleryRoute'
 import { Spinner } from './ui/spinner'
 
 interface ImageDetailProps {
@@ -122,6 +122,16 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
             <Wand2 className="h-4 w-4" />
             Open in editor
           </Link>
+
+          {image.recipe && image.recipe.length > 0 && (
+            <Link
+              to={editorApplyRecipePath(image.uri)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-violet-500/40 px-4 py-2 text-sm font-medium text-violet-200 transition-colors hover:bg-violet-500/10"
+            >
+              <Sparkles className="h-4 w-4" />
+              Apply this recipe
+            </Link>
+          )}
 
           {permalinkTo && (
             <Link

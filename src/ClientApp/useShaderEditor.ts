@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRenderingEngine } from '@/hooks/useRenderingEngine'
 import { useImageLoader } from '@/hooks/useImageLoader'
 import { useWindowSize } from '@/hooks/useWindowSize'
@@ -8,6 +8,7 @@ import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
+import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
 import { effectFamilies } from '@/lib/shaders/catalog'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
 import {
@@ -135,6 +136,10 @@ export function useShaderEditor() {
   // remix loads the source; cleared whenever the source is replaced by any other
   // load, so a fresh image can never inherit a false parent.
   const [remixParent, setRemixParent] = useState<{ uri: string; cid: string } | null>(null)
+
+  // A recipe applied before any image was loaded, waiting to land on the first
+  // source. A ref (not state) — it's consumed inside the load task and needs no render.
+  const pendingRecipeRef = useRef<HydratedStep[] | null>(null)
 
   const effect = shaderLibrary[selectedShader]
   const hasImage =
@@ -312,7 +317,14 @@ export function useShaderEditor() {
     useCallback(async (file: File, parent?: { uri: string; cid: string }) => {
       const image = await loadFromFile(file)
       // A new source is a fresh edit — the prior stack belonged to the old image.
-      setHistory(initHistory(EditPipeline.empty()))
+      // The exception: a recipe applied before any image was loaded is waiting to
+      // land on the first source, so it becomes the fresh stack instead of nothing.
+      const pending = pendingRecipeRef.current
+      pendingRecipeRef.current = null
+      const base = pending
+        ? pending.reduce((p, s) => p.append(s.type, s.params), EditPipeline.empty())
+        : EditPipeline.empty()
+      setHistory(initHistory(base))
       // Set the source directly (not via updateVarValue, whose imageTexture clear
       // would wipe the provenance we set here for a remix). A plain load passes no
       // parent, so provenance clears; a remix passes the record it came from.
@@ -324,6 +336,27 @@ export function useShaderEditor() {
   const handleRemixLoad = useCallback(
     (file: File, parent?: { uri: string; cid: string }) => loadImage.run(file, parent),
     [loadImage.run]
+  )
+
+  // Apply a saved recipe (someone's look) to the current image. Replaces the
+  // committed stack — pushed, so the previous stack is one undo away — and keeps
+  // the source. With no image yet, it's held until the next load (see loadImage),
+  // so "pick a look, then choose a photo" works too.
+  const applyRecipe = useCallback(
+    (steps: HydratedStep[]) => {
+      if (steps.length === 0) return
+      if (hasImage) {
+        const recipePipeline = steps.reduce(
+          (p, s) => p.append(s.type, s.params),
+          EditPipeline.empty()
+        )
+        setHistory(h => pushHistory(h, recipePipeline))
+        pendingRecipeRef.current = null
+      } else {
+        pendingRecipeRef.current = steps
+      }
+    },
+    [hasImage]
   )
 
   return {
@@ -352,6 +385,7 @@ export function useShaderEditor() {
     handleDownload,
     handleImageDrop,
     handleRemixLoad,
+    applyRecipe,
     remixParent,
     handleCanvasResize,
     captureSession,

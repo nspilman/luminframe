@@ -75,6 +75,34 @@ describe('recordToView', () => {
     })
   })
 
+  it('reads the recipe, keeping only steps with a string type', () => {
+    const view = recordToView(
+      {
+        uri: 'at://x/y/z',
+        cid: 'c',
+        value: {
+          recipe: [
+            { type: 'vibrance', params: { amount: 0.4 } },
+            { type: 'blackAndWhite' },
+            { params: { amount: 1 } }, // no type — dropped
+          ],
+        } as never,
+      },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(view.recipe).toEqual([
+      { type: 'vibrance', params: { amount: 0.4 } },
+      { type: 'blackAndWhite' },
+    ])
+  })
+
+  it('leaves recipe undefined when the record has none', () => {
+    const view = recordToView({ uri: 'at://x/y/z', cid: 'c', value: {} }, 'did:plc:abc', 'https://pds.example', null)
+    expect(view.recipe).toBeUndefined()
+  })
+
   it('reads remixOf as a strong ref when present, and ignores a malformed one', () => {
     const parent = { uri: 'at://did:plc:xyz/com.luminframe.image/parent', cid: 'bafparent' }
     const withRef = recordToView(
