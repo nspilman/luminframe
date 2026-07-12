@@ -1,0 +1,60 @@
+{
+  "lexicon": 1,
+  "id": "com.luminframe.image",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "An image edited in Luminframe, saved to the author's repo, together with the effect recipe used to produce it.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["image", "aspectRatio", "createdAt"],
+        "properties": {
+          "image": {
+            "type": "blob",
+            "accept": ["image/*"],
+            "maxSize": 1000000,
+            "description": "The rendered image."
+          },
+          "aspectRatio": {
+            "type": "ref",
+            "ref": "#aspectRatio",
+            "description": "Pixel dimensions of the render, so a viewer can lay it out without decoding."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "When the record was created."
+          },
+          "alt": {
+            "type": "string",
+            "maxGraphemes": 2000,
+            "maxLength": 10000,
+            "description": "Accessibility description of the image."
+          },
+          "title": {
+            "type": "string",
+            "maxGraphemes": 300,
+            "maxLength": 3000,
+            "description": "Short caption or label."
+          },
+          "effects": {
+            "type": "array",
+            "maxLength": 64,
+            "items": { "type": "string", "maxLength": 128 },
+            "description": "The effect keys applied to produce this image, in order (the edit recipe)."
+          }
+        }
+      }
+    },
+    "aspectRatio": {
+      "type": "object",
+      "description": "The width:height ratio of the image, in pixels.",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
