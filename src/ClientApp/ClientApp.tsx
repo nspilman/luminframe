@@ -10,6 +10,7 @@ import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
 import { useRemix } from '@/hooks/useRemix'
+import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { isGalleryPath } from '@/lib/galleryRoute'
 
 export function ClientApp(): JSX.Element {
@@ -53,6 +54,8 @@ export function ClientApp(): JSX.Element {
   // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
   // that image into the editor as a fresh source, wherever it's clicked from.
   useRemix(handleImageDrop)
+
+  const deleteImage = useLuminframeDelete(session.agent)
 
   // Persist the in-progress edit before sign-in navigates away to Bluesky, so it
   // restores when the user lands back here. Other session methods pass through.
@@ -115,7 +118,7 @@ export function ClientApp(): JSX.Element {
         </div>
       </div>
 
-      {onGallery && <GalleryPage did={session.did} />}
+      {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
     </div>
   )
 }

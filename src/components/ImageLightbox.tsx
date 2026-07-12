@@ -1,13 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { X, ExternalLink, Calendar, Wand2 } from 'lucide-react'
+import { X, ExternalLink, Calendar, Wand2, Trash2 } from 'lucide-react'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
 import { editorRemixPath } from '@/lib/galleryRoute'
+import { Spinner } from './ui/spinner'
 
 interface ImageLightboxProps {
   image: LuminframeImageView
   onClose: () => void
+  /** Whether the viewer owns this record and may delete it. */
+  canDelete?: boolean
+  /** Deletes the record; rejects on failure so the dialog can surface it. */
+  onDelete?: () => Promise<void>
 }
 
 /**
@@ -16,9 +21,29 @@ interface ImageLightboxProps {
  * is demoted to a secondary link in the info panel. Closes on Escape, backdrop
  * click, or the X. Locks body scroll while open, moves focus into the dialog on
  * open, and restores it to whatever opened it on close.
+ *
+ * When the viewer owns the record (`canDelete`), a two-step delete lets them
+ * retract it from their PDS.
  */
-export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
+export function ImageLightbox({ image, onClose, canDelete, onDelete }: ImageLightboxProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const runDelete = async () => {
+    if (!onDelete) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await onDelete() // on success the parent unmounts this dialog
+    } catch (err) {
+      setDeleting(false)
+      setConfirming(false)
+      setDeleteError('Couldn’t delete. Please try again.')
+      console.error('Delete failed:', err)
+    }
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -138,6 +163,46 @@ export function ImageLightbox({ image, onClose }: ImageLightboxProps) {
               <ExternalLink className="h-3.5 w-3.5" />
               View record on pdsls.dev
             </a>
+
+            {canDelete && onDelete && (
+              <div className="mt-1 border-t border-zinc-800/60 pt-3">
+                {deleting ? (
+                  <span className="inline-flex items-center gap-2 text-xs text-zinc-400">
+                    <Spinner size="sm" /> Deleting…
+                  </span>
+                ) : confirming ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-400">Delete this image from your PDS? This can’t be undone.</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(false)}
+                        className="flex-1 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/5"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={runDelete}
+                        className="flex-1 rounded-md bg-red-600/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    className="inline-flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-red-400"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                )}
+                {deleteError && <p className="mt-2 text-xs text-red-400">{deleteError}</p>}
+              </div>
+            )}
           </div>
         </aside>
       </div>

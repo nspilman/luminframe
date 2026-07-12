@@ -10,7 +10,9 @@
  *  - `repo:social.grain.photo?action=create`        Grain: create the photo…
  *  - `repo:social.grain.gallery?action=create`      …its gallery…
  *  - `repo:social.grain.gallery.item?action=create` …and the join between them
- *  - `repo:com.luminframe.image?action=create`      Luminframe: save an image to the user's PDS
+ *  - `repo:com.luminframe.image?action=create&action=delete`
+ *                                                   Luminframe: save an image to the user's
+ *                                                   PDS, and delete one they own
  *  - `blob:image/*`                                 upload image blobs (all targets)
  *  - `rpc:app.bsky.actor.getProfile?aud=…`          read the profile, only to show
  *                                                   the signed-in user's handle
@@ -33,7 +35,7 @@ export const ATPROTO_OAUTH_SCOPE = [
   'repo:social.grain.photo?action=create',
   'repo:social.grain.gallery?action=create',
   'repo:social.grain.gallery.item?action=create',
-  'repo:com.luminframe.image?action=create',
+  'repo:com.luminframe.image?action=create&action=delete',
   'blob:image/*',
   'rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app#bsky_appview',
 ].join(' ')

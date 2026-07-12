@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { useLocation, useSearchParams, NavLink } from 'react-router-dom'
 import { ImageOff, LogIn, AlertCircle } from 'lucide-react'
 import { Spinner } from './ui/spinner'
@@ -11,6 +12,8 @@ import { tabFromPath, pathForTab, IMAGE_PARAM } from '@/lib/galleryRoute'
 interface GalleryPageProps {
   /** The signed-in user's DID, or null when signed out (gates the "mine" tab). */
   did: string | null
+  /** Deletes one of the viewer's own records by AT-URI. */
+  onDeleteImage: (uri: string) => Promise<void>
 }
 
 const TABS: { value: FeedTab; label: string }[] = [
@@ -88,13 +91,21 @@ function CenterState({ icon, children }: { icon: React.ReactNode; children: Reac
  * one across the network ("Network"), read live from PDSes via luminframeFeed.
  * A public read: the Network tab works signed-out; Mine asks for sign-in.
  */
-export function GalleryPage({ did }: GalleryPageProps) {
+export function GalleryPage({ did, onDeleteImage }: GalleryPageProps) {
   // The URL is the source of truth: the scope is the path, the open image is a
   // query param. Nothing about where you are lives in local state anymore.
   const tab = tabFromPath(useLocation().pathname)
   const [searchParams, setSearchParams] = useSearchParams()
   const feed = useLuminframeFeed(tab, did)
-  const openImage = useOpenImage(searchParams.get(IMAGE_PARAM), feed.images)
+
+  // Records deleted this session, hidden optimistically so the grid updates the
+  // instant a delete succeeds without a refetch.
+  const [removed, setRemoved] = useState<ReadonlySet<string>>(() => new Set())
+  const images = useMemo(
+    () => feed.images.filter((i) => !removed.has(i.uri)),
+    [feed.images, removed]
+  )
+  const openImage = useOpenImage(searchParams.get(IMAGE_PARAM), images)
 
   const openInLightbox = (image: LuminframeImageView) =>
     setSearchParams((prev) => {
@@ -110,6 +121,14 @@ export function GalleryPage({ did }: GalleryPageProps) {
       },
       { replace: true } // replace, so Back doesn't reopen what you just closed
     )
+
+  // Delete propagates errors to the lightbox (which shows them); only on success
+  // do we hide the record and close the viewer.
+  const handleDelete = async (uri: string) => {
+    await onDeleteImage(uri)
+    setRemoved((prev) => new Set(prev).add(uri))
+    closeLightbox()
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -150,7 +169,7 @@ export function GalleryPage({ did }: GalleryPageProps) {
           </CenterState>
         )}
 
-        {feed.status === 'loaded' && feed.images.length === 0 && (
+        {feed.status === 'loaded' && images.length === 0 && (
           <CenterState icon={<ImageOff className="h-8 w-8" />}>
             {tab === 'mine'
               ? 'You haven’t saved any Luminframe images yet. Edit a photo and Publish → My PDS.'
@@ -158,16 +177,23 @@ export function GalleryPage({ did }: GalleryPageProps) {
           </CenterState>
         )}
 
-        {feed.status === 'loaded' && feed.images.length > 0 && (
+        {feed.status === 'loaded' && images.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {feed.images.map((image) => (
+            {images.map((image) => (
               <ImageCard key={image.uri} image={image} onOpen={() => openInLightbox(image)} />
             ))}
           </div>
         )}
       </div>
 
-      {openImage && <ImageLightbox image={openImage} onClose={closeLightbox} />}
+      {openImage && (
+        <ImageLightbox
+          image={openImage}
+          onClose={closeLightbox}
+          canDelete={!!did && openImage.did === did}
+          onDelete={() => handleDelete(openImage.uri)}
+        />
+      )}
     </div>
   )
 }
