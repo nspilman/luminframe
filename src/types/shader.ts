@@ -95,7 +95,11 @@ export const registeredShaders = [
      'chromaticAberration',
      'lensDistortion',
      'swirl',
-     'tiltShift'
+     'tiltShift',
+     'halftone',
+     'dither',
+     'crt',
+     'crossHatch'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

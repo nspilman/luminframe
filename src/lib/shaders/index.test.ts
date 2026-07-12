@@ -173,6 +173,68 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "crossHatch": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "inkColor": {
+      "default": "#0d0d0d",
+      "type": "color",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "spacing": {
+      "default": 6,
+      "type": "range",
+    },
+  },
+  "crt": {
+    "curvature": {
+      "default": 0.15,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "scanIntensity": {
+      "default": 0.4,
+      "type": "range",
+    },
+    "scanSize": {
+      "default": 2,
+      "type": "range",
+    },
+  },
+  "dither": {
+    "darkColor": {
+      "default": "#000000",
+      "type": "color",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "lightColor": {
+      "default": "#ffffff",
+      "type": "color",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "pixelSize": {
+      "default": 3,
+      "type": "range",
+    },
+  },
   "dream": {
     "blurAmount": {
       "default": 2,
@@ -294,6 +356,28 @@ describe('shader library contract', () => {
     },
     "threshold": {
       "default": 0.6,
+      "type": "range",
+    },
+  },
+  "halftone": {
+    "angle": {
+      "default": 0.4,
+      "type": "range",
+    },
+    "dotSize": {
+      "default": 6,
+      "type": "range",
+    },
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "inkColor": {
+      "default": "#000000",
+      "type": "color",
+    },
+    "opacity": {
+      "default": 1,
       "type": "range",
     },
   },

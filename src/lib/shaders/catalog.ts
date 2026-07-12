@@ -87,10 +87,11 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['bloom', 'lightLeak', 'godRays'],
   },
   {
-    // The analog, tactile layer — grain and grit laid over the image.
+    // The analog, tactile layer — grain, ink, dots, and screens laid over the
+    // image, from film stock to newsprint to a cathode-ray tube.
     id: 'texture',
     label: 'Texture',
-    effects: ['filmGrain'],
+    effects: ['filmGrain', 'halftone', 'crossHatch', 'dither', 'crt'],
   },
   {
     id: 'composite',
@@ -121,6 +122,10 @@ export const effectBlurbs: Record<ShaderType, string> = {
   lensDistortion: 'Bend through a curved lens',
   swirl: 'Twist around the center',
   tiltShift: 'Keep a sharp band, blur the rest',
+  halftone: 'Break into printer dots',
+  dither: 'Dither to two tones',
+  crt: 'Old CRT scanlines and curve',
+  crossHatch: 'Sketch with pencil hatching',
   gaussianBlur: 'Soften with blur',
   dream: 'Blur and brighten to a glow',
   vignette: 'Darken toward the edges',

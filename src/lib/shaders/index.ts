@@ -29,6 +29,10 @@ import { chromaticAberration } from './effects/chromatic-aberration';
 import { lensDistortion } from './effects/lens-distortion';
 import { swirl } from './effects/swirl';
 import { tiltShift } from './effects/tilt-shift';
+import { halftone } from './effects/halftone';
+import { dither } from './effects/dither';
+import { crt } from './effects/crt';
+import { crossHatch } from './effects/cross-hatch';
 
 export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   blackAndWhite,
@@ -61,4 +65,8 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   lensDistortion,
   swirl,
   tiltShift,
+  halftone,
+  dither,
+  crt,
+  crossHatch,
 };
