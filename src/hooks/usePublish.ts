@@ -6,26 +6,37 @@ import { GrainPublishAdapter } from '@/infrastructure/adapters/GrainPublishAdapt
 import { LuminframePublishAdapter } from '@/infrastructure/adapters/LuminframePublishAdapter'
 import { exportCanvasForUpload } from '@/lib/exportCanvasForUpload'
 import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
+import { PublishTarget, ShareTarget, toLuminframeUrl, publicUrlFor } from '@/lib/publishUrls'
 
-/**
- * Where an image can go, all over the same AT identity: the two social networks,
- * or the user's own PDS as a first-class Luminframe record.
- */
-export type PublishTarget = 'bluesky' | 'grain' | 'luminframe'
+export type { PublishTarget, ShareTarget } from '@/lib/publishUrls'
 
 export type PublishPhase = 'idle' | 'publishing' | 'success' | 'error'
 
+/** The result of writing to one destination. */
+export interface PublishOutcome {
+  target: PublishTarget
+  status: 'ok' | 'failed'
+  /** Web URL to the created record, when it succeeded. */
+  url: string | null
+}
+
 export interface PublishState {
   phase: PublishPhase
-  /** A web URL to the created post/gallery, once published. */
-  postUrl: string | null
+  /**
+   * Per-destination results, canonical PDS save first. Populated on success
+   * (the save, plus any selected shares — each of which may have failed on its
+   * own without failing the save).
+   */
+  outcomes: PublishOutcome[]
+  /** Set only when the canonical save itself failed — nothing was written. */
   error: string | null
 }
 
 export interface PublishInput {
   alt: string
   caption: string
-  target: PublishTarget
+  /** Optional cross-posts to make alongside the always-on PDS save. */
+  shareTo: ShareTarget[]
 }
 
 export interface Publisher extends PublishState {
@@ -33,98 +44,81 @@ export interface Publisher extends PublishState {
   reset: () => void
 }
 
-/** at://{did}/app.bsky.feed.post/{rkey} → https://bsky.app/profile/{actor}/post/{rkey} */
-function toBlueskyUrl(uri: string, actor: string | null): string | null {
-  const rkey = uri.split('/').pop()
-  if (!rkey) return null
-  return `https://bsky.app/profile/${actor ?? uri.split('/')[2]}/post/${rkey}`
+const IDLE: PublishState = { phase: 'idle', outcomes: [], error: null }
+
+/** The adapter that cross-posts to a given social network. */
+function shareAdapterFor(
+  target: ShareTarget,
+  agent: NonNullable<AtprotoSession['agent']>
+): PublishPort {
+  return target === 'grain' ? new GrainPublishAdapter(agent) : new BlueskyPublishAdapter(agent)
 }
 
 /**
- * at://{did}/social.grain.gallery/{rkey} → https://grain.social/profile/{did}/gallery/{rkey}
- * Grain's gallery route takes the DID directly, so no handle lookup is needed.
- */
-function toGrainUrl(uri: string): string | null {
-  const parts = uri.split('/')
-  const did = parts[2]
-  const rkey = parts[parts.length - 1]
-  if (!did || !rkey) return null
-  return `https://grain.social/profile/${did}/gallery/${rkey}`
-}
-
-/**
- * A com.luminframe.image record has no first-party viewer yet, so we link to
- * pdsls.dev — a generic AT Protocol record browser — so the user can see the
- * record they just wrote to their repo.
- */
-function toLuminframeUrl(uri: string): string | null {
-  if (!uri.startsWith('at://')) return null
-  return `https://pdsls.dev/${uri}`
-}
-
-function adapterFor(target: PublishTarget, agent: NonNullable<AtprotoSession['agent']>): PublishPort {
-  switch (target) {
-    case 'grain':
-      return new GrainPublishAdapter(agent)
-    case 'luminframe':
-      return new LuminframePublishAdapter(agent)
-    default:
-      return new BlueskyPublishAdapter(agent)
-  }
-}
-
-function toPostUrl(target: PublishTarget, uri: string, handle: string | null): string | null {
-  switch (target) {
-    case 'grain':
-      return toGrainUrl(uri)
-    case 'luminframe':
-      return toLuminframeUrl(uri)
-    default:
-      return toBlueskyUrl(uri, handle)
-  }
-}
-
-/**
- * Orchestrates publishing the current render to a chosen AT Protocol target:
- * export the canvas to uploadable bytes, then hand them to that target's adapter
- * with the user's authenticated agent. Exposes a small phase machine so the
- * dialog can show progress, the resulting link, or an error.
+ * Orchestrates saving the current render. Every save writes the canonical
+ * `com.luminframe.image` record to the user's PDS; Bluesky and Grain are opt-in
+ * cross-posts made alongside it.
  *
- * The target picks the adapter (which records get written) and how the result
- * AT-URI maps to a human web URL — everything else is shared.
+ * The save is primary: if it fails, nothing was written and the phase is `error`.
+ * The shares are secondary and best-effort — they run in parallel after the save
+ * and each reports its own outcome, so a failed cross-post never loses the save.
+ *
+ * The canvas is exported once; every destination uploads those same bytes, which
+ * (being content-addressed) the PDS stores as a single blob regardless.
  */
 export function usePublish(
   session: AtprotoSession,
   canvasRef: RefObject<HTMLCanvasElement>,
   effects: readonly string[] = []
 ): Publisher {
-  const [state, setState] = useState<PublishState>({
-    phase: 'idle',
-    postUrl: null,
-    error: null,
-  })
+  const [state, setState] = useState<PublishState>(IDLE)
 
   const publish = useCallback(
-    async ({ alt, caption, target }: PublishInput) => {
+    async ({ alt, caption, shareTo }: PublishInput) => {
       const canvas = canvasRef.current
       if (!canvas) {
-        setState({ phase: 'error', postUrl: null, error: 'No rendered image to publish.' })
+        setState({ phase: 'error', outcomes: [], error: 'No rendered image to save.' })
         return
       }
       if (!session.agent) {
-        setState({ phase: 'error', postUrl: null, error: 'Sign in first.' })
+        setState({ phase: 'error', outcomes: [], error: 'Sign in first.' })
         return
       }
+      const agent = session.agent
 
-      setState({ phase: 'publishing', postUrl: null, error: null })
+      setState({ phase: 'publishing', outcomes: [], error: null })
       try {
         const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
-        const adapter = adapterFor(target, session.agent)
-        const result = await adapter.publishImage({ bytes, mimeType, alt, caption, aspectRatio, effects })
-        const postUrl = toPostUrl(target, result.uri, session.handle)
-        setState({ phase: 'success', postUrl, error: null })
+        const input = { bytes, mimeType, alt, caption, aspectRatio, effects }
+
+        // Primary: always save to the user's PDS. A failure here means nothing
+        // was written — surface it and stop before attempting any share.
+        const save = await new LuminframePublishAdapter(agent).publishImage(input)
+        const outcomes: PublishOutcome[] = [
+          { target: 'luminframe', status: 'ok', url: toLuminframeUrl(save.uri) },
+        ]
+
+        // Secondary: opt-in cross-posts, in parallel, each independently fallible.
+        const shares = await Promise.allSettled(
+          shareTo.map((target) => shareAdapterFor(target, agent).publishImage(input))
+        )
+        shares.forEach((result, i) => {
+          const target = shareTo[i]
+          if (result.status === 'fulfilled') {
+            outcomes.push({
+              target,
+              status: 'ok',
+              url: publicUrlFor(target, result.value.uri, session.handle),
+            })
+          } else {
+            console.error(`Share to ${target} failed:`, result.reason)
+            outcomes.push({ target, status: 'failed', url: null })
+          }
+        })
+
+        setState({ phase: 'success', outcomes, error: null })
       } catch (err) {
-        console.error('Publish failed:', err)
+        console.error('Save failed:', err)
         // A dead session can only be discovered on a failed write (no
         // session-deleted event in this client). Drop it so the UI returns to
         // signed-out and the user can re-authenticate.
@@ -132,25 +126,22 @@ export function usePublish(
           session.clearSession()
           setState({
             phase: 'error',
-            postUrl: null,
+            outcomes: [],
             error: 'Your session expired. Please sign in again.',
           })
           return
         }
         setState({
           phase: 'error',
-          postUrl: null,
-          error: 'Publishing failed. Please try again.',
+          outcomes: [],
+          error: 'Saving failed. Please try again.',
         })
       }
     },
     [session.agent, session.handle, session.clearSession, canvasRef, effects]
   )
 
-  const reset = useCallback(
-    () => setState({ phase: 'idle', postUrl: null, error: null }),
-    []
-  )
+  const reset = useCallback(() => setState(IDLE), [])
 
   return { ...state, publish, reset }
 }

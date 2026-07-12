@@ -110,7 +110,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               className="bg-zinc-900/50 hover:bg-zinc-900/70"
             >
               <Send className="w-4 h-4 mr-2" />
-              Publish
+              Save
             </Button>
             <Button
               onClick={onSaveAsSecondImage}
@@ -127,7 +127,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           onClose={() => setPublishOpen(false)}
           isSignedIn={isSignedIn}
           phase={publish.phase}
-          postUrl={publish.postUrl}
+          outcomes={publish.outcomes}
           error={publish.error}
           onPublish={publish.publish}
         />
