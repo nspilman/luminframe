@@ -5,17 +5,21 @@ import { useLocation } from 'react-router-dom'
 import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
 import { GalleryPage } from '@/components/GalleryPage'
+import { ImagePage } from '@/components/ImagePage'
 import { EditorSidebar } from './EditorSidebar'
 import { useShaderEditor } from './useShaderEditor'
 import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
 import { useRemix } from '@/hooks/useRemix'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
-import { isGalleryPath } from '@/lib/galleryRoute'
+import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 
 export function ClientApp(): JSX.Element {
   const session = useAtprotoSession()
-  const onGallery = isGalleryPath(useLocation().pathname)
+  const pathname = useLocation().pathname
+  const onGallery = isGalleryPath(pathname)
+  const onImage = isImagePath(pathname)
+  const onEditor = !onGallery && !onImage
   const {
     canvasRef,
     selectedShader,
@@ -72,10 +76,10 @@ export function ClientApp(): JSX.Element {
     <div className="flex flex-col min-h-screen bg-[#030305]">
       <HeaderBar session={headerSession} />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
-          on every visit) — it's just hidden while the gallery is shown. Which view
-          is visible is read from the URL, not local state, so /gallery is a real,
-          bookmarkable address. */}
-      <div className={onGallery ? 'hidden' : 'flex flex-col md:flex-row flex-1'}>
+          on every visit) — it's just hidden while another view is shown. Which
+          view is visible is read from the URL, not local state, so every place is
+          a real, bookmarkable address. */}
+      <div className={onEditor ? 'flex flex-col md:flex-row flex-1' : 'hidden'}>
         <EditorSidebar
           hasImage={hasImage}
           source={source}
@@ -119,6 +123,7 @@ export function ClientApp(): JSX.Element {
       </div>
 
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
+      {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
     </div>
   )
 }

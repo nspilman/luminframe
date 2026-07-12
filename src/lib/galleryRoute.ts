@@ -1,9 +1,16 @@
 /**
- * The mapping between a URL and the gallery's place within it. The gallery lives
- * at /gallery (network scope) and /gallery/mine (the signed-in user's scope); the
- * scope is a path segment because it's a genuine sub-place. The open image is a
- * ?image=<at-uri> query param — a transient focus laid *over* a scope, not a place
- * of its own — so the gallery stays addressable underneath it.
+ * The app's URL vocabulary — every place mapped to an address, and back.
+ *
+ *   /                     the editor
+ *   /gallery              the gallery, network scope
+ *   /gallery/mine         the gallery, the signed-in user's scope
+ *   /image/:did/:rkey     one image's canonical page (its home)
+ *   …?image=<at-uri>      an image opened as a quick preview over the gallery
+ *   /?remix=<at-uri>      the editor, loading that image as its source
+ *
+ * The gallery scope is a path segment (a genuine sub-place); the quick-preview
+ * image and the remix are query params (transient focuses over a place). An
+ * image's canonical page is a place of its own — the thing you share.
  *
  * Pure so the address↔state translation has one tested home and a typo can't
  * silently send a link to the wrong place.
@@ -43,4 +50,23 @@ export const REMIX_PARAM = 'remix'
 /** The editor address that loads a given image (by AT-URI) as the working source. */
 export function editorRemixPath(uri: string): string {
   return `/?${REMIX_PARAM}=${encodeURIComponent(uri)}`
+}
+
+const IMAGE_PAGE_PREFIX = '/image'
+
+/** The canonical page for one image, keyed by its author DID and record key. */
+export function imagePagePath(did: string, rkey: string): string {
+  return `${IMAGE_PAGE_PREFIX}/${encodeURIComponent(did)}/${encodeURIComponent(rkey)}`
+}
+
+/** The did + rkey addressed by an image-page path, or null if it isn't one. */
+export function parseImagePath(pathname: string): { did: string; rkey: string } | null {
+  const match = pathname.replace(/\/$/, '').match(/^\/image\/([^/]+)\/([^/]+)$/)
+  if (!match) return null
+  return { did: decodeURIComponent(match[1]), rkey: decodeURIComponent(match[2]) }
+}
+
+/** True when a path addresses an image page. */
+export function isImagePath(pathname: string): boolean {
+  return parseImagePath(pathname) !== null
 }

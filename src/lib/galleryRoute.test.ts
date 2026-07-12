@@ -1,4 +1,42 @@
-import { tabFromPath, pathForTab, isGalleryPath, editorRemixPath } from './galleryRoute'
+import {
+  tabFromPath,
+  pathForTab,
+  isGalleryPath,
+  editorRemixPath,
+  imagePagePath,
+  parseImagePath,
+  isImagePath,
+} from './galleryRoute'
+
+describe('imagePagePath / parseImagePath', () => {
+  it('builds an image-page path with did and rkey encoded', () => {
+    // The DID's colons must be encoded or they'd read as extra path structure.
+    expect(imagePagePath('did:plc:abc', '3kxyz')).toBe('/image/did%3Aplc%3Aabc/3kxyz')
+  })
+
+  it('round-trips a path back to its did and rkey', () => {
+    const path = imagePagePath('did:plc:abc', '3kxyz')
+    expect(parseImagePath(path)).toEqual({ did: 'did:plc:abc', rkey: '3kxyz' })
+  })
+
+  it('returns null for a non-image path', () => {
+    expect(parseImagePath('/gallery/mine')).toBeNull()
+  })
+
+  it('returns null when the rkey segment is missing', () => {
+    expect(parseImagePath('/image/did:plc:abc')).toBeNull()
+  })
+})
+
+describe('isImagePath', () => {
+  it('true for a full image path', () => {
+    expect(isImagePath('/image/did%3Aplc%3Aabc/3kxyz')).toBe(true)
+  })
+
+  it('false for the gallery', () => {
+    expect(isImagePath('/gallery')).toBe(false)
+  })
+})
 
 describe('editorRemixPath', () => {
   it('builds an editor URL with the AT-URI encoded into ?remix', () => {
