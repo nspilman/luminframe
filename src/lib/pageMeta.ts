@@ -96,28 +96,44 @@ export function staticPageMeta(pathname: string, url: string): PageMeta {
   }
 }
 
+/** One head meta tag: its selector kind (name/property) and its content. */
+export interface MetaTag {
+  kind: 'name' | 'property'
+  key: string
+  content: string
+}
+
 /**
- * Render a PageMeta as the head markup (title + description + Open Graph + Twitter
- * Card). Used by the edge function to inject server-side; the client sets the same
- * fields on live DOM nodes. All interpolated values are HTML-escaped.
+ * The <meta> set for a page, as data — the single enumeration of what a page's
+ * share tags are. Rendered two ways from here: renderMetaTags joins it into HTML
+ * for the edge to inject, and useDocumentMeta upserts it onto live DOM nodes. The
+ * <title> is handled alongside by each (it isn't a <meta>). Adding a tag is a
+ * one-line change in one place.
+ */
+export function metaTags(meta: PageMeta): MetaTag[] {
+  return [
+    { kind: 'name', key: 'description', content: meta.description },
+    { kind: 'property', key: 'og:site_name', content: SITE.name },
+    { kind: 'property', key: 'og:title', content: meta.title },
+    { kind: 'property', key: 'og:description', content: meta.description },
+    { kind: 'property', key: 'og:type', content: 'website' },
+    { kind: 'property', key: 'og:url', content: meta.url },
+    { kind: 'property', key: 'og:image', content: meta.image },
+    { kind: 'name', key: 'twitter:card', content: meta.card },
+    { kind: 'name', key: 'twitter:title', content: meta.title },
+    { kind: 'name', key: 'twitter:description', content: meta.description },
+    { kind: 'name', key: 'twitter:image', content: meta.image },
+  ]
+}
+
+/**
+ * Render a PageMeta as head markup (title + the meta set from metaTags). Used by
+ * the edge function to inject server-side; useDocumentMeta applies the same set to
+ * live DOM. All interpolated values are HTML-escaped — record text is untrusted.
  */
 export function renderMetaTags(meta: PageMeta): string {
-  const title = escapeHtml(meta.title)
-  const description = escapeHtml(meta.description)
-  const image = escapeHtml(meta.image)
-  const url = escapeHtml(meta.url)
-  return [
-    `<title>${title}</title>`,
-    `<meta name="description" content="${description}" />`,
-    `<meta property="og:site_name" content="${escapeHtml(SITE.name)}" />`,
-    `<meta property="og:title" content="${title}" />`,
-    `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta property="og:url" content="${url}" />`,
-    `<meta property="og:image" content="${image}" />`,
-    `<meta name="twitter:card" content="${meta.card}" />`,
-    `<meta name="twitter:title" content="${title}" />`,
-    `<meta name="twitter:description" content="${description}" />`,
-    `<meta name="twitter:image" content="${image}" />`,
-  ].join('\n    ')
+  const tags = metaTags(meta).map(
+    (t) => `<meta ${t.kind}="${t.key}" content="${escapeHtml(t.content)}" />`
+  )
+  return [`<title>${escapeHtml(meta.title)}</title>`, ...tags].join('\n    ')
 }

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { PageMeta, SITE } from '@/lib/pageMeta'
+import { PageMeta, metaTags } from '@/lib/pageMeta'
 
 /** Find-or-create a head <meta> by its name/property, and set its content. */
 function upsertMeta(kind: 'name' | 'property', key: string, content: string): void {
@@ -26,16 +26,6 @@ export function useDocumentMeta(meta: PageMeta | null): void {
   useEffect(() => {
     if (!meta) return
     document.title = meta.title
-    upsertMeta('name', 'description', meta.description)
-    upsertMeta('property', 'og:site_name', SITE.name)
-    upsertMeta('property', 'og:title', meta.title)
-    upsertMeta('property', 'og:description', meta.description)
-    upsertMeta('property', 'og:type', 'website')
-    upsertMeta('property', 'og:url', meta.url)
-    upsertMeta('property', 'og:image', meta.image)
-    upsertMeta('name', 'twitter:card', meta.card)
-    upsertMeta('name', 'twitter:title', meta.title)
-    upsertMeta('name', 'twitter:description', meta.description)
-    upsertMeta('name', 'twitter:image', meta.image)
+    for (const tag of metaTags(meta)) upsertMeta(tag.kind, tag.key, tag.content)
   }, [meta?.title, meta?.description, meta?.image, meta?.url, meta?.card])
 }

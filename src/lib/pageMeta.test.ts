@@ -1,4 +1,4 @@
-import { escapeHtml, imagePageMeta, staticPageMeta, SITE } from './pageMeta'
+import { escapeHtml, imagePageMeta, staticPageMeta, renderMetaTags, SITE } from './pageMeta'
 
 // escapeHtml guards the edge function: record titles and alt text are untrusted
 // and get injected straight into the served HTML. A missed case is an injection.
@@ -27,6 +27,18 @@ describe('imagePageMeta', () => {
     expect(meta.image).toBe(SITE.image)
     expect(meta.card).toBe('summary')
     expect(meta.title).toBe('Luminframe image by @nate.example')
+  })
+})
+
+describe('renderMetaTags', () => {
+  it('escapes untrusted content so an image title cannot break out of the tag', () => {
+    // A record title is attacker-controllable and gets injected into HTML at the
+    // edge — the quote must not close the content attribute early.
+    const html = renderMetaTags(
+      imagePageMeta({ title: '"><script>alert(1)</script>' }, 'https://luminframe.com/image/x/y')
+    )
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&quot;&gt;&lt;script&gt;')
   })
 })
 
