@@ -79,13 +79,14 @@ export function useRenderingEngine() {
   }, []);
 
   /**
-   * Download the current rendered canvas as an image file.
+   * Download the current edit as a file. Pass the base name only — the exporter
+   * appends the extension (.gif for an animated edit, .png for a still one).
    */
-  const downloadImage = useCallback(async (filename: string): Promise<void> => {
+  const downloadImage = useCallback(async (baseName: string): Promise<void> => {
     if (!contextRef.current) {
       throw new Error('Rendering engine not initialized');
     }
-    return contextRef.current.getExportCanvasUseCase().execute(filename);
+    return contextRef.current.getExportCanvasUseCase().execute(baseName);
   }, []);
 
   // No unmount cleanup: the ApplicationContext is a singleton, deliberately

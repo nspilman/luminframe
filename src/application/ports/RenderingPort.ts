@@ -47,6 +47,24 @@ export interface RenderingPort {
   exportCanvas(format: ImageFormat): Promise<Blob>;
 
   /**
+   * Whether the current edit animates — it has a time- or feedback-driven effect,
+   * so it redraws continuously and a single-frame export would freeze the motion.
+   */
+  isAnimated(): boolean;
+
+  /**
+   * Render a run of frames of the current animated edit at evenly stepped times,
+   * each sized to fit `maxSize` on its longest side (aspect preserved). The frames
+   * are captured in sequence so feedback effects accumulate correctly. Returns raw
+   * RGBA frames for an encoder to turn into an animation.
+   */
+  captureAnimationFrames(opts: {
+    frameCount: number;
+    fps: number;
+    maxSize: number;
+  }): Promise<ImageData[]>;
+
+  /**
    * Get the current canvas element for external operations
    *
    * @returns The canvas element or null if not available

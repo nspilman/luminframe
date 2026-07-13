@@ -53,6 +53,10 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   // uniform; static chains draw once and the loop stays off, so the GPU idles.
   private animationFrameId: number | null = null;
   private clockStartMs: number | null = null;
+  // When set, the `time` uniform is pinned to this value instead of the wall
+  // clock — used to render an animation frame-by-frame at deterministic times
+  // during a capture, rather than at whatever moment the draw happens to run.
+  private captureTime: number | null = null;
   // Holds the previous frame's canvas output, exposed to effects as `prevFrame`
   // so they can feed back on themselves (trails, tunnels). Written after each
   // frame that uses feedback; read at the top of the next. null until first use.
@@ -299,8 +303,12 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     }
   }
 
-  /** Seconds since the animation loop started; 0 while it is stopped. */
+  /**
+   * The value fed to the `time` uniform. During a capture it is the pinned frame
+   * time; otherwise it's seconds since the animation loop started (0 while stopped).
+   */
   private elapsedSeconds(): number {
+    if (this.captureTime !== null) return this.captureTime;
     return this.clockStartMs === null
       ? 0
       : (performance.now() - this.clockStartMs) / 1000;
@@ -317,18 +325,30 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
+   * Whether a chain animates: some pass advances with `time` or feeds back on the
+   * previous frame (`prevFrame`). Both mean the output changes every frame, so it
+   * drives both the live loop and whether an export must capture motion.
+   */
+  private chainIsAnimated(passes: ReadonlyArray<RenderPass>): boolean {
+    return passes.some((p) => {
+      const body = p.effect.getBody();
+      return /\btime\b/.test(body) || /\bprevFrame\b/.test(body);
+    });
+  }
+
+  /** Whether the current edit animates — a still export would freeze its motion. */
+  isAnimated(): boolean {
+    return !!this.lastChainParams && this.chainIsAnimated(this.lastChainParams.passes);
+  }
+
+  /**
    * Start or stop the animation loop to match the current chain. The loop is
    * needed when an effect advances with `time` OR feeds back on the previous
    * frame (`prevFrame`) — both require continuous re-rendering. A purely static
    * chain leaves the loop off so the GPU isn't redrawing an unchanging frame.
    */
   private syncAnimation(): void {
-    const needsLoop =
-      !!this.lastChainParams &&
-      this.lastChainParams.passes.some((p) => {
-        const body = p.effect.getBody();
-        return /\btime\b/.test(body) || /\bprevFrame\b/.test(body);
-      });
+    const needsLoop = !!this.lastChainParams && this.chainIsAnimated(this.lastChainParams.passes);
 
     if (needsLoop) {
       if (this.animationFrameId === null) {
@@ -494,6 +514,66 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       this.renderer.setSize(displayDimensions.width, displayDimensions.height, false);
       this.drawChain();
       if (wasAnimating) this.syncAnimation();
+    }
+  }
+
+  /**
+   * Render a run of frames of the current animated edit at evenly stepped times,
+   * capturing each as raw RGBA. Mirrors exportCanvas's freeze/resize/restore, but
+   * renders frameCount frames at deterministic times (captureTime) instead of one
+   * at the wall clock — so an encoder can turn the motion into an animation.
+   *
+   * Frames render in sequence from a reset feedback texture, so feedback effects
+   * (trails, tunnels) accumulate from a clean start rather than inheriting the live
+   * view's state. Sized to the source aspect, capped on the longest side.
+   */
+  async captureAnimationFrames(opts: {
+    frameCount: number;
+    fps: number;
+    maxSize: number;
+  }): Promise<ImageData[]> {
+    if (!this.renderer || !this.lastChainParams) return [];
+
+    const source = this.lastChainParams.source;
+    const displayDimensions = this.currentDimensions;
+    const wasAnimating = this.animationFrameId !== null;
+
+    const dims = source.getDimensions();
+    const { width, height } = scaleToLongestSide(dims.width, dims.height, opts.maxSize);
+
+    const reader = document.createElement('canvas');
+    reader.width = width;
+    reader.height = height;
+    const ctx = reader.getContext('2d');
+    if (!ctx) return [];
+
+    const frames: ImageData[] = [];
+    this.stopAnimation();
+    try {
+      this.currentDimensions = new Dimensions(width, height);
+      this.renderer.setSize(width, height, false);
+      this.resetFeedback();
+      for (let i = 0; i < opts.frameCount; i++) {
+        this.captureTime = i / opts.fps;
+        this.drawChain();
+        ctx.drawImage(this.renderer.domElement, 0, 0, width, height);
+        frames.push(ctx.getImageData(0, 0, width, height));
+      }
+    } finally {
+      this.captureTime = null;
+      this.currentDimensions = displayDimensions;
+      this.renderer.setSize(displayDimensions.width, displayDimensions.height, false);
+      this.drawChain();
+      if (wasAnimating) this.syncAnimation();
+    }
+    return frames;
+  }
+
+  /** Drop the feedback texture so the next draw starts from a clean (black) frame. */
+  private resetFeedback(): void {
+    if (this.feedbackTexture) {
+      this.feedbackTexture.dispose();
+      this.feedbackTexture = null;
     }
   }
 

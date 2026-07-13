@@ -304,7 +304,8 @@ export function useShaderEditor() {
 
   const handleDownload = useCallback(async () => {
     try {
-      await downloadImage(`luminframe-${selectedShader ?? 'image'}.png`)
+      // Base name only — the exporter picks .gif (animated) or .png (still).
+      await downloadImage(`luminframe-${selectedShader ?? 'image'}`)
       if (selectedShader) recordRecent(selectedShader)
     } catch (error) {
       console.error('Failed to download image:', error)

@@ -2,7 +2,9 @@ import { RenderEditUseCase } from './RenderEditUseCase';
 import { RenderingPort, RenderPass } from '@/application/ports/RenderingPort';
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { EditPipeline } from '@/domain/models/EditPipeline';
-import { Image, ImageData } from '@/domain/models/Image';
+// Aliased so the DOM's ImageData (used by the RenderingPort mock below) isn't
+// shadowed by the domain type of the same name.
+import { Image, ImageData as DomainImageData } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ShaderEffect, ShaderType } from '@/types/shader';
 
@@ -40,6 +42,16 @@ class RecordingRenderingPort implements RenderingPort {
   exportCanvas(): Promise<Blob> {
     return Promise.resolve(new Blob());
   }
+  isAnimated(): boolean {
+    return false;
+  }
+  captureAnimationFrames(_opts: {
+    frameCount: number;
+    fps: number;
+    maxSize: number;
+  }): Promise<ImageData[]> {
+    return Promise.resolve([]);
+  }
   getCanvas(): HTMLCanvasElement | null {
     return {} as HTMLCanvasElement;
   }
@@ -48,7 +60,7 @@ class RecordingRenderingPort implements RenderingPort {
 }
 
 const makeSource = () =>
-  new Image('source', new Dimensions(4, 2), { url: 'blob:source' } as ImageData);
+  new Image('source', new Dimensions(4, 2), { url: 'blob:source' } as DomainImageData);
 
 function makeUseCase(rendering: RecordingRenderingPort) {
   return new RenderEditUseCase(new FakeRepository(), rendering);

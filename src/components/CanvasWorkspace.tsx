@@ -5,7 +5,7 @@ import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
 import { Upload, Save, Download, Eye, Send, Sparkles, Shuffle, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LoadingOverlay } from '@/components/ui/spinner'
+import { LoadingOverlay, Spinner } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { PublishDialog } from './PublishDialog'
 import { SourcePickerDialog } from './SourcePickerDialog'
@@ -43,7 +43,21 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     const [publishOpen, setPublishOpen] = useState(false)
     const [loadingSample, setLoadingSample] = useState(false)
     const [pickerOpen, setPickerOpen] = useState(false)
+    const [downloading, setDownloading] = useState(false)
     const { surprise, isFinding } = useSurpriseMe()
+
+    // Download can be slow for an animated edit (it renders and encodes a GIF), so
+    // show progress — and yield a frame first so the button paints its loading
+    // state before the encode blocks the main thread.
+    const handleDownloadClick = async () => {
+      setDownloading(true)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      try {
+        await onDownload()
+      } finally {
+        setDownloading(false)
+      }
+    }
 
     // Load the bundled sample through the same door a drop uses. urlToFile keeps
     // it same-origin so the result stays exportable, just like a real upload.
@@ -167,11 +181,21 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               {isComparing ? 'Original' : 'Compare'}
             </Button>
             <Button
-              onClick={onDownload}
+              onClick={handleDownloadClick}
+              disabled={downloading}
               className="bg-violet-600 hover:bg-violet-700 text-white"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Download
+              {downloading ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Rendering…
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </>
+              )}
             </Button>
             <Button
               onClick={openPublish}
