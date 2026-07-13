@@ -7,7 +7,8 @@ import { useLuminframeFeed, FeedTab } from '@/hooks/useLuminframeFeed'
 import { useOpenImage } from '@/hooks/useOpenImage'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { effectLabel, formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
-import { tabFromPath, pathForTab, IMAGE_PARAM } from '@/lib/galleryRoute'
+import { tabFromPath, pathForTab, IMAGE_PARAM, FAMILY_PARAM } from '@/lib/galleryRoute'
+import { familiesOf, isEffectCategory, effectFamilies, EffectCategory } from '@/lib/shaders/catalog'
 
 interface GalleryPageProps {
   /** The signed-in user's DID, or null when signed out (gates the "mine" tab). */
@@ -87,6 +88,46 @@ function CenterState({ icon, children }: { icon: React.ReactNode; children: Reac
 }
 
 /**
+ * Browse the gallery by look: one chip per effect family actually present in the
+ * feed, plus an "All" reset. Offering only present families keeps the rail honest
+ * — no control that would yield an empty grid. The active family lives in the URL,
+ * so a filtered view is a link.
+ */
+function FilterRail({
+  families,
+  active,
+  onSelect,
+}: {
+  families: { id: EffectCategory; label: string }[]
+  active: EffectCategory | null
+  onSelect: (id: EffectCategory | null) => void
+}) {
+  const chip = (isActive: boolean) =>
+    `rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+      isActive
+        ? 'bg-violet-600 text-white'
+        : 'border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+    }`
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => onSelect(null)} className={chip(active === null)}>
+        All
+      </button>
+      {families.map((family) => (
+        <button
+          key={family.id}
+          type="button"
+          onClick={() => onSelect(family.id)}
+          className={chip(active === family.id)}
+        >
+          {family.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
  * The gallery of com.luminframe.image records — the user's own ("Mine") or every
  * one across the network ("Network"), read live from PDSes via luminframeFeed.
  * A public read: the Network tab works signed-out; Mine asks for sign-in.
@@ -106,6 +147,33 @@ export function GalleryPage({ did, onDeleteImage }: GalleryPageProps) {
     [feed.images, removed]
   )
   const openImage = useOpenImage(searchParams.get(IMAGE_PARAM), images)
+
+  // Discover by look. The active family is read from the URL (validated, so a junk
+  // ?family= just means unfiltered); the rail offers only families present in this
+  // feed; the grid narrows to images wearing the active look.
+  const familyParam = searchParams.get(FAMILY_PARAM)
+  const activeFamily = familyParam && isEffectCategory(familyParam) ? familyParam : null
+
+  const availableFamilies = useMemo(() => {
+    const present = new Set<EffectCategory>()
+    for (const image of images) for (const family of familiesOf(image.effects)) present.add(family)
+    return effectFamilies.filter((family) => present.has(family.id))
+  }, [images])
+
+  const visibleImages = useMemo(
+    () => (activeFamily ? images.filter((i) => familiesOf(i.effects).has(activeFamily)) : images),
+    [images, activeFamily]
+  )
+
+  const setFamily = (id: EffectCategory | null) =>
+    setSearchParams(
+      (prev) => {
+        if (id) prev.set(FAMILY_PARAM, id)
+        else prev.delete(FAMILY_PARAM)
+        return prev
+      },
+      { replace: true } // a filter refines the current place; Back shouldn't step through each try
+    )
 
   const openInLightbox = (image: LuminframeImageView) =>
     setSearchParams((prev) => {
@@ -178,10 +246,31 @@ export function GalleryPage({ did, onDeleteImage }: GalleryPageProps) {
         )}
 
         {feed.status === 'loaded' && images.length > 0 && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {images.map((image) => (
-              <ImageCard key={image.uri} image={image} onOpen={() => openInLightbox(image)} />
-            ))}
+          <div className="space-y-6">
+            {availableFamilies.length > 0 && (
+              <FilterRail families={availableFamilies} active={activeFamily} onSelect={setFamily} />
+            )}
+
+            {visibleImages.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {visibleImages.map((image) => (
+                  <ImageCard key={image.uri} image={image} onOpen={() => openInLightbox(image)} />
+                ))}
+              </div>
+            ) : (
+              // Reachable only via a direct ?family= link to a look nothing in this
+              // feed wears — the rail can't produce it, since it offers present looks only.
+              <CenterState icon={<ImageOff className="h-8 w-8" />}>
+                No images with a {effectFamilies.find((f) => f.id === activeFamily)?.label ?? 'matching'} look here yet.{' '}
+                <button
+                  type="button"
+                  onClick={() => setFamily(null)}
+                  className="text-violet-300 underline hover:text-violet-200"
+                >
+                  Show all
+                </button>
+              </CenterState>
+            )}
           </div>
         )}
       </div>

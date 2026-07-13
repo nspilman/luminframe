@@ -162,6 +162,30 @@ export function categoryOf(type: ShaderType): EffectCategory {
   return categoryByType[type]
 }
 
+/** True when a string is one of the known family ids — guards a value from the URL. */
+export function isEffectCategory(value: string): value is EffectCategory {
+  return effectFamilies.some((family) => family.id === value)
+}
+
+/**
+ * The families present among a set of effect keys, unknown keys ignored. This is
+ * the one primitive the gallery's "discover by look" builds on: the filter
+ * predicate is `familiesOf(image.effects).has(family)`, and the filter rail is the
+ * union of this over the feed — so a look is only offered when something wears it.
+ *
+ * Effect keys come off network records, so a key this build doesn't know (a newer
+ * effect, say) contributes no family rather than throwing — the same forgiving
+ * read the rest of the feed layer takes toward unfamiliar data.
+ */
+export function familiesOf(effectKeys: readonly string[]): Set<EffectCategory> {
+  const families = new Set<EffectCategory>()
+  for (const key of effectKeys) {
+    const family = categoryByType[key as ShaderType]
+    if (family) families.add(family)
+  }
+  return families
+}
+
 /** The plain-speech blurb for an effect. */
 export function blurbOf(type: ShaderType): string {
   return effectBlurbs[type]

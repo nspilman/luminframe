@@ -41,6 +41,14 @@ export function isGalleryPath(pathname: string): boolean {
 export const IMAGE_PARAM = 'image'
 
 /**
+ * The search-param key that narrows the gallery to one effect family — the "look."
+ * Like the open image, it's a query param (a transient focus over the gallery
+ * place, not a place of its own), so a filtered view is a shareable address:
+ * /gallery?family=texture. Its value is an EffectCategory id (see catalog.ts).
+ */
+export const FAMILY_PARAM = 'family'
+
+/**
  * The search-param key that asks the editor to open a network image as its
  * source — a "remix." Like the others, it lives in the URL so the action is a
  * plain link (and a shared /?remix=<uri> works for anyone).
