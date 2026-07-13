@@ -3,12 +3,18 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download, Eye, Send } from 'lucide-react'
+import { Upload, Save, Download, Eye, Send, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { PublishDialog } from './PublishDialog'
 import { Publisher } from '@/hooks/usePublish'
+import { urlToFile } from '@/lib/urlToFile'
+
+// A bundled photo (served same-origin from public/, so the render stays
+// exportable) that a newcomer can load in one click — play before committing
+// their own image. It flows through the same load door as a drop or a remix.
+const SAMPLE_IMAGE_URL = '/pink-car-space-needle4.jpg'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]
@@ -33,6 +39,16 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
     const [publishOpen, setPublishOpen] = useState(false)
+    const [loadingSample, setLoadingSample] = useState(false)
+
+    // Load the bundled sample through the same door a drop uses. urlToFile keeps
+    // it same-origin so the result stays exportable, just like a real upload.
+    const loadSample = async () => {
+      setLoadingSample(true)
+      const file = await urlToFile(SAMPLE_IMAGE_URL, 'sample')
+      if (file) onImageDrop(file)
+      setLoadingSample(false)
+    }
 
     const openPublish = () => {
       // Clear any prior result so the dialog opens on the fresh form.
@@ -73,16 +89,36 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         )}
         {!hasImage ? (
-          <button
-            type="button"
-            onClick={open}
-            className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500"
-          >
-            <div className="text-center space-y-2">
-              <Upload className="w-10 h-10 mx-auto text-zinc-500" />
-              <p className="text-lg text-zinc-400">Drop an image here or click to choose</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 p-6 backdrop-blur-sm">
+            <div className="max-w-md space-y-6 text-center">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-white">Edit a photo with live looks</h2>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Stack shader effects on any image in real time — then save it to your own
+                  repo on the AT&nbsp;Protocol, yours to keep, share, and remix.
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={open}
+                  className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                >
+                  <Upload className="h-4 w-4" />
+                  Drop a photo or choose one
+                </button>
+                <button
+                  type="button"
+                  onClick={loadSample}
+                  disabled={loadingSample}
+                  className="inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:outline-none focus-visible:text-violet-300"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {loadingSample ? 'Loading sample…' : 'No photo? Try a sample'}
+                </button>
+              </div>
             </div>
-          </button>
+          </div>
         ) : (
           <div className="absolute top-4 right-4 flex gap-2">
             <Button
