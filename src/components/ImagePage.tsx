@@ -10,6 +10,8 @@ import {
   LUMINFRAME_COLLECTION,
 } from '@/infrastructure/atproto/luminframeFeed'
 import { useLineage } from '@/hooks/useLineage'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { imagePageMeta, staticPageMeta } from '@/lib/pageMeta'
 import { parseImagePath, GALLERY_ROOT, pathForTab } from '@/lib/galleryRoute'
 
 interface ImagePageProps {
@@ -38,6 +40,24 @@ export function ImagePage({ viewerDid, onDeleteImage }: ImagePageProps) {
 
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const lineage = useLineage(state.status === 'loaded' ? state.image : null)
+
+  // Share metadata: the record's own image and title once it resolves; a neutral
+  // fallback while loading or if it's gone. (Non-JS crawlers get the same from the
+  // edge function, which resolves the record server-side.)
+  const canonicalUrl = window.location.origin + pathname
+  useDocumentMeta(
+    state.status === 'loaded'
+      ? imagePageMeta(
+          {
+            title: state.image.title,
+            alt: state.image.alt,
+            handle: state.image.handle,
+            imageUrl: state.image.imageUrl,
+          },
+          canonicalUrl
+        )
+      : staticPageMeta(pathname, canonicalUrl)
+  )
 
   useEffect(() => {
     if (!uri) {

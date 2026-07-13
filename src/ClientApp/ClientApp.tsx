@@ -15,6 +15,8 @@ import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { staticPageMeta } from '@/lib/pageMeta'
 
 export function ClientApp(): JSX.Element {
   const session = useAtprotoSession()
@@ -22,6 +24,11 @@ export function ClientApp(): JSX.Element {
   const onGallery = isGalleryPath(pathname)
   const onImage = isImagePath(pathname)
   const onEditor = !onGallery && !onImage
+
+  // Keep share metadata in step with the URL. The shell owns every route except
+  // the image page, which refines its own once its record loads — so this defers
+  // there (null) rather than overwriting it with a neutral fallback.
+  useDocumentMeta(onImage ? null : staticPageMeta(pathname, window.location.origin + pathname))
   const {
     canvasRef,
     selectedShader,

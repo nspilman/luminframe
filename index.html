@@ -2,17 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/src/favicon.png" />
+    <link rel="icon" type="image/png" href="/src/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Browser-based image editor powered by Three.js and GLSL shaders" />
-    <meta name="keywords" content="image editor, WebGL, Three.js, shader effects, browser image processing" />
-    
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="Luminframe - Browser Image Editor" />
-    <meta property="og:description" content="Edit images with real-time shader effects" />
-    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#030305" />
 
-    <title>Luminframe | Browser Image Editor</title>
+    <!-- Default share metadata. Page-specific tags are injected per route by the
+         Netlify edge function (netlify/edge-functions/og-meta.ts) and set live by
+         useDocumentMeta; these are the fallback. Kept in sync with src/lib/pageMeta.ts. -->
+    <meta name="description" content="Edit a photo with live shader looks, then save it to your own repo on the AT Protocol — yours to keep, share, and remix." />
+
+    <meta property="og:site_name" content="Luminframe" />
+    <meta property="og:title" content="Luminframe — edit photos with live shader looks" />
+    <meta property="og:description" content="Edit a photo with live shader looks, then save it to your own repo on the AT Protocol — yours to keep, share, and remix." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://luminframe.com" />
+    <meta property="og:image" content="https://luminframe.com/luminframe.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Luminframe — edit photos with live shader looks" />
+    <meta name="twitter:description" content="Edit a photo with live shader looks, then save it to your own repo on the AT Protocol." />
+    <meta name="twitter:image" content="https://luminframe.com/luminframe.png" />
+
+    <title>Luminframe — edit photos with live shader looks</title>
   </head>
   <body>
     <div id="root"></div>
