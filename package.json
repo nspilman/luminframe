@@ -50,6 +50,7 @@
     "gifenc": "^1.0.3",
     "jsdom": "^25.0.1",
     "lucide-react": "^0.460.0",
+    "mp4-muxer": "^5.2.2",
     "react-dropzone": "^14.3.5",
     "react-router-dom": "^6.30.4",
     "tailwind-merge": "^2.5.4",
