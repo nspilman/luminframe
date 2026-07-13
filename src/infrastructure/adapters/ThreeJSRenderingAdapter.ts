@@ -10,6 +10,18 @@ import { TextureAdapter } from './TextureAdapter';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
 import { planPasses } from './renderChainPlan';
 import { scaleToLongestSide } from '@/lib/exportCanvasForUpload';
+import { createShaderRecord, createShaderVariable } from '@/lib/shaderConfig';
+
+// Draws the source unchanged. Used when the pipeline is empty (no effects applied
+// and none being tuned) so "no edits yet" renders the *original* to the canvas —
+// not a blank frame — which also means Download and Save capture the image. It is
+// an internal render detail, deliberately not in the effect library or catalog.
+const PASSTHROUGH_EFFECT: ShaderEffect = createShaderRecord({
+  name: 'Original',
+  variables: [createShaderVariable('imageTexture').asImage('Source Image')],
+  body: 'void main() { gl_FragColor = texture2D(imageTexture, vUv); }',
+});
+const NO_PARAMS = {} as ShaderInputVars;
 
 /**
  * Three.js implementation of the RenderingPort.
@@ -223,14 +235,19 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     if (!params) {
       return;
     }
-    const { source, passes, resolution } = params;
+    const { source, resolution } = params;
 
     if (!this.renderer || !this.scene || !this.camera) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
     }
-    if (passes.length === 0) {
-      return;
-    }
+
+    // An empty pipeline still shows the original: a single passthrough pass blits
+    // the source to the canvas, so "no effects yet" renders the image rather than
+    // leaving a blank frame.
+    const passes =
+      params.passes.length === 0
+        ? [{ effect: PASSTHROUGH_EFFECT, params: NO_PARAMS }]
+        : params.passes;
 
     const sourceTexture = this.textureAdapter.createTexture(source).texture;
     const plan = planPasses(passes.length);

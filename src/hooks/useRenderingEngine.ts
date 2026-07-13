@@ -51,7 +51,7 @@ export function useRenderingEngine() {
    * With an empty committed pipeline this is a single render on the source.
    */
   const renderEdit = useCallback(
-    (pipeline: EditPipeline, draft: DraftEffect, resolution: [number, number]) => {
+    (pipeline: EditPipeline, draft: DraftEffect | null, resolution: [number, number]) => {
       if (!contextRef.current || !isInitialized) {
         console.warn('Rendering engine not initialized yet');
         return;

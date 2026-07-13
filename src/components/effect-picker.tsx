@@ -56,7 +56,8 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
 }
 
 type EffectPickerProps = {
-  selectedShader: ShaderType
+  /** The chosen effect, or null when none is selected (nothing is highlighted). */
+  selectedShader: ShaderType | null
   onShaderSelect: (shader: ShaderType) => void
   /** Recently-used effects, most-recent first, surfaced as a section on top. */
   recentShaders: readonly ShaderType[]

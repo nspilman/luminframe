@@ -115,5 +115,32 @@ describe('RenderEditUseCase', () => {
         { size: 4 },
       ]);
     });
+
+    it('renders committed effects only when there is no draft', () => {
+      const rendering = new RecordingRenderingPort();
+      const source = makeSource();
+      const pipeline = EditPipeline.empty()
+        .withSource(source)
+        .append('colorTint' as ShaderType, { strength: 1 });
+
+      // No effect selected (the landing state) — draft is null.
+      makeUseCase(rendering).execute(pipeline, null, [4, 2]);
+
+      expect(rendering.calls).toHaveLength(1);
+      expect(rendering.calls[0].passes.map((p) => p.effect.name)).toEqual(['effect:colorTint']);
+    });
+
+    it('renders an empty chain when there is neither draft nor committed effect', () => {
+      // The source-with-no-edits case: the use case hands the port an empty chain,
+      // which the rendering port draws as the original (a passthrough pass).
+      const rendering = new RecordingRenderingPort();
+      const source = makeSource();
+
+      makeUseCase(rendering).execute(EditPipeline.empty().withSource(source), null, [4, 2]);
+
+      expect(rendering.calls).toHaveLength(1);
+      expect(rendering.calls[0].passes).toHaveLength(0);
+      expect(rendering.calls[0].source).toBe(source);
+    });
   });
 });

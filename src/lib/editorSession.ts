@@ -48,7 +48,8 @@ interface SerializedEffect {
 
 export interface SerializedSession {
   version: number
-  selectedShader: ShaderType
+  /** The selected effect, or null when none is chosen (the pristine landing). */
+  selectedShader: ShaderType | null
   draft: SerializedVars
   effects: SerializedEffect[]
   images: SerializedImage[]
@@ -56,7 +57,7 @@ export interface SerializedSession {
 
 /** The live editor state we snapshot and restore. */
 export interface EditorSessionState {
-  selectedShader: ShaderType
+  selectedShader: ShaderType | null
   draftVars: ShaderInputVars
   effects: ReadonlyArray<{ type: ShaderType; params: ShaderInputVars }>
 }

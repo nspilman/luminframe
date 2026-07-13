@@ -10,7 +10,6 @@ import { EditPipeline } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
 import { StrongRef } from '@/types/atproto'
-import { effectFamilies } from '@/lib/shaders/catalog'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
 import {
   History,
@@ -91,18 +90,14 @@ export function freshDraftParams(
  * its parameter values, and the render/resize/save wiring against the
  * rendering engine. Keeps ClientApp purely presentational.
  */
-// The effect the editor lands on for a fresh visit: the first effect of the
-// first family, so the gallery's reading order and the opening selection agree
-// rather than starting on an arbitrary effect (and never on a composite one
-// that wants a second image before there is one). A restored session overrides
-// it. Derived from the catalog so reordering families moves the landing too.
-const LANDING_SHADER: ShaderType = effectFamilies[0].effects[0]
-
 export function useShaderEditor() {
-  const [selectedShader, setSelectedShader] = useState<ShaderType>(LANDING_SHADER)
-  const [varValues, setVarValues] = useState<ShaderInputVars>(
-    () => ({ ...shaderLibrary[selectedShader].defaultValues })
-  )
+  // No effect is selected on a fresh visit: the editor lands showing the image
+  // untouched, and the picker highlights nothing until the user chooses one. An
+  // empty pipeline renders the original (see RenderEditUseCase), so there's no
+  // arbitrary default look imposed on the image. A restored session overrides
+  // this with its saved selection.
+  const [selectedShader, setSelectedShader] = useState<ShaderType | null>(null)
+  const [varValues, setVarValues] = useState<ShaderInputVars>(() => ({}))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
   // Effects the user has committed to (applied or downloaded), most-recent
@@ -142,7 +137,7 @@ export function useShaderEditor() {
   // source. A ref (not state) — it's consumed inside the load task and needs no render.
   const pendingRecipeRef = useRef<HydratedStep[] | null>(null)
 
-  const effect = shaderLibrary[selectedShader]
+  const effect = selectedShader ? shaderLibrary[selectedShader] : null
   const hasImage =
     'imageTexture' in varValues && varValues.imageTexture instanceof Image
 
@@ -210,9 +205,12 @@ export function useShaderEditor() {
     }
   }, [hasImage, selectedShader, varValues, pipeline.effects])
 
-  // Reconcile parameters when the selected effect changes.
+  // Reconcile parameters when the selected effect changes. Nothing to reconcile
+  // when the selection is cleared to "no effect" — the draft params just go unused.
   useEffect(() => {
-    setVarValues(prev => reconcileShaderParams(prev, effect.defaultValues, effect.inputs))
+    if (!selectedShader) return
+    const next = shaderLibrary[selectedShader]
+    setVarValues(prev => reconcileShaderParams(prev, next.defaultValues, next.inputs))
   }, [selectedShader])
 
   // Render whenever the committed pipeline, the live draft effect, its
@@ -224,7 +222,10 @@ export function useShaderEditor() {
     }
     const source = varValues.imageTexture as Image
     const committed = pipeline.withSource(source)
-    renderEdit(committed, { type: selectedShader, params: varValues }, resolution)
+    // No selected effect → no draft; with an empty committed stack the chain is
+    // empty and the renderer shows the original.
+    const draft = selectedShader ? { type: selectedShader, params: varValues } : null
+    renderEdit(committed, draft, resolution)
   }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
@@ -249,6 +250,7 @@ export function useShaderEditor() {
   // on the new base. The committed values now live in the pipeline, so the
   // canvas keeps showing them — the fresh draft starts from defaults on top.
   const handleApply = useCallback(() => {
+    if (!selectedShader) return
     setHistory(h => pushHistory(h, h.present.append(selectedShader, varValues)))
     setVarValues(prev =>
       freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
@@ -302,8 +304,8 @@ export function useShaderEditor() {
 
   const handleDownload = useCallback(async () => {
     try {
-      await downloadImage(`luminframe-${selectedShader}.png`)
-      recordRecent(selectedShader)
+      await downloadImage(`luminframe-${selectedShader ?? 'image'}.png`)
+      if (selectedShader) recordRecent(selectedShader)
     } catch (error) {
       console.error('Failed to download image:', error)
     }

@@ -20,8 +20,12 @@ export interface DraftEffect {
  * shader and hands the ordered list to the rendering port as a single chain. The
  * port runs it as one synchronous GPU pipeline (each pass samples the previous
  * pass's output in an offscreen framebuffer), so there is no canvas readback and
- * no async round-trip between passes. With an empty committed pipeline this is a
- * one-pass chain — the draft rendered directly on the source.
+ * no async round-trip between passes.
+ *
+ * The draft is optional: none is being tuned when no effect is selected (the
+ * landing state, before the user picks one). With no draft and no committed
+ * effects the chain is empty — the port renders the source unchanged, so the
+ * original shows until an effect is chosen.
  */
 export class RenderEditUseCase {
   constructor(
@@ -31,7 +35,7 @@ export class RenderEditUseCase {
 
   execute(
     pipeline: EditPipeline,
-    draft: DraftEffect,
+    draft: DraftEffect | null,
     resolution: [number, number]
   ): void {
     if (!pipeline.source) {
@@ -43,7 +47,7 @@ export class RenderEditUseCase {
         effect: this.shaders.getShader(effect.type),
         params: effect.params,
       })),
-      { effect: this.shaders.getShader(draft.type), params: draft.params },
+      ...(draft ? [{ effect: this.shaders.getShader(draft.type), params: draft.params }] : []),
     ];
 
     this.rendering.renderChain(pipeline.source, passes, resolution);

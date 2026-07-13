@@ -11,10 +11,10 @@ import { Image } from '@/domain/models/Image'
 type EditorSidebarProps = {
   hasImage: boolean
   source: Image | null
-  selectedShader: ShaderType
+  selectedShader: ShaderType | null
   onShaderSelect: (shader: ShaderType) => void
   recentShaders: readonly ShaderType[]
-  effect: ShaderEffect
+  effect: ShaderEffect | null
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
   appliedEffects: readonly AppliedEffect[]
@@ -71,23 +71,33 @@ export function EditorSidebar({
           source={source}
         />
 
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>
-          <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <ShaderControls effect={effect} values={values} onChange={onChange} />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Until an effect is chosen the image shows untouched — so the tuning
+            controls and Apply only appear once there's something to tune. */}
+        {effect ? (
+          <>
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>
+              <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
+                <CardContent className="p-4">
+                  <ShaderControls effect={effect} values={values} onChange={onChange} />
+                </CardContent>
+              </Card>
+            </div>
 
-        <Button
-          type="button"
-          onClick={onApply}
-          className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white"
-        >
-          <Plus className="h-4 w-4" />
-          Apply effect
-        </Button>
+            <Button
+              type="button"
+              onClick={onApply}
+              className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              <Plus className="h-4 w-4" />
+              Apply effect
+            </Button>
+          </>
+        ) : (
+          <p className="px-1 text-sm text-zinc-500">
+            Pick an effect to start — your image stays untouched until you do.
+          </p>
+        )}
 
         {(canUndo || canRedo) && (
           <div className="flex gap-2">
