@@ -236,6 +236,54 @@ export async function fetchImageByUri(uri: string): Promise<LuminframeImageView 
   }
 }
 
+/**
+ * Walk a remix chain upward to its root, following each record's parent link.
+ * `fetchNode` resolves a URI to that record and the URI of *its* parent (or null
+ * at a dead/foreign link). Bounded two ways so a malformed record can't hang the
+ * page: `maxDepth` caps a very long chain, and a seen-set breaks a cycle (a record
+ * whose lineage loops back on itself). Returns ancestors oldest-first — root … the
+ * immediate parent — with the starting record excluded (the caller already has it).
+ *
+ * Pure over its injected fetcher, so the termination guarantees (stops at the root,
+ * at a dead link, at the depth cap, and on a cycle) are tested without the network.
+ */
+export async function walkAncestry<T>(
+  firstParentUri: string | undefined,
+  fetchNode: (uri: string) => Promise<{ node: T; parentUri?: string } | null>,
+  maxDepth = 12
+): Promise<T[]> {
+  const chain: T[] = []
+  const seen = new Set<string>()
+  let nextUri = firstParentUri
+  while (nextUri && chain.length < maxDepth && !seen.has(nextUri)) {
+    seen.add(nextUri)
+    const result = await fetchNode(nextUri)
+    if (!result) break
+    chain.push(result.node)
+    nextUri = result.parentUri
+  }
+  return chain.reverse()
+}
+
+/** The ancestry of one image — the remix chain above it, oldest first (may be empty). */
+export async function fetchAncestry(image: LuminframeImageView): Promise<LuminframeImageView[]> {
+  return walkAncestry(image.remixOf?.uri, async (uri) => {
+    const node = await fetchImageByUri(uri)
+    return node ? { node, parentUri: node.remixOf?.uri } : null
+  })
+}
+
+/**
+ * The direct remixes of one image — records whose remixOf points at this URI,
+ * newest first. Found by scanning the network (the same fan-out the gallery uses)
+ * and filtering; there's no reverse index yet, so this shares the gallery's
+ * scaling path (a backend index is how it grows past a client-side sweep).
+ */
+export async function fetchRemixesOf(uri: string): Promise<LuminframeImageView[]> {
+  const all = await fetchNetworkImages()
+  return all.filter((view) => view.remixOf?.uri === uri)
+}
+
 /** Every com.luminframe.image record in one repo, newest first, resolved to views. */
 export async function fetchRepoImages(did: string): Promise<LuminframeImageView[]> {
   const identity = await resolveIdentity(did)

@@ -3,11 +3,13 @@ import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 import { Spinner } from './ui/spinner'
 import { ImageDetail } from './ImageDetail'
+import { LineagePanel } from './LineagePanel'
 import {
   fetchImageByUri,
   LuminframeImageView,
   LUMINFRAME_COLLECTION,
 } from '@/infrastructure/atproto/luminframeFeed'
+import { useLineage } from '@/hooks/useLineage'
 import { parseImagePath, GALLERY_ROOT, pathForTab } from '@/lib/galleryRoute'
 
 interface ImagePageProps {
@@ -35,6 +37,7 @@ export function ImagePage({ viewerDid, onDeleteImage }: ImagePageProps) {
   const uri = parsed ? `at://${parsed.did}/${LUMINFRAME_COLLECTION}/${parsed.rkey}` : null
 
   const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const lineage = useLineage(state.status === 'loaded' ? state.image : null)
 
   useEffect(() => {
     if (!uri) {
@@ -78,15 +81,18 @@ export function ImagePage({ viewerDid, onDeleteImage }: ImagePageProps) {
         )}
 
         {state.status === 'loaded' && (
-          <ImageDetail
-            image={state.image}
-            canDelete={!!viewerDid && state.image.did === viewerDid}
-            onDelete={async () => {
-              await onDeleteImage(state.image.uri)
-              // The record is gone — send the owner back to their gallery.
-              navigate(pathForTab('mine'))
-            }}
-          />
+          <>
+            <ImageDetail
+              image={state.image}
+              canDelete={!!viewerDid && state.image.did === viewerDid}
+              onDelete={async () => {
+                await onDeleteImage(state.image.uri)
+                // The record is gone — send the owner back to their gallery.
+                navigate(pathForTab('mine'))
+              }}
+            />
+            <LineagePanel lineage={lineage} />
+          </>
         )}
       </div>
     </div>
