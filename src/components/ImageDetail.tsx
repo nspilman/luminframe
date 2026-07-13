@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch, Sparkles } from 'lucide-react'
 import { LuminframeImageView, parseAtUri, LUMINFRAME_COLLECTION } from '@/infrastructure/atproto/luminframeFeed'
-import { effectLabel, formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
+import { formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
 import { editorRemixPath, editorApplyRecipePath, imagePagePath } from '@/lib/galleryRoute'
+import { EffectChip } from './EffectChip'
 import { Spinner } from './ui/spinner'
 
 interface ImageDetailProps {
@@ -105,12 +106,7 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
             <p className="text-[11px] uppercase tracking-wide text-zinc-600">Effects</p>
             <div className="flex flex-wrap gap-1.5">
               {image.effects.map((key, i) => (
-                <span
-                  key={`${key}-${i}`}
-                  className="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-medium text-violet-300"
-                >
-                  {effectLabel(key)}
-                </span>
+                <EffectChip key={`${key}-${i}`} effectKey={key} className="px-2.5 py-0.5 text-xs" />
               ))}
             </div>
           </div>

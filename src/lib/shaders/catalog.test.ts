@@ -1,5 +1,5 @@
 import { registeredShaders, ShaderType } from '@/types/shader'
-import { effectFamilies, effectBlurbs, categoryOf, familiesOf, isEffectCategory } from './catalog'
+import { effectFamilies, effectBlurbs, categoryOf, familiesOf, familyOf, isEffectCategory } from './catalog'
 
 // The catalog is the navigation's contract: if these break, an effect has
 // fallen out of the picker or gained a phantom entry. They're the safety net
@@ -50,6 +50,18 @@ describe('familiesOf', () => {
 
   it('is empty for no effects', () => {
     expect(familiesOf([])).toEqual(new Set())
+  })
+})
+
+// familyOf gates whether an effect chip becomes a filter link — an unknown key
+// must yield null so the chip stays a plain label, not a link to nowhere.
+describe('familyOf', () => {
+  it('returns the family of a known effect', () => {
+    expect(familyOf('crt')).toBe('texture')
+  })
+
+  it('returns null for an effect this build does not know', () => {
+    expect(familyOf('notARealEffect')).toBeNull()
   })
 })
 

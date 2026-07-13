@@ -6,9 +6,10 @@ import { ImageLightbox } from './ImageLightbox'
 import { useLuminframeFeed, FeedTab } from '@/hooks/useLuminframeFeed'
 import { useOpenImage } from '@/hooks/useOpenImage'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
-import { effectLabel, formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
+import { formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
 import { tabFromPath, pathForTab, IMAGE_PARAM, FAMILY_PARAM } from '@/lib/galleryRoute'
 import { familiesOf, isEffectCategory, effectFamilies, EffectCategory } from '@/lib/shaders/catalog'
+import { EffectChip } from './EffectChip'
 
 interface GalleryPageProps {
   /** The signed-in user's DID, or null when signed out (gates the "mine" tab). */
@@ -50,12 +51,7 @@ function ImageCard({ image, onOpen }: { image: LuminframeImageView; onOpen: () =
         {image.effects.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {image.effects.slice(0, 4).map((key, i) => (
-              <span
-                key={`${key}-${i}`}
-                className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300"
-              >
-                {effectLabel(key)}
-              </span>
+              <EffectChip key={`${key}-${i}`} effectKey={key} className="px-2 py-0.5 text-[10px]" />
             ))}
             {image.effects.length > 4 && (
               <span className="px-1 py-0.5 text-[10px] text-zinc-500">+{image.effects.length - 4}</span>

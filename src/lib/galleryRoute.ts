@@ -49,6 +49,15 @@ export const IMAGE_PARAM = 'image'
 export const FAMILY_PARAM = 'family'
 
 /**
+ * The gallery address filtered to one effect family, network scope — where an
+ * effect chip anywhere in the app points ("show me more of this look"). Network,
+ * not the current tab: exploring a look is a reach across everyone's work.
+ */
+export function galleryPathForFamily(family: string): string {
+  return `${GALLERY_ROOT}?${FAMILY_PARAM}=${encodeURIComponent(family)}`
+}
+
+/**
  * The search-param key that asks the editor to open a network image as its
  * source — a "remix." Like the others, it lives in the URL so the action is a
  * plain link (and a shared /?remix=<uri> works for anyone).

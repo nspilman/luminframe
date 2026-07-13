@@ -168,6 +168,16 @@ export function isEffectCategory(value: string): value is EffectCategory {
 }
 
 /**
+ * The family for an effect key, or null when this build doesn't know the effect.
+ * The honest counterpart to categoryOf (which is typed total over ShaderType) for
+ * the untrusted effect keys that come off network records — an unfamiliar key
+ * yields null rather than a phantom family, so a UI can decline to link it.
+ */
+export function familyOf(key: string): EffectCategory | null {
+  return categoryByType[key as ShaderType] ?? null
+}
+
+/**
  * The families present among a set of effect keys, unknown keys ignored. This is
  * the one primitive the gallery's "discover by look" builds on: the filter
  * predicate is `familiesOf(image.effects).has(family)`, and the filter rail is the
