@@ -498,20 +498,34 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     }
 
     const [nativeWidth, nativeHeight] = this.exportBufferSize(params.source);
+    return this.withRenderSize(nativeWidth, nativeHeight, () => {
+      this.drawChain();
+      return this.encodeCanvas(canvas, format);
+    });
+  }
+
+  /**
+   * Render at a temporary buffer size, then restore the display buffer. The live
+   * animation loop is frozen for the duration (so it can't redraw at display size
+   * mid-operation) and resumed after; the display frame is redrawn on the way out.
+   * Both exports lean on this — a still at native size, an animation at a capped
+   * size — so the freeze/resize/restore ceremony lives in exactly one place.
+   */
+  private async withRenderSize<T>(
+    width: number,
+    height: number,
+    body: () => T | Promise<T>
+  ): Promise<T> {
     const displayDimensions = this.currentDimensions;
     const wasAnimating = this.animationFrameId !== null;
-
-    // Freeze the animation loop so it can't redraw at display size between our
-    // native render and the async encode.
     this.stopAnimation();
     try {
-      this.currentDimensions = new Dimensions(nativeWidth, nativeHeight);
-      this.renderer.setSize(nativeWidth, nativeHeight, false);
-      this.drawChain();
-      return await this.encodeCanvas(canvas, format);
+      this.currentDimensions = new Dimensions(width, height);
+      this.renderer!.setSize(width, height, false);
+      return await body();
     } finally {
       this.currentDimensions = displayDimensions;
-      this.renderer.setSize(displayDimensions.width, displayDimensions.height, false);
+      this.renderer!.setSize(displayDimensions.width, displayDimensions.height, false);
       this.drawChain();
       if (wasAnimating) this.syncAnimation();
     }
@@ -534,11 +548,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }): Promise<ImageData[]> {
     if (!this.renderer || !this.lastChainParams) return [];
 
-    const source = this.lastChainParams.source;
-    const displayDimensions = this.currentDimensions;
-    const wasAnimating = this.animationFrameId !== null;
-
-    const dims = source.getDimensions();
+    const dims = this.lastChainParams.source.getDimensions();
     const { width, height } = scaleToLongestSide(dims.width, dims.height, opts.maxSize);
 
     const reader = document.createElement('canvas');
@@ -548,24 +558,22 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     if (!ctx) return [];
 
     const frames: ImageData[] = [];
-    this.stopAnimation();
-    try {
-      this.currentDimensions = new Dimensions(width, height);
-      this.renderer.setSize(width, height, false);
+    await this.withRenderSize(width, height, () => {
+      // Start feedback effects from a clean (black) previous frame, so the capture
+      // doesn't inherit the live view's accumulated trails.
       this.resetFeedback();
-      for (let i = 0; i < opts.frameCount; i++) {
-        this.captureTime = i / opts.fps;
-        this.drawChain();
-        ctx.drawImage(this.renderer.domElement, 0, 0, width, height);
-        frames.push(ctx.getImageData(0, 0, width, height));
+      try {
+        for (let i = 0; i < opts.frameCount; i++) {
+          this.captureTime = i / opts.fps;
+          this.drawChain();
+          ctx.drawImage(this.renderer!.domElement, 0, 0, width, height);
+          frames.push(ctx.getImageData(0, 0, width, height));
+        }
+      } finally {
+        // Unpin before withRenderSize redraws the restored display frame.
+        this.captureTime = null;
       }
-    } finally {
-      this.captureTime = null;
-      this.currentDimensions = displayDimensions;
-      this.renderer.setSize(displayDimensions.width, displayDimensions.height, false);
-      this.drawChain();
-      if (wasAnimating) this.syncAnimation();
-    }
+    });
     return frames;
   }
 
@@ -662,10 +670,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       this.renderTargets = null;
     }
 
-    if (this.feedbackTexture) {
-      this.feedbackTexture.dispose();
-      this.feedbackTexture = null;
-    }
+    this.resetFeedback();
     this.lastChainParams = null;
 
     // Clear texture cache
