@@ -3,12 +3,13 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download, Eye, Send, Sparkles } from 'lucide-react'
+import { Upload, Save, Download, Eye, Send, Sparkles, Shuffle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { PublishDialog } from './PublishDialog'
 import { Publisher } from '@/hooks/usePublish'
+import { useSurpriseMe } from '@/hooks/useSurpriseMe'
 import { urlToFile } from '@/lib/urlToFile'
 
 // A bundled photo (served same-origin from public/, so the render stays
@@ -40,6 +41,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     const [isComparing, setIsComparing] = useState(false)
     const [publishOpen, setPublishOpen] = useState(false)
     const [loadingSample, setLoadingSample] = useState(false)
+    const { surprise, isFinding } = useSurpriseMe()
 
     // Load the bundled sample through the same door a drop uses. urlToFile keeps
     // it same-origin so the result stays exportable, just like a real upload.
@@ -48,6 +50,13 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
       const file = await urlToFile(SAMPLE_IMAGE_URL, 'sample')
       if (file) onImageDrop(file)
       setLoadingSample(false)
+    }
+
+    // Remix a random network creation; if the network has nothing yet, fall back
+    // to the bundled sample so the button never dead-ends.
+    const handleSurprise = async () => {
+      const found = await surprise()
+      if (!found) await loadSample()
     }
 
     const openPublish = () => {
@@ -107,15 +116,27 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
                   <Upload className="h-4 w-4" />
                   Drop a photo or choose one
                 </button>
-                <button
-                  type="button"
-                  onClick={loadSample}
-                  disabled={loadingSample}
-                  className="inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:outline-none focus-visible:text-violet-300"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {loadingSample ? 'Loading sample…' : 'No photo? Try a sample'}
-                </button>
+                <div className="flex items-center gap-3 text-xs text-zinc-400">
+                  <button
+                    type="button"
+                    onClick={loadSample}
+                    disabled={loadingSample || isFinding}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {loadingSample ? 'Loading sample…' : 'Try a sample'}
+                  </button>
+                  <span className="text-zinc-700">·</span>
+                  <button
+                    type="button"
+                    onClick={handleSurprise}
+                    disabled={loadingSample || isFinding}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                  >
+                    <Shuffle className="h-3.5 w-3.5" />
+                    {isFinding ? 'Finding one…' : 'Surprise me'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
