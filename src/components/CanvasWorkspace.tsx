@@ -3,11 +3,12 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download, Eye, Send, Sparkles, Shuffle } from 'lucide-react'
+import { Upload, Save, Download, Eye, Send, Sparkles, Shuffle, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { PublishDialog } from './PublishDialog'
+import { SourcePickerDialog } from './SourcePickerDialog'
 import { Publisher } from '@/hooks/usePublish'
 import { useSurpriseMe } from '@/hooks/useSurpriseMe'
 import { urlToFile } from '@/lib/urlToFile'
@@ -41,6 +42,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     const [isComparing, setIsComparing] = useState(false)
     const [publishOpen, setPublishOpen] = useState(false)
     const [loadingSample, setLoadingSample] = useState(false)
+    const [pickerOpen, setPickerOpen] = useState(false)
     const { surprise, isFinding } = useSurpriseMe()
 
     // Load the bundled sample through the same door a drop uses. urlToFile keeps
@@ -116,7 +118,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
                   <Upload className="h-4 w-4" />
                   Drop a photo or choose one
                 </button>
-                <div className="flex items-center gap-3 text-xs text-zinc-400">
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-zinc-400">
                   <button
                     type="button"
                     onClick={loadSample}
@@ -125,6 +127,16 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     {loadingSample ? 'Loading sample…' : 'Try a sample'}
+                  </button>
+                  <span className="text-zinc-700">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    disabled={loadingSample || isFinding}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                  >
+                    <Images className="h-3.5 w-3.5" />
+                    Browse public images
                   </button>
                   <span className="text-zinc-700">·</span>
                   <button
@@ -188,6 +200,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           error={publish.error}
           onPublish={publish.publish}
         />
+        {pickerOpen && <SourcePickerDialog onClose={() => setPickerOpen(false)} />}
         <LoadingOverlay show={isLoadingImage} label="Loading image…" />
       </div>
     )
