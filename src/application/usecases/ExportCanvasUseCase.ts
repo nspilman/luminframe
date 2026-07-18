@@ -1,7 +1,7 @@
 import { RenderingPort } from '@/application/ports/RenderingPort';
 import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
-import { encodeAnimation } from '@/lib/encodeAnimation';
+import { encodeAnimation, AnimationEncoding } from '@/lib/encodeAnimation';
 
 /** Animation capture settings — ~2.4s at 15fps, capped so the clip stays a sane size. */
 const ANIM = { fps: 15, frameCount: 36, maxSize: 480 } as const;
@@ -35,19 +35,28 @@ export class ExportCanvasUseCase {
       throw new Error('No canvas available for export');
     }
 
-    if (this.renderingPort.isAnimated()) {
-      const frames = await this.renderingPort.captureAnimationFrames(ANIM);
-      if (frames.length > 0) {
-        const { bytes, mimeType, extension } = await encodeAnimation(frames, ANIM.fps);
-        const blob = new Blob([bytes], { type: mimeType });
-        this.imageExport.download(blob, `${baseName}.${extension}`);
-        return;
-      }
-      // Nothing captured — fall through to a still export rather than downloading nothing.
+    const animation = await this.encodeAnimatedEdit();
+    if (animation) {
+      const blob = new Blob([animation.bytes], { type: animation.mimeType });
+      this.imageExport.download(blob, `${baseName}.${animation.extension}`);
+      return;
     }
 
     const blob = await this.renderingPort.exportCanvas(format);
     const ext = format.getMimeType().split('/')[1].replace('jpeg', 'jpg');
     this.imageExport.download(blob, `${baseName}.${ext}`);
+  }
+
+  /**
+   * The current edit as an encoded animation, or null when it's a still (or
+   * nothing could be captured) — the caller then treats it as a plain image.
+   * Shared by the download above and the save path, so capture settings and
+   * format choice are decided once.
+   */
+  async encodeAnimatedEdit(): Promise<AnimationEncoding | null> {
+    if (!this.renderingPort.isAnimated()) return null;
+    const frames = await this.renderingPort.captureAnimationFrames(ANIM);
+    if (frames.length === 0) return null;
+    return encodeAnimation(frames, ANIM.fps);
   }
 }

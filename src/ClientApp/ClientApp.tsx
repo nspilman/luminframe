@@ -59,6 +59,7 @@ export function ClientApp(): JSX.Element {
     remixParent,
     handleCanvasResize,
     captureSession,
+    encodeAnimatedEdit,
   } = useShaderEditor()
 
   // What's recorded on a saved Luminframe record beyond the pixels: the committed
@@ -74,7 +75,7 @@ export function ClientApp(): JSX.Element {
     }),
     [appliedEffects, remixParent]
   )
-  const publish = usePublish(session, canvasRef, publishEdit)
+  const publish = usePublish(session, canvasRef, publishEdit, encodeAnimatedEdit)
 
   // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
   // that image into the editor as a fresh source (carrying its {uri, cid} so a

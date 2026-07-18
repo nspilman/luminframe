@@ -23,6 +23,21 @@ describe('buildLuminframeImageRecord', () => {
     })
   })
 
+  it('attaches the video blob when the edit animates', () => {
+    // The bug class is dropping the second blob in the record assembly — the
+    // save would silently lose the animation while the still uploads fine.
+    const videoBlob = { ref: 'fake-video-blob' } as unknown as BlobRef
+    const record = buildLuminframeImageRecord({
+      blob,
+      videoBlob,
+      aspectRatio: { width: 1, height: 1 },
+      createdAt: ISO,
+    })
+
+    expect(record.video).toBe(videoBlob)
+    expect(record.image).toBe(blob)
+  })
+
   it('records the effect recipe when effects are given', () => {
     const record = buildLuminframeImageRecord({
       blob,

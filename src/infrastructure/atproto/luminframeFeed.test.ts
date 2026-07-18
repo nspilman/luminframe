@@ -66,6 +66,7 @@ describe('recordToView', () => {
       did: 'did:plc:abc',
       handle: 'alice.bsky.social',
       imageUrl: 'https://pds.example/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Aabc&cid=bafblob',
+      videoUrl: null,
       aspectRatio: { width: 1600, height: 900 },
       alt: 'a misty forest',
       title: 'Forest',
@@ -73,6 +74,20 @@ describe('recordToView', () => {
       remixOf: undefined,
       createdAt: '2026-01-01T00:00:00.000Z',
     })
+  })
+
+  it('builds the video URL from an animated record\'s video CID', () => {
+    // The still test above pins videoUrl: null; this pins the animated half —
+    // dropping the mapping would silently freeze every animated record to its poster.
+    const view = recordToView(
+      { ...record, value: { ...record.value, video: { ref: { $link: 'bafvideo' } } } },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(view.videoUrl).toBe(
+      'https://pds.example/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Aabc&cid=bafvideo'
+    )
   })
 
   it('reads the recipe, keeping only steps with a string type', () => {

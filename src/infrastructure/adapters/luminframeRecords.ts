@@ -26,8 +26,10 @@ export const LUMINFRAME_IMAGE_COLLECTION = 'com.luminframe.image'
 
 export interface LuminframeImageRecord {
   $type: 'com.luminframe.image'
-  /** The rendered image blob, from `uploadBlob`. */
+  /** The rendered image blob, from `uploadBlob`. When `video` is present, its poster. */
   image: BlobRef
+  /** A short looping clip of the edit, when the recipe animates (v3). */
+  video?: BlobRef
   /** Pixel dimensions of the render, for aspect-ratio layout. */
   aspectRatio: { width: number; height: number }
   /** ISO timestamp. */
@@ -47,6 +49,8 @@ export interface LuminframeImageRecord {
 export interface LuminframeImageParts {
   /** The uploaded image blob reference returned by `uploadBlob`. */
   blob: BlobRef
+  /** The uploaded looping-clip blob, when the edit animates (v3). */
+  videoBlob?: BlobRef
   aspectRatio: { width: number; height: number }
   /** ISO timestamp; passed in rather than read from the clock so this stays pure. */
   createdAt: string
@@ -60,7 +64,7 @@ export interface LuminframeImageParts {
 }
 
 export function buildLuminframeImageRecord(parts: LuminframeImageParts): LuminframeImageRecord {
-  const { blob, aspectRatio, createdAt, alt, title, effects, recipe, remixOf } = parts
+  const { blob, videoBlob, aspectRatio, createdAt, alt, title, effects, recipe, remixOf } = parts
 
   const record: LuminframeImageRecord = {
     $type: 'com.luminframe.image',
@@ -71,6 +75,9 @@ export function buildLuminframeImageRecord(parts: LuminframeImageParts): Luminfr
 
   // Optional fields are attached only when they carry something, so the repo
   // never stores an empty string or an empty array as if it were meaningful.
+  if (videoBlob) {
+    record.video = videoBlob
+  }
   if (alt && alt.trim().length > 0) {
     record.alt = alt.trim()
   }

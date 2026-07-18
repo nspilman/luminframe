@@ -18,6 +18,12 @@ export interface PublishImageInput {
   /** Pixel dimensions, surfaced to clients as the embed's aspect-ratio hint. */
   aspectRatio: { width: number; height: number }
   /**
+   * A short looping MP4 of the edit, when it animates. Only Luminframe's own
+   * record stores it (the still stays its poster); the social targets ignore it —
+   * their image embeds can't animate an uploaded clip.
+   */
+  video?: { bytes: Uint8Array; mimeType: string }
+  /**
    * The effect keys applied to produce this image, in order — the edit recipe.
    * Optional: only targets with a place to record it (Luminframe's own lexicon)
    * use it; the social targets ignore it.

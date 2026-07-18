@@ -122,8 +122,15 @@ export function useShaderEditor() {
   )
   const pipeline = history.present
 
-  const { canvasRef, renderEdit, saveCanvasAsInput, downloadImage, updateDimensions, isInitialized } =
-    useRenderingEngine()
+  const {
+    canvasRef,
+    renderEdit,
+    saveCanvasAsInput,
+    downloadImage,
+    encodeAnimatedEdit,
+    updateDimensions,
+    isInitialized,
+  } = useRenderingEngine()
   const { loadFromFile } = useImageLoader()
   const windowSize = useWindowSize()
 
@@ -387,6 +394,7 @@ export function useShaderEditor() {
     canRedo: canRedo(history),
     handleSaveAsSecondImage,
     handleDownload,
+    encodeAnimatedEdit,
     handleImageDrop,
     handleRemixLoad,
     applyRecipe,

@@ -17,7 +17,8 @@ import {
  *
  * One save writes one record:
  *   1. uploadBlob                → blob ref for the encoded render
- *   2. com.luminframe.image      the record carrying that blob + the edit recipe
+ *      (an animated edit uploads a second blob: its looping MP4)
+ *   2. com.luminframe.image      the record carrying the blob(s) + the edit recipe
  *
  * The `com.luminframe.image` lexicon is published: its schema lives as a
  * `com.atproto.lexicon.schema` record in the authority repo, resolvable via the
@@ -34,17 +35,22 @@ export class LuminframePublishAdapter implements PublishPort {
     const did = this.agent.assertDid
     const createdAt = new Date().toISOString()
 
-    // 1. Upload the encoded image to the user's PDS, yielding a blob ref.
+    // 1. Upload the encoded image to the user's PDS, yielding a blob ref. An
+    //    animated edit uploads its looping clip too; the still stays the poster.
     const upload = await this.agent.uploadBlob(input.bytes, {
       encoding: input.mimeType,
     })
+    const videoUpload = input.video
+      ? await this.agent.uploadBlob(input.video.bytes, { encoding: input.video.mimeType })
+      : null
 
-    // 2. Create the Luminframe image record carrying the blob and the recipe.
+    // 2. Create the Luminframe image record carrying the blob(s) and the recipe.
     const result = await this.agent.com.atproto.repo.createRecord({
       repo: did,
       collection: LUMINFRAME_IMAGE_COLLECTION,
       record: buildLuminframeImageRecord({
         blob: upload.data.blob,
+        videoBlob: videoUpload?.data.blob,
         aspectRatio: input.aspectRatio,
         alt: input.alt,
         title: input.caption,

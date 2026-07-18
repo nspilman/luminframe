@@ -9,6 +9,7 @@ import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
 import { PublishTarget, ShareTarget, toLuminframeUrl, publicUrlFor } from '@/lib/publishUrls'
 import { StrongRef } from '@/types/atproto'
 import { RecipeStep } from '@/types/recipe'
+import { AnimationEncoding } from '@/lib/encodeAnimation'
 
 export type { PublishTarget, ShareTarget } from '@/lib/publishUrls'
 
@@ -84,11 +85,17 @@ function shareAdapterFor(
  *
  * The canvas is exported once; every destination uploads those same bytes, which
  * (being content-addressed) the PDS stores as a single blob regardless.
+ *
+ * When `encodeAnimatedEdit` is provided and the edit animates, the save also
+ * carries the looping MP4 (the same clip a download produces), so the record
+ * keeps its motion. The lexicon's `video` field takes MP4 only, so a GIF-only
+ * encode (no WebCodecs) saves as a still — today's behavior, not a failure.
  */
 export function usePublish(
   session: AtprotoSession,
   canvasRef: RefObject<HTMLCanvasElement>,
-  edit: PublishEdit = { effects: [] }
+  edit: PublishEdit = { effects: [] },
+  encodeAnimatedEdit?: () => Promise<AnimationEncoding | null>
 ): Publisher {
   const [state, setState] = useState<PublishState>(IDLE)
 
@@ -125,12 +132,17 @@ export function usePublish(
 
       try {
         const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
+        const animation = (await encodeAnimatedEdit?.()) ?? null
         const input = {
           bytes,
           mimeType,
           alt,
           caption,
           aspectRatio,
+          video:
+            animation?.mimeType === 'video/mp4'
+              ? { bytes: animation.bytes, mimeType: animation.mimeType }
+              : undefined,
           effects: edit.effects,
           recipe: edit.recipe,
           remixOf: edit.remixOf,

@@ -14,7 +14,13 @@
             "type": "blob",
             "accept": ["image/*"],
             "maxSize": 1000000,
-            "description": "The rendered image."
+            "description": "The rendered image. When `video` is present, this is its poster frame."
+          },
+          "video": {
+            "type": "blob",
+            "accept": ["video/mp4"],
+            "maxSize": 5000000,
+            "description": "A short looping clip of the edit, present when the recipe animates. The still `image` remains required as the poster, so viewers that only know stills keep working."
           },
           "aspectRatio": {
             "type": "ref",

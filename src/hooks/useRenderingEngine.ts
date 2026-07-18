@@ -4,6 +4,7 @@ import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { EditPipeline } from '@/domain/models/EditPipeline';
 import { DraftEffect } from '@/application/usecases/RenderEditUseCase';
+import { AnimationEncoding } from '@/lib/encodeAnimation';
 
 /**
  * React hook that exposes the rendering engine to components, wiring a canvas
@@ -89,6 +90,18 @@ export function useRenderingEngine() {
     return contextRef.current.getExportCanvasUseCase().execute(baseName);
   }, []);
 
+  /**
+   * The current edit as an encoded animation, or null when it's a still — the
+   * save path attaches this to the record so animated edits keep their motion.
+   * Same capture + encoder as the download, so the two never drift apart.
+   */
+  const encodeAnimatedEdit = useCallback(async (): Promise<AnimationEncoding | null> => {
+    if (!contextRef.current) {
+      throw new Error('Rendering engine not initialized');
+    }
+    return contextRef.current.getExportCanvasUseCase().encodeAnimatedEdit();
+  }, []);
+
   // No unmount cleanup: the ApplicationContext is a singleton, deliberately
   // reused across component re-mounts rather than disposed here.
 
@@ -97,6 +110,7 @@ export function useRenderingEngine() {
     renderEdit,
     saveCanvasAsInput,
     downloadImage,
+    encodeAnimatedEdit,
     updateDimensions,
     isInitialized,
   };

@@ -53,7 +53,20 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-950/80 md:flex-row">
       <div className="flex min-h-0 flex-1 items-center justify-center bg-black p-2 md:p-4">
-        {image.imageUrl ? (
+        {image.videoUrl ? (
+          // An animated edit: the record's looping clip, with the still as its
+          // poster so the frame is filled while the video loads.
+          <video
+            src={image.videoUrl}
+            poster={image.imageUrl ?? undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-label={image.alt ?? ''}
+            className="max-h-[50vh] w-auto max-w-full object-contain md:max-h-[80vh]"
+          />
+        ) : image.imageUrl ? (
           <img
             src={image.imageUrl}
             alt={image.alt ?? ''}

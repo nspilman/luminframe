@@ -37,6 +37,8 @@ export interface LuminframeImageView {
   handle: string | null
   /** getBlob URL for the image, or null if the record carried no blob. */
   imageUrl: string | null
+  /** getBlob URL for the looping clip of an animated edit, or null for a still (v3). */
+  videoUrl: string | null
   aspectRatio: { width: number; height: number }
   alt?: string
   title?: string
@@ -61,6 +63,7 @@ interface RawRecord {
   cid?: string
   value: {
     image?: { ref?: { $link?: string } }
+    video?: { ref?: { $link?: string } }
     aspectRatio?: { width: number; height: number }
     alt?: string
     title?: string
@@ -121,6 +124,7 @@ export function parseAtUri(uri: string): { did: string; collection: string; rkey
 export function recordToView(record: RawRecord, did: string, pds: string, handle: string | null): LuminframeImageView {
   const value = record.value ?? {}
   const blobCid = value.image?.ref?.$link
+  const videoCid = value.video?.ref?.$link
   const rkey = record.uri.split('/').pop() ?? ''
   return {
     uri: record.uri,
@@ -129,6 +133,7 @@ export function recordToView(record: RawRecord, did: string, pds: string, handle
     did,
     handle,
     imageUrl: blobCid ? getBlobUrl(pds, did, blobCid) : null,
+    videoUrl: videoCid ? getBlobUrl(pds, did, videoCid) : null,
     aspectRatio: value.aspectRatio ?? { width: 1, height: 1 },
     alt: value.alt,
     title: value.title,
