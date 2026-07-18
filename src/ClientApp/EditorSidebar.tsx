@@ -27,8 +27,9 @@ type EditorSidebarProps = {
   canRedo: boolean
 }
 
+// order-2: on a phone the canvas comes first and the tools follow beneath it.
 const sidebarShell =
-  'md:flex md:min-h-0 md:w-[320px] md:flex-col border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
+  'order-2 md:order-none md:flex md:min-h-0 md:w-[320px] md:flex-col border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
 
 export function EditorSidebar({
   hasImage,

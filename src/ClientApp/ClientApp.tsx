@@ -100,11 +100,12 @@ export function ClientApp(): JSX.Element {
   const headerSession = useMemo(() => ({ ...session, signIn }), [session, signIn])
 
   return (
-    // The editor is a workbench: it owns exactly one viewport (h-screen) and its
-    // regions scroll internally, so the header, canvas, and Apply never leave
-    // view. The gallery and image pages are documents — they keep the normal
-    // page scroll (min-h-screen).
-    <div className={`flex flex-col bg-[#030305] ${onEditor ? 'h-screen md:overflow-hidden' : 'min-h-screen'}`}>
+    // On desktop the editor is a workbench: it owns exactly one viewport
+    // (h-screen) and its regions scroll internally, so the header, canvas, and
+    // Apply never leave view. On a phone — and on the document routes (gallery,
+    // image page) — the page scrolls normally; the phone editor keeps its
+    // subject present by sticking the canvas to the top instead.
+    <div className={`flex min-h-screen flex-col bg-[#030305] ${onEditor ? 'md:h-screen md:overflow-hidden' : ''}`}>
       <HeaderBar session={headerSession} />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
           on every visit) — it's just hidden while another view is shown. Which
@@ -130,11 +131,12 @@ export function ClientApp(): JSX.Element {
           canRedo={canRedo}
         />
 
-        {/* Main content. The workbench shell above fixes the canvas region in the
-            viewport, so no sticky compensation is needed — the subject simply
-            fills the space beside the tools and never scrolls away. */}
-        <div className="relative min-h-0 flex-1">
-          <div className="h-[50vh] md:h-full">
+        {/* Main content. On desktop the workbench shell fixes the canvas region
+            in the viewport beside the tools. On a phone the canvas comes first
+            (order-1) and stays stuck to the top while the tools scroll beneath
+            it — the subject is the constant, the controls pass by. */}
+        <div className="sticky top-0 z-10 order-1 min-h-0 md:static md:order-none md:flex-1">
+          <div className="h-[45vh] md:h-full">
             <CanvasWorkspace
               ref={canvasRef}
               dimensions={aspectRatioArray}

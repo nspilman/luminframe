@@ -176,7 +176,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             </div>
           </div>
         ) : (
-          <div className="absolute top-4 right-4 flex gap-2">
+          <div className="absolute inset-x-4 top-4 flex flex-wrap justify-end gap-2">
             <Button
               onPointerDown={() => setIsComparing(true)}
               onPointerUp={() => setIsComparing(false)}
