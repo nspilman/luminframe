@@ -11,15 +11,15 @@ import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/col
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 
-// Fallback glyphs, shown only until the live preview of the user's own image
-// finishes rendering for each effect. Once a thumbnail lands, the image is the
-// label — the icon was only ever a placeholder for the real thing.
 // The desktop growing-column declaration: at md+ the picker fills the sidebar's
 // middle region, and CSS requires each nesting level to restate flex/min-h-0
 // for the height to reach the scrolling list. On mobile the picker sizes to
 // content instead (the list keeps its own max-h scroll).
 const fillColumn = 'md:flex md:min-h-0 md:flex-1 md:flex-col'
 
+// Fallback glyphs, shown only until the live preview of the user's own image
+// finishes rendering for each effect. Once a thumbnail lands, the image is the
+// label — the icon was only ever a placeholder for the real thing.
 const shaderIcons: Record<ShaderType, React.ReactNode> = {
   colorTint: <Wand2 className="h-5 w-5" />,
   pixelate: <Grid className="h-5 w-5" />,
@@ -112,6 +112,43 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
     setCollapsed((prev) => toggleCollapsed(prev, id))
   }, [])
 
+  // The list shows ~3 of 11 families at rest, so the catalog needs a map: a row
+  // of family chips that jump the list to their section (expanding it if the
+  // user had folded it — a jump must never land on a closed door).
+  const listRef = useRef<HTMLDivElement>(null)
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  // The jump is two renders: expand the family, then scroll to it. Holding the
+  // destination in state and scrolling from an effect ties the scroll to the
+  // commit itself — deferring via rAF instead would silently drop the jump in a
+  // backgrounded tab, where rAF never fires.
+  const [pendingJump, setPendingJump] = useState<string | null>(null)
+  const jumpToFamily = useCallback((id: string) => {
+    setCollapsed((prev) => prev.filter((c) => c !== id))
+    setPendingJump(id)
+  }, [])
+  useEffect(() => {
+    if (!pendingJump) return
+    // Instant, not smooth: a jump across ~2000px of list is clearer landing at
+    // once — and smooth scrolling is frame-driven, so it also never completes
+    // in a backgrounded tab.
+    sectionRefs.current[pendingJump]?.scrollIntoView({ block: 'start' })
+    setPendingJump(null)
+  }, [pendingJump])
+
+  // "More below" cue: a fade at the list's bottom edge whenever content
+  // continues past it, so the catalog never silently ends at the fold.
+  const [moreBelow, setMoreBelow] = useState(false)
+  const measureMoreBelow = useCallback(() => {
+    const el = listRef.current
+    if (el) setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 8)
+  }, [])
+  useEffect(() => {
+    measureMoreBelow()
+    window.addEventListener('resize', measureMoreBelow)
+    return () => window.removeEventListener('resize', measureMoreBelow)
+    // Re-measure whenever the list's content could have changed shape.
+  }, [measureMoreBelow, sections, collapsed, query])
+
   // A keyboard shortcut to the search line: '/' when not already typing, or ⌘/Ctrl-K
   // anywhere — the command-palette reflex, so the search is reachable without the mouse.
   const searchRef = useRef<HTMLInputElement>(null)
@@ -174,16 +211,42 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
               </button>
             )}
           </div>
+          {/* The map of the territory: one chip per family, jumping the list to
+              its section. Hidden while searching — the filtered list is short
+              and the chips would only restate it. */}
+          {!isSearching && (
+            <div className="flex flex-wrap gap-1">
+              {sections.map((family) => (
+                <button
+                  key={family.id}
+                  type="button"
+                  onClick={() => jumpToFamily(family.id)}
+                  className="rounded-full border border-zinc-800/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-500 transition-colors hover:border-zinc-600 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+                >
+                  {family.label}
+                </button>
+              ))}
+            </div>
+          )}
           {families.length === 0 ? (
             <p className="px-1 py-6 text-center text-xs text-zinc-500">
               No effects match “{query}”
             </p>
           ) : (
-          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1">
+          <div className={`relative ${fillColumn}`}>
+          <div
+            ref={listRef}
+            onScroll={measureMoreBelow}
+            className="max-h-[420px] space-y-3 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1"
+          >
             {sections.map((family) => {
               const isCollapsed = !isSearching && collapsed.includes(family.id)
               return (
-              <div key={family.id} className="space-y-2">
+              <div
+                key={family.id}
+                ref={(el) => (sectionRefs.current[family.id] = el)}
+                className="space-y-2 scroll-mt-1"
+              >
                 <button
                   type="button"
                   onClick={() => toggleFamily(family.id)}
@@ -237,6 +300,12 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
               </div>
               )
             })}
+          </div>
+          {/* The fold made visible: fades over the last rows while the catalog
+              continues past the edge, and vanishes at the true end. */}
+          {moreBelow && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/80 to-transparent" />
+          )}
           </div>
           )}
         </CardContent>
