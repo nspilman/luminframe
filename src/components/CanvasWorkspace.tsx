@@ -114,11 +114,22 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         )}
         {!hasImage ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 p-6 backdrop-blur-sm">
-            <div className="max-w-md space-y-6 text-center">
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            {/* The product demos itself: the sample photo drifts through hues
+                behind the invitation — a look, live, before any button is
+                pressed. Decorative only, so it's hidden from AT and stands
+                still under reduced motion. */}
+            <img
+              src={SAMPLE_IMAGE_URL}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full object-cover opacity-40 motion-safe:[animation:look-drift_16s_ease-in-out_infinite]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/60 to-black/40" />
+            <div className="relative max-w-md space-y-6 text-center">
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold text-white">Edit a photo with live looks</h2>
-                <p className="text-sm leading-relaxed text-zinc-400">
+                <p className="text-sm leading-relaxed text-zinc-300">
                   Stack shader effects on any image in real time — then save it to your own
                   repo on the AT&nbsp;Protocol, yours to keep, share, and remix.
                 </p>
@@ -132,37 +143,35 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
                   <Upload className="h-4 w-4" />
                   Drop a photo or choose one
                 </button>
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-zinc-400">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={loadSample}
                     disabled={loadingSample || isFinding}
-                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-600/80 bg-black/40 px-3.5 py-2 text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400 hover:text-violet-200 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     {loadingSample ? 'Loading sample…' : 'Try a sample'}
                   </button>
-                  <span className="text-zinc-700">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpen(true)}
-                    disabled={loadingSample || isFinding}
-                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
-                  >
-                    <Images className="h-3.5 w-3.5" />
-                    Browse public images
-                  </button>
-                  <span className="text-zinc-700">·</span>
                   <button
                     type="button"
                     onClick={handleSurprise}
                     disabled={loadingSample || isFinding}
-                    className="inline-flex items-center gap-1.5 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-600/80 bg-black/40 px-3.5 py-2 text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400 hover:text-violet-200 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
                   >
                     <Shuffle className="h-3.5 w-3.5" />
                     {isFinding ? 'Finding one…' : 'Surprise me'}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  disabled={loadingSample || isFinding}
+                  className="inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 disabled:opacity-60 focus-visible:text-violet-300 focus-visible:outline-none"
+                >
+                  <Images className="h-3.5 w-3.5" />
+                  Browse public images
+                </button>
               </div>
             </div>
           </div>

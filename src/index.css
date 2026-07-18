@@ -42,3 +42,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* The landing's self-demonstration: a slow drift through hues over the sample
+   photo, previewing "live looks" in spirit before any shader runs. Applied via
+   motion-safe: so reduced-motion users get the still image. */
+@keyframes look-drift {
+  0%,
+  100% {
+    filter: hue-rotate(0deg) saturate(1);
+  }
+  50% {
+    filter: hue-rotate(60deg) saturate(1.35);
+  }
+}

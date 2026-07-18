@@ -3,7 +3,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ImagePlus, Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2 } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2 } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
 import { Image } from '@/domain/models/Image'
@@ -49,16 +49,10 @@ export function EditorSidebar({
   canRedo,
 }: EditorSidebarProps) {
   // Image-first: the tools have no subject to act on until a source is loaded,
-  // so they aren't mounted yet — the canvas holds the one invitation to begin.
+  // so the sidebar doesn't exist yet — the canvas invitation is the whole stage,
+  // with no dead tool rack beside it.
   if (!hasImage) {
-    return (
-      <div className={sidebarShell}>
-        <div className="p-4 flex items-center gap-3 text-zinc-500">
-          <ImagePlus className="h-5 w-5 shrink-0" />
-          <p className="text-sm">Load an image to start editing.</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   // Three regions, so the commit step can never hide: the effect library owns
