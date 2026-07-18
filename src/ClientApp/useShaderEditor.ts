@@ -11,6 +11,7 @@ import { shaderLibrary } from '@/lib/shaders'
 import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
 import { StrongRef } from '@/types/atproto'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
+import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import {
   History,
   initHistory,
@@ -301,7 +302,7 @@ export function useShaderEditor() {
         // The blend/threshold second input is a per-effect parameter, not a
         // new source — the committed pipeline stays intact.
         const image = await saveCanvasAsInput()
-        updateVarValue('imageTextureTwo', image)
+        updateVarValue(SECOND_IMAGE_INPUT, image)
       } catch (error) {
         console.error('Failed to save canvas as second image:', error)
       }

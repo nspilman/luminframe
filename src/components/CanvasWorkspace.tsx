@@ -3,7 +3,7 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Save, Download, Eye, Send, Sparkles, Shuffle, Images } from 'lucide-react'
+import { Upload, Download, Eye, EyeOff, Send, Sparkles, Shuffle, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay, Spinner } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
@@ -25,7 +25,6 @@ interface CanvasWorkspaceProps {
   isLoadingImage: boolean
   isSignedIn: boolean
   publish: Publisher
-  onSaveAsSecondImage: () => void
   onDownload: () => void
   onImageDrop: (file: File) => void
   onCanvasResize?: (dimensions: Dimensions) => void
@@ -36,7 +35,7 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, sourceUrl, isLoadingImage, isSignedIn, publish, onSaveAsSecondImage, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, isLoadingImage, isSignedIn, publish, onDownload, onImageDrop, onCanvasResize }, ref) => {
     // Press-and-hold the compare button to swap the live render for the
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
@@ -177,17 +176,20 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         ) : (
           <div className="absolute inset-x-4 top-4 flex flex-wrap justify-end gap-2">
+            {/* Hold-to-peek at the untouched original: an icon is enough — the
+                action is momentary and the label was the widest thing here. */}
             <Button
               onPointerDown={() => setIsComparing(true)}
               onPointerUp={() => setIsComparing(false)}
               onPointerLeave={() => setIsComparing(false)}
               onPointerCancel={() => setIsComparing(false)}
               variant="secondary"
+              size="icon"
               aria-label="Hold to compare with original"
+              title="Hold to compare with original"
               className="bg-zinc-900/50 hover:bg-zinc-900/70 select-none touch-none"
             >
-              <Eye className="w-4 h-4 mr-2" />
-              {isComparing ? 'Original' : 'Compare'}
+              {isComparing ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
             <Button
               onClick={handleDownloadClick}
@@ -213,14 +215,6 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             >
               <Send className="w-4 h-4 mr-2" />
               Save
-            </Button>
-            <Button
-              onClick={onSaveAsSecondImage}
-              variant="secondary"
-              className="bg-zinc-900/50 hover:bg-zinc-900/70"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save as Second Image
             </Button>
           </div>
         )}

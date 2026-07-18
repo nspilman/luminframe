@@ -3,9 +3,10 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2 } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { shaderLibrary } from '@/lib/shaders'
+import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
@@ -19,6 +20,8 @@ type EditorSidebarProps = {
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
   appliedEffects: readonly AppliedEffect[]
   onApply: () => void
+  /** Bake the current render into the effect's second-image slot. */
+  onUseRenderAsSecondImage: () => void
   onRemoveEffect: (index: number) => void
   onMoveEffect: (from: number, to: number) => void
   onUndo: () => void
@@ -42,6 +45,7 @@ export function EditorSidebar({
   onChange,
   appliedEffects,
   onApply,
+  onUseRenderAsSecondImage,
   onRemoveEffect,
   onMoveEffect,
   onUndo,
@@ -82,6 +86,19 @@ export function EditorSidebar({
             <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
               <CardContent className="p-4">
                 <ShaderControls effect={effect} values={values} onChange={onChange} />
+                {/* Only the composite effects have a second-image slot; the
+                    shortcut that bakes the current render into it lives right
+                    beside that slot, not in the global action bar. */}
+                {SECOND_IMAGE_INPUT in effect.inputs && (
+                  <button
+                    type="button"
+                    onClick={onUseRenderAsSecondImage}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 focus-visible:text-violet-300 focus-visible:outline-none"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    Use current render as the second image
+                  </button>
+                )}
               </CardContent>
             </Card>
           </div>

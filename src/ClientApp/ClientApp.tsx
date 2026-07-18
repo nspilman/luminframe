@@ -123,6 +123,7 @@ export function ClientApp(): JSX.Element {
           onChange={updateVarValue}
           appliedEffects={appliedEffects}
           onApply={handleApply}
+          onUseRenderAsSecondImage={handleSaveAsSecondImage}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
           onUndo={handleUndo}
@@ -145,7 +146,6 @@ export function ClientApp(): JSX.Element {
               isLoadingImage={isLoadingImage}
               isSignedIn={session.status === 'signed-in'}
               publish={publish}
-              onSaveAsSecondImage={handleSaveAsSecondImage}
               onDownload={handleDownload}
               onImageDrop={handleImageDrop}
               onCanvasResize={handleCanvasResize}
