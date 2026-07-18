@@ -14,6 +14,12 @@ import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 // Fallback glyphs, shown only until the live preview of the user's own image
 // finishes rendering for each effect. Once a thumbnail lands, the image is the
 // label — the icon was only ever a placeholder for the real thing.
+// The desktop growing-column declaration: at md+ the picker fills the sidebar's
+// middle region, and CSS requires each nesting level to restate flex/min-h-0
+// for the height to reach the scrolling list. On mobile the picker sizes to
+// content instead (the list keeps its own max-h scroll).
+const fillColumn = 'md:flex md:min-h-0 md:flex-1 md:flex-col'
+
 const shaderIcons: Record<ShaderType, React.ReactNode> = {
   colorTint: <Wand2 className="h-5 w-5" />,
   pixelate: <Grid className="h-5 w-5" />,
@@ -127,10 +133,14 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
   }, [])
 
   return (
-    <div className="space-y-3">
+    // At desktop the picker fills the sidebar's middle region, so its effect
+    // list is the one that grows and scrolls. CSS makes every level of the
+    // chain repeat the same growing-column declaration to pass the height down,
+    // so that declaration is named once here.
+    <div className={`space-y-3 ${fillColumn}`}>
       <h3 className="text-sm font-medium text-zinc-400">Effects</h3>
-      <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
-        <CardContent className="space-y-3 p-3">
+      <Card className={`border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm ${fillColumn}`}>
+        <CardContent className={`space-y-3 p-3 ${fillColumn}`}>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <input
@@ -169,7 +179,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
               No effects match “{query}”
             </p>
           ) : (
-          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1">
             {sections.map((family) => {
               const isCollapsed = !isSearching && collapsed.includes(family.id)
               return (

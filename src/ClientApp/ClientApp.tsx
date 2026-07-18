@@ -100,13 +100,17 @@ export function ClientApp(): JSX.Element {
   const headerSession = useMemo(() => ({ ...session, signIn }), [session, signIn])
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#030305]">
+    // The editor is a workbench: it owns exactly one viewport (h-screen) and its
+    // regions scroll internally, so the header, canvas, and Apply never leave
+    // view. The gallery and image pages are documents — they keep the normal
+    // page scroll (min-h-screen).
+    <div className={`flex flex-col bg-[#030305] ${onEditor ? 'h-screen md:overflow-hidden' : 'min-h-screen'}`}>
       <HeaderBar session={headerSession} />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
           on every visit) — it's just hidden while another view is shown. Which
           view is visible is read from the URL, not local state, so every place is
           a real, bookmarkable address. */}
-      <div className={onEditor ? 'flex flex-col md:flex-row flex-1' : 'hidden'}>
+      <div className={onEditor ? 'flex min-h-0 flex-1 flex-col md:flex-row' : 'hidden'}>
         <EditorSidebar
           hasImage={hasImage}
           source={source}
@@ -126,11 +130,10 @@ export function ClientApp(): JSX.Element {
           canRedo={canRedo}
         />
 
-        {/* Main content. On desktop the canvas is pinned in view (sticky,
-            self-start so it keeps its own viewport height instead of stretching
-            to the taller sidebar) — the subject stays visible while the tools
-            scroll past it, so choosing an effect never scrolls the image away. */}
-        <div className="relative flex-1 md:sticky md:top-4 md:self-start md:h-[calc(100vh-2rem)]">
+        {/* Main content. The workbench shell above fixes the canvas region in the
+            viewport, so no sticky compensation is needed — the subject simply
+            fills the space beside the tools and never scrolls away. */}
+        <div className="relative min-h-0 flex-1">
           <div className="h-[50vh] md:h-full">
             <CanvasWorkspace
               ref={canvasRef}

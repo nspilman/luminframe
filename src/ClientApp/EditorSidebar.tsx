@@ -28,7 +28,7 @@ type EditorSidebarProps = {
 }
 
 const sidebarShell =
-  'md:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
+  'md:flex md:min-h-0 md:w-[320px] md:flex-col border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
 
 export function EditorSidebar({
   hasImage,
@@ -61,69 +61,39 @@ export function EditorSidebar({
     )
   }
 
+  // Three regions, so the commit step can never hide: the effect library owns
+  // the sidebar's scrolling middle; the work-in-progress panel (tuning + the
+  // applied stack) sits pinned below it, scrolling within itself when tall; and
+  // the action row — Apply, undo, redo — is the sidebar's fixed last word.
   return (
     <div className={sidebarShell}>
-      <div className="p-4 space-y-4 md:space-y-6">
+      <div className="flex min-h-0 flex-col p-4 md:flex-1">
         <EffectPicker
           selectedShader={selectedShader}
           onShaderSelect={onShaderSelect}
           recentShaders={recentShaders}
           source={source}
         />
+      </div>
 
+      {/* 45vh keeps the pinned panel from ever squeezing the effect library out
+          of its half of the sidebar; taller content scrolls within the panel. */}
+      <div className="space-y-4 border-t border-zinc-800/50 p-4 md:max-h-[45vh] md:overflow-y-auto">
         {/* Until an effect is chosen the image shows untouched — so the tuning
-            controls and Apply only appear once there's something to tune. */}
+            controls only appear once there's something to tune. */}
         {effect ? (
-          <>
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>
-              <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
-                <CardContent className="p-4">
-                  <ShaderControls effect={effect} values={values} onChange={onChange} />
-                </CardContent>
-              </Card>
-            </div>
-
-            <Button
-              type="button"
-              onClick={onApply}
-              className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white"
-            >
-              <Plus className="h-4 w-4" />
-              Apply effect
-            </Button>
-          </>
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-zinc-400">Adjustments</h3>
+            <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <ShaderControls effect={effect} values={values} onChange={onChange} />
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <p className="px-1 text-sm text-zinc-500">
             Pick an effect to start — your image stays untouched until you do.
           </p>
-        )}
-
-        {(canUndo || canRedo) && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onUndo}
-              disabled={!canUndo}
-              aria-label="Undo"
-              className="flex-1 gap-2 text-zinc-400 hover:bg-white/5 disabled:opacity-30"
-            >
-              <Undo2 className="h-4 w-4" />
-              Undo
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onRedo}
-              disabled={!canRedo}
-              aria-label="Redo"
-              className="flex-1 gap-2 text-zinc-400 hover:bg-white/5 disabled:opacity-30"
-            >
-              <Redo2 className="h-4 w-4" />
-              Redo
-            </Button>
-          </div>
         )}
 
         {appliedEffects.length > 0 && (
@@ -178,6 +148,47 @@ export function EditorSidebar({
           </div>
         )}
       </div>
+
+      {(effect || canUndo || canRedo) && (
+        <div className="flex items-center gap-2 border-t border-zinc-800/50 p-4">
+          {effect && (
+            <Button
+              type="button"
+              onClick={onApply}
+              className="flex-1 gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              <Plus className="h-4 w-4" />
+              Apply effect
+            </Button>
+          )}
+          {(canUndo || canRedo) && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onUndo}
+                disabled={!canUndo}
+                aria-label="Undo"
+                className="text-zinc-400 hover:bg-white/5 disabled:opacity-30"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onRedo}
+                disabled={!canRedo}
+                aria-label="Redo"
+                className="text-zinc-400 hover:bg-white/5 disabled:opacity-30"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
