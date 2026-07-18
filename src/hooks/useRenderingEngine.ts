@@ -81,7 +81,8 @@ export function useRenderingEngine() {
 
   /**
    * Download the current edit as a file. Pass the base name only — the exporter
-   * appends the extension (.gif for an animated edit, .png for a still one).
+   * appends the extension by content (.mp4 for an animated edit — .gif where
+   * WebCodecs is unavailable — and .png for a still).
    */
   const downloadImage = useCallback(async (baseName: string): Promise<void> => {
     if (!contextRef.current) {

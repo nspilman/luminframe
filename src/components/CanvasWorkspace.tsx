@@ -46,9 +46,9 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     const [downloading, setDownloading] = useState(false)
     const { surprise, isFinding } = useSurpriseMe()
 
-    // Download can be slow for an animated edit (it renders and encodes a GIF), so
-    // show progress — and yield a frame first so the button paints its loading
-    // state before the encode blocks the main thread.
+    // Download can be slow for an animated edit (it renders and encodes a video),
+    // so show progress — and yield a frame first so the button paints its loading
+    // state before the encode occupies the main thread.
     const handleDownloadClick = async () => {
       setDownloading(true)
       await new Promise((resolve) => setTimeout(resolve, 20))

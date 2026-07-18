@@ -24,6 +24,10 @@ interface ImageDetailProps {
  * open-in-editor, the pdsls record link, and a two-step owner delete). The two
  * hosts supply only their own chrome around it (modal backdrop vs. page frame).
  */
+// One sizing for the artwork whether it arrives as a clip or a still — the two
+// renderings below must lay out identically, so the class list is named once.
+const MEDIA_CLASS = 'max-h-[50vh] w-auto max-w-full object-contain md:max-h-[80vh]'
+
 export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDetailProps) {
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -64,14 +68,10 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
             loop
             playsInline
             aria-label={image.alt ?? ''}
-            className="max-h-[50vh] w-auto max-w-full object-contain md:max-h-[80vh]"
+            className={MEDIA_CLASS}
           />
         ) : image.imageUrl ? (
-          <img
-            src={image.imageUrl}
-            alt={image.alt ?? ''}
-            className="max-h-[50vh] w-auto max-w-full object-contain md:max-h-[80vh]"
-          />
+          <img src={image.imageUrl} alt={image.alt ?? ''} className={MEDIA_CLASS} />
         ) : (
           <span className="py-24 text-sm text-zinc-600">Image unavailable</span>
         )}

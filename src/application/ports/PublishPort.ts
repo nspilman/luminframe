@@ -20,9 +20,11 @@ export interface PublishImageInput {
   /**
    * A short looping MP4 of the edit, when it animates. Only Luminframe's own
    * record stores it (the still stays its poster); the social targets ignore it —
-   * their image embeds can't animate an uploaded clip.
+   * their image embeds can't animate an uploaded clip. The mime type is the
+   * literal `video/mp4` because that is all the lexicon's `video` field accepts —
+   * the type makes callers filter out any fallback encoding (GIF) at the source.
    */
-  video?: { bytes: Uint8Array; mimeType: string }
+  video?: { bytes: Uint8Array; mimeType: 'video/mp4' }
   /**
    * The effect keys applied to produce this image, in order — the edit recipe.
    * Optional: only targets with a place to record it (Luminframe's own lexicon)

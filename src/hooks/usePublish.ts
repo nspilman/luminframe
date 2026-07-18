@@ -141,7 +141,7 @@ export function usePublish(
           aspectRatio,
           video:
             animation?.mimeType === 'video/mp4'
-              ? { bytes: animation.bytes, mimeType: animation.mimeType }
+              ? { bytes: animation.bytes, mimeType: 'video/mp4' as const }
               : undefined,
           effects: edit.effects,
           recipe: edit.recipe,

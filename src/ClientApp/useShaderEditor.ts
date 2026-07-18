@@ -311,7 +311,8 @@ export function useShaderEditor() {
 
   const handleDownload = useCallback(async () => {
     try {
-      // Base name only — the exporter picks .gif (animated) or .png (still).
+      // Base name only — the exporter picks the extension by content (.mp4 for
+      // an animated edit, .png for a still).
       await downloadImage(`luminframe-${selectedShader ?? 'image'}`)
       if (selectedShader) recordRecent(selectedShader)
     } catch (error) {
