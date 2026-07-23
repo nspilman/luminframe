@@ -70,7 +70,11 @@
       "required": ["type"],
       "properties": {
         "type": { "type": "string", "maxLength": 128, "description": "The effect key." },
-        "params": { "type": "unknown", "description": "The effect's parameters (effect-specific freeform JSON)." }
+        "params": {
+          "type": "string",
+          "maxLength": 10000,
+          "description": "The effect's parameters, JSON-encoded. A string rather than an object because the atproto data model has no float type and effect parameters are fractional. Records saved before v4 carry a plain object here instead."
+        }
       }
     },
     "aspectRatio": {

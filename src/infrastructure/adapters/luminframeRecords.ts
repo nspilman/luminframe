@@ -24,6 +24,18 @@ import { RecipeStep } from '@/types/recipe'
 
 export const LUMINFRAME_IMAGE_COLLECTION = 'com.luminframe.image'
 
+/**
+ * One recipe step as stored on a record. Params are a JSON-encoded string, not
+ * an object: the atproto data model has no float type (only integers), and
+ * effect parameters are full of fractional values — as an object the PDS
+ * rejects the record outright. JSON-encoding at this boundary keeps the whole
+ * app working in plain objects while the wire format stays data-model-legal.
+ */
+export interface StoredRecipeStep {
+  type: string
+  params?: string
+}
+
 export interface LuminframeImageRecord {
   $type: 'com.luminframe.image'
   /** The rendered image blob, from `uploadBlob`. When `video` is present, its poster. */
@@ -41,7 +53,7 @@ export interface LuminframeImageRecord {
   /** The effect keys applied, in order. Kept for display + backward compat; `recipe` is the executable form. */
   effects?: string[]
   /** The ordered effect stack with parameters — the executable edit. */
-  recipe?: RecipeStep[]
+  recipe?: StoredRecipeStep[]
   /** The record this image was remixed from, if any — its lineage. */
   remixOf?: StrongRef
 }
@@ -88,8 +100,9 @@ export function buildLuminframeImageRecord(parts: LuminframeImageParts): Luminfr
     record.effects = [...effects]
   }
   if (recipe && recipe.length > 0) {
+    // Params are JSON-encoded here, at the wire boundary — see StoredRecipeStep.
     record.recipe = recipe.map((step) =>
-      step.params ? { type: step.type, params: step.params } : { type: step.type }
+      step.params ? { type: step.type, params: JSON.stringify(step.params) } : { type: step.type }
     )
   }
   if (remixOf) {

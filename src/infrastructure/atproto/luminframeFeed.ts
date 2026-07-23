@@ -82,14 +82,40 @@ function parseStrongRef(value: unknown): StrongRef | undefined {
   return undefined
 }
 
+/**
+ * Read one step's params out of freeform record data. Two forms exist in the
+ * wild: current records JSON-encode params as a string (the atproto data model
+ * has no float type, so objects with fractional values are unwritable), and
+ * records saved before that carry plain objects. Both hydrate; garbage drops.
+ */
+function parseStepParams(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : undefined
+    } catch {
+      return undefined
+    }
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  return undefined
+}
+
 /** Read the recipe (steps with a string `type`) out of freeform record data. */
 function parseRecipe(value: unknown): RawRecipeStep[] | undefined {
   if (!Array.isArray(value)) return undefined
   const steps = value
-    .filter((s): s is RawRecipeStep =>
+    .filter((s): s is { type: string; params?: unknown } =>
       !!s && typeof s === 'object' && typeof (s as { type?: unknown }).type === 'string'
     )
-    .map((s) => (s.params && typeof s.params === 'object' ? { type: s.type, params: s.params } : { type: s.type }))
+    .map((s): RawRecipeStep => {
+      const params = parseStepParams(s.params)
+      return params ? { type: s.type, params } : { type: s.type }
+    })
   return steps.length > 0 ? steps : undefined
 }
 

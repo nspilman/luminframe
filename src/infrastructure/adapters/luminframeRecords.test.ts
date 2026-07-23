@@ -75,7 +75,10 @@ describe('buildLuminframeImageRecord', () => {
     expect('title' in record).toBe(false)
   })
 
-  it('attaches the executable recipe, keeping params only where present', () => {
+  it('attaches the executable recipe, JSON-encoding params where present', () => {
+    // Params must reach the wire as a JSON string, never an object: the atproto
+    // data model has no float type, so `{ amount: 0.4 }` as an object makes the
+    // PDS reject the whole record. This is the regression that broke saving.
     const record = buildLuminframeImageRecord({
       blob,
       aspectRatio: { width: 1, height: 1 },
@@ -87,7 +90,7 @@ describe('buildLuminframeImageRecord', () => {
     })
 
     expect(record.recipe).toEqual([
-      { type: 'vibrance', params: { amount: 0.4 } },
+      { type: 'vibrance', params: '{"amount":0.4}' },
       { type: 'blackAndWhite' },
     ])
   })

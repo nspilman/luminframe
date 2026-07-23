@@ -90,6 +90,40 @@ describe('recordToView', () => {
     )
   })
 
+  it('reads JSON-string params from a current record', () => {
+    // Since v4, params are JSON-encoded strings on the wire (atproto has no
+    // float type). They must hydrate back to objects for the editor.
+    const view = recordToView(
+      {
+        uri: 'at://x/y/z',
+        cid: 'c',
+        value: {
+          recipe: [{ type: 'vibrance', params: '{"amount":0.4}' }],
+        } as never,
+      },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(view.recipe).toEqual([{ type: 'vibrance', params: { amount: 0.4 } }])
+  })
+
+  it('drops params that are not valid JSON, keeping the step', () => {
+    const view = recordToView(
+      {
+        uri: 'at://x/y/z',
+        cid: 'c',
+        value: {
+          recipe: [{ type: 'vibrance', params: 'not json {' }],
+        } as never,
+      },
+      'did:plc:abc',
+      'https://pds.example',
+      null
+    )
+    expect(view.recipe).toEqual([{ type: 'vibrance' }])
+  })
+
   it('reads the recipe, keeping only steps with a string type', () => {
     const view = recordToView(
       {
