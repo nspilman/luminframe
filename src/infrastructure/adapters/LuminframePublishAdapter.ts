@@ -1,4 +1,4 @@
-import { Agent } from '@atproto/api'
+import { Agent, BlobRef } from '@atproto/api'
 import {
   PublishPort,
   PublishImageInput,
@@ -35,31 +35,56 @@ export class LuminframePublishAdapter implements PublishPort {
     const did = this.agent.assertDid
     const createdAt = new Date().toISOString()
 
-    // 1. Upload the encoded image to the user's PDS, yielding a blob ref. An
-    //    animated edit uploads its looping clip too; the still stays the poster.
+    // 1. Upload the encoded image to the user's PDS, yielding a blob ref.
     const upload = await this.agent.uploadBlob(input.bytes, {
       encoding: input.mimeType,
     })
-    const videoUpload = input.video
-      ? await this.agent.uploadBlob(input.video.bytes, { encoding: input.video.mimeType })
-      : null
 
-    // 2. Create the Luminframe image record carrying the blob(s) and the recipe.
-    const result = await this.agent.com.atproto.repo.createRecord({
-      repo: did,
-      collection: LUMINFRAME_IMAGE_COLLECTION,
-      record: buildLuminframeImageRecord({
-        blob: upload.data.blob,
-        videoBlob: videoUpload?.data.blob,
-        aspectRatio: input.aspectRatio,
-        alt: input.alt,
-        title: input.caption,
-        effects: input.effects,
-        recipe: input.recipe,
-        remixOf: input.remixOf,
-        createdAt,
-      }),
-    })
+    // The looping clip is an enhancement, never the save itself: a PDS may
+    // refuse the upload or the record carrying it (e.g. one still validating
+    // against a published schema that predates the `video` field), and the
+    // still must save regardless. So its upload failure downgrades to a
+    // still-only record instead of failing the save.
+    let videoBlob: BlobRef | undefined
+    if (input.video) {
+      try {
+        const videoUpload = await this.agent.uploadBlob(input.video.bytes, {
+          encoding: input.video.mimeType,
+        })
+        videoBlob = videoUpload.data.blob
+      } catch (err) {
+        console.warn('Video blob upload failed — saving the still alone:', err)
+      }
+    }
+
+    // 2. Create the Luminframe image record carrying the blob(s) and the
+    //    recipe. Same downgrade rule: if the record is rejected with the video
+    //    attached, retry once as a still rather than losing the save.
+    const create = (withVideo: boolean) =>
+      this.agent.com.atproto.repo.createRecord({
+        repo: did,
+        collection: LUMINFRAME_IMAGE_COLLECTION,
+        record: buildLuminframeImageRecord({
+          blob: upload.data.blob,
+          videoBlob: withVideo ? videoBlob : undefined,
+          aspectRatio: input.aspectRatio,
+          alt: input.alt,
+          title: input.caption,
+          effects: input.effects,
+          recipe: input.recipe,
+          remixOf: input.remixOf,
+          createdAt,
+        }),
+      })
+
+    let result
+    try {
+      result = await create(videoBlob !== undefined)
+    } catch (err) {
+      if (videoBlob === undefined) throw err
+      console.warn('Record with video was rejected — retrying as a still:', err)
+      result = await create(false)
+    }
 
     return { uri: result.data.uri, cid: result.data.cid }
   }

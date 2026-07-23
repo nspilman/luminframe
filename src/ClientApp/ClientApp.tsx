@@ -32,7 +32,7 @@ export function ClientApp(): JSX.Element {
   const {
     canvasRef,
     selectedShader,
-    setSelectedShader,
+    selectShader,
     recentShaders,
     effect,
     varValues,
@@ -116,7 +116,7 @@ export function ClientApp(): JSX.Element {
           hasImage={hasImage}
           source={source}
           selectedShader={selectedShader}
-          onShaderSelect={setSelectedShader}
+          onShaderSelect={selectShader}
           recentShaders={recentShaders}
           effect={effect}
           values={{ ...varValues, resolution }}

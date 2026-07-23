@@ -264,7 +264,20 @@ export function useShaderEditor() {
       freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
     )
     recordRecent(selectedShader)
+    // The commit consumes the draft: the effect now lives in the pipeline, so
+    // nothing stays selected. Without this, an applied animated effect kept
+    // riding the chain as a live draft — turning every later download and save
+    // into a video even when the committed edit was a still.
+    setSelectedShader(null)
   }, [selectedShader, varValues, recordRecent])
+
+  // Selecting from the library toggles: clicking the selected effect again
+  // deselects it. Browsing an effect must always be reversible — otherwise a
+  // glance at Wave leaves an animated draft stuck on the chain with no way off
+  // short of picking a different effect.
+  const selectShader = useCallback((shader: ShaderType) => {
+    setSelectedShader(prev => (prev === shader ? null : shader))
+  }, [])
 
   const handleRemoveEffect = useCallback((index: number) => {
     setHistory(h => pushHistory(h, h.present.removeAt(index)))
@@ -313,13 +326,16 @@ export function useShaderEditor() {
   const handleDownload = useCallback(async () => {
     try {
       // Base name only — the exporter picks the extension by content (.mp4 for
-      // an animated edit, .png for a still).
-      await downloadImage(`luminframe-${selectedShader ?? 'image'}`)
+      // an animated edit, .png for a still). Named for the effect being tuned,
+      // else the last committed one — Apply clears the selection, so the
+      // committed stack is what usually carries the edit's name.
+      const namesake = selectedShader ?? pipeline.effects[pipeline.effects.length - 1]?.type
+      await downloadImage(`luminframe-${namesake ?? 'image'}`)
       if (selectedShader) recordRecent(selectedShader)
     } catch (error) {
       console.error('Failed to download image:', error)
     }
-  }, [downloadImage, selectedShader, recordRecent])
+  }, [downloadImage, selectedShader, pipeline, recordRecent])
 
   // Loading a source is the slowest first-contact in the editor, so it is the
   // first surface to adopt the app's loading-state SoT: useAsyncStatus tracks the
@@ -375,7 +391,7 @@ export function useShaderEditor() {
   return {
     canvasRef,
     selectedShader,
-    setSelectedShader,
+    selectShader,
     recentShaders,
     effect,
     varValues,
