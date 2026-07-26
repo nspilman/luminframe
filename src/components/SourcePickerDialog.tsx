@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, ImageOff } from 'lucide-react'
 import { useLuminframeFeed } from '@/hooks/useLuminframeFeed'
@@ -41,27 +40,12 @@ function PickThumb({ image, onPick }: { image: LuminframeImageView; onPick: () =
  * path Surprise me and the gallery's "Open in editor" take). Reads the public
  * network feed; mounted only while open, so the scan runs on demand.
  *
- * Modal chrome mirrors the lightbox: closes on Escape, backdrop, or the X;
- * moves focus in on open and restores it to the opener on close. (Body scroll
- * locking lives in ModalPortal, shared by every dialog.)
+ * Modal chrome mirrors the lightbox: closes on backdrop or the X; Escape,
+ * scroll lock, and focus handling live in ModalPortal, shared by every dialog.
  */
 export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
   const feed = useLuminframeFeed('network', null)
-  const closeRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const opener = document.activeElement as HTMLElement | null
-    closeRef.current?.focus()
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      opener?.focus?.()
-    }
-  }, [onClose])
 
   const pick = (image: LuminframeImageView) => {
     navigate(editorRemixPath(image.uri))
@@ -69,7 +53,7 @@ export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ModalPortal>
+    <ModalPortal onDismiss={onClose}>
     <div
       role="dialog"
       aria-modal="true"
@@ -84,7 +68,6 @@ export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between border-b border-zinc-800/60 p-4">
           <h2 className="text-sm font-semibold text-white">Start from a public image</h2>
           <button
-            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="Close"

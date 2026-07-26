@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Check, AlertCircle, Circle, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -111,21 +111,12 @@ export function PublishDialog({
   const inFlight = publishing || succeeded
   const anyShare = shares.bluesky || shares.grain
 
-  // Close on backdrop tap, the X, or Escape — but never mid-publish, so an
-  // accidental tap can't hide the write's progress. Escape matters least on a
-  // phone, which is exactly why the visible ways out exist.
-  const dismiss = () => {
+  // Close on backdrop tap, the X, or Escape (via ModalPortal) — but never
+  // mid-publish, so an accidental tap can't hide the write's progress. Escape
+  // matters least on a phone, which is exactly why the visible ways out exist.
+  const dismiss = useCallback(() => {
     if (!publishing) onClose()
-  }
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !publishing) onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, publishing, onClose])
+  }, [publishing, onClose])
 
   if (!open) return null
 
@@ -135,7 +126,7 @@ export function PublishDialog({
   }
 
   return (
-    <ModalPortal>
+    <ModalPortal onDismiss={dismiss}>
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
