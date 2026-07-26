@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight, Play } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
+import { motionOf, EffectMotion } from '@/lib/shaders/animation'
 import { blurbOf } from '@/lib/shaders/catalog'
 import { filterEffectFamilies } from '@/lib/shaders/effectSearch'
 import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/collapsedFamilies'
@@ -16,6 +17,27 @@ import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 // for the height to reach the scrolling list. On mobile the picker sizes to
 // content instead (the list keeps its own max-h scroll).
 const fillColumn = 'md:flex md:min-h-0 md:flex-1 md:flex-col'
+
+/**
+ * Marks an effect's motion on its library card, so "will this move?" is
+ * answered at the point of choosing rather than after a download. Derived from
+ * motionOf — the same truth the render loop and exporters consult — never a
+ * hand-kept list. Bright for effects that animate out of the box, dimmed for
+ * ones that can (a parameter turns motion on), absent for stills.
+ */
+function MotionBadge({ motion }: { motion: EffectMotion }) {
+  if (motion === 'still') return null
+  const animated = motion === 'animated'
+  return (
+    <span
+      title={animated ? 'Animates' : 'Can animate'}
+      className={`shrink-0 pr-1 ${animated ? 'text-violet-400' : 'text-zinc-600'}`}
+    >
+      <Play className="h-3 w-3" fill={animated ? 'currentColor' : 'none'} />
+      <span className="sr-only">{animated ? 'Animates' : 'Can animate'}</span>
+    </span>
+  )
+}
 
 // Fallback glyphs, shown only until the live preview of the user's own image
 // finishes rendering for each effect. Once a thumbnail lands, the image is the
@@ -292,6 +314,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
                             {blurbOf(shader)}
                           </span>
                         </span>
+                        <MotionBadge motion={motionOf(shaderLibrary[shader])} />
                       </button>
                     )
                   })}

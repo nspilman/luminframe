@@ -1,4 +1,4 @@
-import { passIsAnimated, chainIsAnimated } from './animation'
+import { passIsAnimated, chainIsAnimated, motionOf } from './animation'
 import { shaderLibrary } from '@/lib/shaders'
 
 // The real library is used throughout so these double as contract pins — e.g.
@@ -47,6 +47,22 @@ describe('passIsAnimated', () => {
       defaultValues: { speed: 0 },
     }
     expect(passIsAnimated(effect, { speed: 0 })).toBe(true)
+  })
+})
+
+// The motion badge in the library derives from motionOf; these pin the three
+// characters against real effects so the badge can't drift from the export.
+describe('motionOf', () => {
+  it('time-driven effect → animated', () => {
+    expect(motionOf(shaderLibrary.wave)).toBe('animated')
+  })
+
+  it('gated effect that defaults still → gated', () => {
+    expect(motionOf(shaderLibrary.lightLeak)).toBe('gated')
+  })
+
+  it('static effect → still', () => {
+    expect(motionOf(shaderLibrary.blackAndWhite)).toBe('still')
   })
 })
 

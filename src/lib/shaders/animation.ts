@@ -26,6 +26,24 @@ export function passIsAnimated(
   return typeof gate === 'number' && gate !== 0
 }
 
+/**
+ * An effect's motion character, as a user should expect it before touching a
+ * slider: 'animated' moves out of the box, 'gated' is still until its
+ * animatedBy parameter is raised (e.g. Light Leak's drift), 'still' never
+ * moves. Derived from the same predicate the render loop and the exporters
+ * consult — with no parameters, passIsAnimated reads the defaults — so a
+ * motion badge in the library can never disagree with what a download does.
+ */
+export type EffectMotion = 'animated' | 'gated' | 'still'
+
+export function motionOf(
+  effect: Pick<ShaderEffect, 'getBody' | 'animatedBy' | 'defaultValues'>
+): EffectMotion {
+  if (passIsAnimated(effect, {})) return 'animated'
+  if (effect.animatedBy && /\btime\b/.test(effect.getBody())) return 'gated'
+  return 'still'
+}
+
 /** Whether any pass in a chain animates — the chain moves if any layer does. */
 export function chainIsAnimated(
   passes: ReadonlyArray<{
