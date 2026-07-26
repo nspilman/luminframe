@@ -41,8 +41,9 @@ function PickThumb({ image, onPick }: { image: LuminframeImageView; onPick: () =
  * path Surprise me and the gallery's "Open in editor" take). Reads the public
  * network feed; mounted only while open, so the scan runs on demand.
  *
- * Modal chrome mirrors the lightbox: closes on Escape, backdrop, or the X; locks
- * body scroll; moves focus in on open and restores it to the opener on close.
+ * Modal chrome mirrors the lightbox: closes on Escape, backdrop, or the X;
+ * moves focus in on open and restores it to the opener on close. (Body scroll
+ * locking lives in ModalPortal, shared by every dialog.)
  */
 export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
@@ -54,13 +55,10 @@ export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     const opener = document.activeElement as HTMLElement | null
     closeRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
       opener?.focus?.()
     }
   }, [onClose])

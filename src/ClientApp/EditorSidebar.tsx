@@ -196,7 +196,10 @@ export function EditorSidebar({
         )}
       </div>
 
-      {effect && (
+      {/* effect and selectedShader are one fact under two names — the effect is
+          the selected shader's, so the door checks both once and TypeScript
+          knows it, rather than each handler re-guarding an impossible null. */}
+      {effect && selectedShader && (
         <div className={tuningShell}>
           {/* Sheet header, phone only: names what's being tuned and offers the
               way out (deselect) — on desktop the column's presence and the
@@ -205,7 +208,7 @@ export function EditorSidebar({
             <span className="text-sm font-medium text-zinc-200">{effect.name}</span>
             <button
               type="button"
-              onClick={() => selectedShader && onShaderSelect(selectedShader)}
+              onClick={() => onShaderSelect(selectedShader)}
               aria-label="Close adjustments"
               className="rounded-full bg-white/5 p-1.5 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
             >

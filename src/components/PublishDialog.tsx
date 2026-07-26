@@ -121,11 +121,11 @@ export function PublishDialog({
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismiss()
+      if (e.key === 'Escape' && !publishing) onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  })
+  }, [open, publishing, onClose])
 
   if (!open) return null
 
