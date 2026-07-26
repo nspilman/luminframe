@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Check, AlertCircle, Circle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Check, AlertCircle, Circle, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Switch } from './ui/switch'
 import { Spinner } from './ui/spinner'
+import { ModalPortal } from './ui/modal-portal'
 import { PublishPhase, PublishOutcome, PublishTarget, ShareTarget } from '@/hooks/usePublish'
 
 interface PublishDialogProps {
@@ -105,12 +106,28 @@ export function PublishDialog({
     grain: false,
   })
 
-  if (!open) return null
-
   const publishing = phase === 'publishing'
   const succeeded = phase === 'success'
   const inFlight = publishing || succeeded
   const anyShare = shares.bluesky || shares.grain
+
+  // Close on backdrop tap, the X, or Escape — but never mid-publish, so an
+  // accidental tap can't hide the write's progress. Escape matters least on a
+  // phone, which is exactly why the visible ways out exist.
+  const dismiss = () => {
+    if (!publishing) onClose()
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
+
+  if (!open) return null
 
   const submit = () => {
     const shareTo = (Object.keys(shares) as ShareTarget[]).filter((t) => shares[t])
@@ -118,20 +135,40 @@ export function PublishDialog({
   }
 
   return (
+    <ModalPortal>
     <div
-      className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Save"
+      onClick={dismiss}
     >
       <div
-        className="w-[26rem] max-w-[90%] rounded-xl border border-zinc-700 bg-zinc-950 p-5 shadow-2xl"
+        className="max-h-[85vh] w-[26rem] max-w-full overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-950 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-3 text-lg font-semibold text-white">Save</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Save</h2>
+          <button
+            type="button"
+            onClick={dismiss}
+            disabled={publishing}
+            aria-label="Close"
+            className="rounded-full bg-white/5 p-1.5 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         {!isSignedIn ? (
-          <p className="text-sm text-zinc-400">
-            Sign in (top right) to save your image to your PDS.
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-400">
+              Sign in (top right) to save your image to your PDS.
+            </p>
+            <Button variant="secondary" className="w-full" onClick={onClose}>
+              Close
+            </Button>
+          </div>
         ) : inFlight ? (
           <div className="space-y-3">
             <div className="space-y-2.5 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
@@ -213,5 +250,6 @@ export function PublishDialog({
         )}
       </div>
     </div>
+    </ModalPortal>
   )
 }

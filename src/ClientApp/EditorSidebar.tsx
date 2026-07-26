@@ -30,14 +30,16 @@ type EditorSidebarProps = {
   canRedo: boolean
 }
 
-// order-2/order-3: on a phone the canvas comes first and the tool columns
-// follow beneath it, library before tuning — the same vertical sequence the
-// single column had. On desktop they sit side by side; both columns narrow a
-// notch below lg so the canvas keeps workable width on small laptops.
-const columnShell =
-  'md:order-none md:flex md:min-h-0 md:flex-col border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
-const libraryShell = `order-2 md:w-[280px] lg:w-[320px] ${columnShell}`
-const tuningShell = `order-3 md:w-[260px] lg:w-72 ${columnShell}`
+// On a phone the canvas comes first (order-2 puts the library beneath it), and
+// tuning is a bottom sheet rather than a block buried below the whole library:
+// selecting an effect must answer on screen, not two scrolls away. On desktop
+// the two are sibling columns; both narrow a notch below lg so the canvas
+// keeps workable width on small laptops.
+const libraryShell =
+  'order-2 md:order-none md:flex md:min-h-0 md:flex-col md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
+const tuningShell =
+  'fixed inset-x-0 bottom-0 z-40 flex max-h-[70vh] flex-col rounded-t-2xl border-t border-zinc-800/50 bg-zinc-950/95 ' +
+  'md:static md:z-auto md:order-none md:max-h-none md:min-h-0 md:w-[260px] md:rounded-none md:border-t-0 md:border-r md:bg-black/20 md:backdrop-blur-xl lg:w-72'
 
 export function EditorSidebar({
   hasImage,
@@ -196,9 +198,26 @@ export function EditorSidebar({
 
       {effect && (
         <div className={tuningShell}>
-          <div className="min-h-0 space-y-4 overflow-y-auto p-4 md:flex-1">
+          {/* Sheet header, phone only: names what's being tuned and offers the
+              way out (deselect) — on desktop the column's presence and the
+              library beside it already say both. */}
+          <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3 md:hidden">
+            <span className="text-sm font-medium text-zinc-200">{effect.name}</span>
+            <button
+              type="button"
+              onClick={() => selectedShader && onShaderSelect(selectedShader)}
+              aria-label="Close adjustments"
+              className="rounded-full bg-white/5 p-1.5 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             <div className="space-y-1">
-              <h3 className="text-sm font-medium text-zinc-400">Adjustments — {effect.name}</h3>
+              {/* The sheet header already names the effect on a phone. */}
+              <h3 className="hidden text-sm font-medium text-zinc-400 md:block">
+                Adjustments — {effect.name}
+              </h3>
               <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
                 <CardContent className="p-4">
                   <ShaderControls effect={effect} values={values} onChange={onChange} />

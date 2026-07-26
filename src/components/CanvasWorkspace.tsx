@@ -191,20 +191,24 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
             >
               {isComparing ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
+            {/* Icon-only on a phone — the label costs canvas the user came to
+                see; Save keeps its word because publishing is the headline act. */}
             <Button
               onClick={handleDownloadClick}
               disabled={downloading}
+              aria-label="Download"
+              title="Download"
               className="bg-violet-600 hover:bg-violet-700 text-white"
             >
               {downloading ? (
                 <>
-                  <Spinner size="sm" className="mr-2" />
-                  Rendering…
+                  <Spinner size="sm" className="sm:mr-2" />
+                  <span className="hidden sm:inline">Rendering…</span>
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
+                  <Download className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Download</span>
                 </>
               )}
             </Button>

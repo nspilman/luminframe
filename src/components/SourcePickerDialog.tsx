@@ -5,6 +5,7 @@ import { useLuminframeFeed } from '@/hooks/useLuminframeFeed'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { editorRemixPath } from '@/lib/galleryRoute'
 import { Spinner } from './ui/spinner'
+import { ModalPortal } from './ui/modal-portal'
 
 /** One public image, clickable to start from. */
 function PickThumb({ image, onPick }: { image: LuminframeImageView; onPick: () => void }) {
@@ -70,6 +71,7 @@ export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <ModalPortal>
     <div
       role="dialog"
       aria-modal="true"
@@ -121,5 +123,6 @@ export function SourcePickerDialog({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
