@@ -36,6 +36,18 @@ describe('passIsAnimated', () => {
     }
     expect(passIsAnimated(effect, {})).toBe(false)
   })
+
+  it('does not let a gate quiet a feedback effect', () => {
+    // Deliberate: feedback accumulates state across frames no matter what its
+    // parameters read, so animatedBy applies to time-driven motion only. This
+    // pins the check order — moving the gate above prevFrame would break it.
+    const effect = {
+      getBody: () => 'void main() { vec4 p = texture2D(prevFrame, vUv); }',
+      animatedBy: 'speed',
+      defaultValues: { speed: 0 },
+    }
+    expect(passIsAnimated(effect, { speed: 0 })).toBe(true)
+  })
 })
 
 describe('chainIsAnimated', () => {

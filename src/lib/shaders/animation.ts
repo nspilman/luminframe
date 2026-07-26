@@ -16,6 +16,9 @@ export function passIsAnimated(
   params: ShaderInputVars
 ): boolean {
   const body = effect.getBody()
+  // Feedback is checked before the gate on purpose: a feedback effect
+  // accumulates state across frames no matter what its parameters read, so
+  // animatedBy can never quiet it — only time-driven motion is gateable.
   if (/\bprevFrame\b/.test(body)) return true
   if (!/\btime\b/.test(body)) return false
   if (!effect.animatedBy) return true
