@@ -63,6 +63,13 @@ export interface ShaderEffect {
   defaultValues: { [k: string]: any };
   inputs: { [k: string]: ShaderInputDefinition };
   getBody: () => string;
+  /**
+   * Name of the parameter that gates this effect's motion, for effects whose
+   * body references `time` but that are still when the parameter is zero
+   * (e.g. Light Leak's `drift`). Absent means the body tells the whole truth:
+   * `time` in the body ⇒ the effect animates.
+   */
+  animatedBy?: string;
 }
 
 export const registeredShaders = [

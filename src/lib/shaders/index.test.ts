@@ -494,6 +494,10 @@ describe('shader library contract', () => {
       "default": 0.8,
       "type": "range",
     },
+    "drift": {
+      "default": 0,
+      "type": "range",
+    },
     "imageTexture": {
       "default": null,
       "type": "image",

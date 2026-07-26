@@ -16,6 +16,8 @@ interface ShaderConfig {
   name: string;
   variables: ShaderVariable[];
   body: string;
+  /** See ShaderEffect.animatedBy: the param that gates motion, 0 ⇒ still. */
+  animatedBy?: string;
 }
 
 // Convert vec3 values to Color objects
@@ -101,6 +103,7 @@ export const createShaderRecord = (config: ShaderConfig) => {
     defaultValues,
     inputs,
     getBody: () => wrapBodyWithOpacity(config.body),
+    ...(config.animatedBy ? { animatedBy: config.animatedBy } : {}),
   };
 };
 

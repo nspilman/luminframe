@@ -5,6 +5,7 @@ import { Dimensions } from '@/domain/value-objects/Dimensions';
 import { ImageFormat } from '@/domain/value-objects/ImageFormat';
 import { ShaderEffect } from '@/types/shader';
 import { ShaderInputVars } from '@/types/shader';
+import { chainIsAnimated } from '@/lib/shaders/animation';
 import { Color } from '@/domain/value-objects/Color';
 import { TextureAdapter } from './TextureAdapter';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
@@ -329,16 +330,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * previous frame (`prevFrame`). Both mean the output changes every frame, so it
    * drives both the live loop and whether an export must capture motion.
    */
-  private chainIsAnimated(passes: ReadonlyArray<RenderPass>): boolean {
-    return passes.some((p) => {
-      const body = p.effect.getBody();
-      return /\btime\b/.test(body) || /\bprevFrame\b/.test(body);
-    });
-  }
-
-  /** Whether the current edit animates — a still export would freeze its motion. */
+  /**
+   * Whether the current edit animates — a still export would freeze its motion.
+   * The predicate itself lives in lib/shaders/animation, one truth consulted
+   * here, by the loop below, and (via the exporters) the download and save.
+   */
   isAnimated(): boolean {
-    return !!this.lastChainParams && this.chainIsAnimated(this.lastChainParams.passes);
+    return !!this.lastChainParams && chainIsAnimated(this.lastChainParams.passes);
   }
 
   /**
@@ -348,7 +346,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * chain leaves the loop off so the GPU isn't redrawing an unchanging frame.
    */
   private syncAnimation(): void {
-    const needsLoop = !!this.lastChainParams && this.chainIsAnimated(this.lastChainParams.passes);
+    const needsLoop = !!this.lastChainParams && chainIsAnimated(this.lastChainParams.passes);
 
     if (needsLoop) {
       if (this.animationFrameId === null) {
