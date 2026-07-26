@@ -25,13 +25,13 @@ export type ParseResult =
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-const isFinite_ = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 const isNumberPair = (v: unknown): v is [number, number] =>
-  Array.isArray(v) && v.length === 2 && v.every(isFinite_)
+  Array.isArray(v) && v.length === 2 && v.every(isFiniteNumber)
 
 const isColorTriple = (v: unknown): v is [number, number, number] =>
-  Array.isArray(v) && v.length === 3 && v.every((n) => isFinite_(n) && n >= 0 && n <= 1)
+  Array.isArray(v) && v.length === 3 && v.every((n) => isFiniteNumber(n) && n >= 0 && n <= 1)
 
 /** Validate one parsed param entry; push named errors, return the def when clean. */
 function parseParam(value: unknown, index: number, errors: string[]): EffectParamDef | null {
@@ -41,57 +41,59 @@ function parseParam(value: unknown, index: number, errors: string[]): EffectPara
     return null
   }
   const name = value.name
-  const label = `param "${typeof name === 'string' ? name : `#${index + 1}`}"`
+  // How this param is referred to in error messages: by name once one exists,
+  // by position until then.
+  const subject = `param "${typeof name === 'string' ? name : `#${index + 1}`}"`
   if (typeof name !== 'string' || !PARAM_NAME_PATTERN.test(name)) {
     errors.push(`${at}: name must be a GLSL identifier (letters, digits, underscore)`)
     return null
   }
   if ((RESERVED_UNIFORMS as readonly string[]).includes(name) || (RESERVED_TOKENS as readonly string[]).includes(name)) {
-    errors.push(`${label}: collides with a reserved uniform`)
+    errors.push(`${subject}: collides with a reserved uniform`)
     return null
   }
   if (typeof value.label !== 'string' || value.label.length === 0) {
-    errors.push(`${label}: label required`)
+    errors.push(`${subject}: label required`)
     return null
   }
   const base = { name, label: value.label }
   switch (value.type) {
     case 'range': {
       const { default: def, min, max, step } = value
-      if (![def, min, max, step].every(isFinite_)) {
-        errors.push(`${label}: default, min, max, step must be finite numbers`)
+      if (![def, min, max, step].every(isFiniteNumber)) {
+        errors.push(`${subject}: default, min, max, step must be finite numbers`)
         return null
       }
-      const ok: string[] = []
-      if (!((min as number) < (max as number))) ok.push('min must be less than max')
-      if (!((step as number) > 0)) ok.push('step must be greater than 0')
-      if ((def as number) < (min as number) || (def as number) > (max as number)) ok.push('default outside [min, max]')
-      if (ok.length > 0) {
-        errors.push(...ok.map((m) => `${label}: ${m}`))
+      const violations: string[] = []
+      if (!((min as number) < (max as number))) violations.push('min must be less than max')
+      if (!((step as number) > 0)) violations.push('step must be greater than 0')
+      if ((def as number) < (min as number) || (def as number) > (max as number)) violations.push('default outside [min, max]')
+      if (violations.length > 0) {
+        errors.push(...violations.map((m) => `${subject}: ${m}`))
         return null
       }
       return { type: 'range', ...base, default: def as number, min: min as number, max: max as number, step: step as number }
     }
     case 'color':
       if (!isColorTriple(value.default)) {
-        errors.push(`${label}: default must be [r, g, b] with each component 0..1`)
+        errors.push(`${subject}: default must be [r, g, b] with each component 0..1`)
         return null
       }
       return { type: 'color', ...base, default: value.default }
     case 'boolean':
       if (typeof value.default !== 'boolean') {
-        errors.push(`${label}: default must be a boolean`)
+        errors.push(`${subject}: default must be a boolean`)
         return null
       }
       return { type: 'boolean', ...base, default: value.default }
     case 'vec2':
       if (!isNumberPair(value.default)) {
-        errors.push(`${label}: default must be [x, y] finite numbers`)
+        errors.push(`${subject}: default must be [x, y] finite numbers`)
         return null
       }
       return { type: 'vec2', ...base, default: value.default }
     default:
-      errors.push(`${label}: unknown type (must be range, color, boolean, or vec2)`)
+      errors.push(`${subject}: unknown type (must be range, color, boolean, or vec2)`)
       return null
   }
 }

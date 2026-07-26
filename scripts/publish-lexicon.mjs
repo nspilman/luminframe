@@ -3,10 +3,10 @@
  * Publish the com.luminframe.* lexicons so AT Protocol resolvers can find and
  * validate them.
  *
- * It writes each lexicon (from lexicons/**​/*.json — the single source of truth)
- * as a `com.atproto.lexicon.schema` record in the authenticated account's repo,
- * keyed by the NSID. Idempotent: it uses putRecord, so re-running updates the
- * published schemas in place.
+ * It writes each lexicon — every .json file under lexicons/, the single source
+ * of truth — as a `com.atproto.lexicon.schema` record in the authenticated
+ * account's repo, keyed by the NSID. Idempotent: it uses putRecord, so
+ * re-running updates the published schemas in place.
  *
  * TWO THINGS make a lexicon authoritative, and this script only does the second:
  *   1. A DNS TXT record at `_lexicon.luminframe.com` with value `did=<DID>`,

@@ -7,7 +7,8 @@ import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase'
 import { EffectKey, ShaderEffect, registeredShaders } from '@/types/shader'
 
 // The longest edge of a generated thumbnail, in device pixels. Small enough
-// that sixteen GPU passes are cheap and one-time per source.
+// that rendering the whole library — one GPU pass per effect — is cheap and
+// one-time per source.
 const MAX_EDGE = 96
 
 // Best-effort cap on waiting for the source texture. The source is an image the
