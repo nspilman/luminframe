@@ -1,20 +1,24 @@
-import { ShaderEffect, ShaderType, ShaderInputVars } from '@/types/shader'
+import { EffectKey, EffectRegistry, ShaderEffect, ShaderInputVars } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
-import { shaderLibrary } from '@/lib/shaders'
+import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
   hasImage: boolean
   source: Image | null
-  selectedShader: ShaderType | null
-  onShaderSelect: (shader: ShaderType) => void
-  recentShaders: readonly ShaderType[]
+  selectedShader: EffectKey | null
+  onShaderSelect: (shader: EffectKey) => void
+  recentShaders: readonly EffectKey[]
+  /** Every effect resolvable right now — builtins plus loaded custom effects. */
+  registry: EffectRegistry
+  /** The user's own published effects, for the picker's Yours section. */
+  customEffects: readonly CustomEffectEntry[]
   effect: ShaderEffect | null
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -44,6 +48,8 @@ const tuningShell =
 export function EditorSidebar({
   hasImage,
   source,
+  registry,
+  customEffects,
   selectedShader,
   onShaderSelect,
   recentShaders,
@@ -70,6 +76,11 @@ export function EditorSidebar({
   // The applied stack and the action row live wherever the work-in-progress
   // is: at the tuning column's foot while an effect is selected, at the
   // library's foot otherwise. Defined once, mounted in one place at a time.
+  // Signing out empties the custom half of the registry while the pipeline may
+  // still hold an applied custom effect, so an unresolvable key is a real state
+  // here: fall back to showing the raw key.
+  const nameOf = (key: EffectKey) => registry[key]?.name ?? key
+
   const appliedList = appliedEffects.length > 0 && (
     <div className="space-y-1">
       <h3 className="flex items-center gap-2 text-sm font-medium text-zinc-400">
@@ -87,12 +98,12 @@ export function EditorSidebar({
                 <span className="w-4 text-right tabular-nums text-zinc-600">
                   {index + 1}
                 </span>
-                <span className="flex-1 truncate">{shaderLibrary[applied.type].name}</span>
+                <span className="flex-1 truncate">{nameOf(applied.type)}</span>
                 <button
                   type="button"
                   onClick={() => onMoveEffect(index, index - 1)}
                   disabled={index === 0}
-                  aria-label={`Move ${shaderLibrary[applied.type].name} up`}
+                  aria-label={`Move ${nameOf(applied.type)} up`}
                   className="rounded p-1 text-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
                 >
                   <ArrowUp className="h-3.5 w-3.5" />
@@ -101,7 +112,7 @@ export function EditorSidebar({
                   type="button"
                   onClick={() => onMoveEffect(index, index + 1)}
                   disabled={index === appliedEffects.length - 1}
-                  aria-label={`Move ${shaderLibrary[applied.type].name} down`}
+                  aria-label={`Move ${nameOf(applied.type)} down`}
                   className="rounded p-1 text-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
                 >
                   <ArrowDown className="h-3.5 w-3.5" />
@@ -109,7 +120,7 @@ export function EditorSidebar({
                 <button
                   type="button"
                   onClick={() => onRemoveEffect(index)}
-                  aria-label={`Remove ${shaderLibrary[applied.type].name}`}
+                  aria-label={`Remove ${nameOf(applied.type)}`}
                   className="rounded p-1 text-zinc-500 hover:text-red-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -176,6 +187,7 @@ export function EditorSidebar({
             selectedShader={selectedShader}
             onShaderSelect={onShaderSelect}
             recentShaders={recentShaders}
+            customEffects={customEffects}
             source={source}
           />
         </div>

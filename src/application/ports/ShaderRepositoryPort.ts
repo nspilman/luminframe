@@ -1,4 +1,4 @@
-import { ShaderEffect, ShaderType } from '@/types/shader';
+import { EffectKey, ShaderEffect } from '@/types/shader';
 
 /**
  * Port for accessing shader effects.
@@ -8,18 +8,18 @@ import { ShaderEffect, ShaderType } from '@/types/shader';
  */
 export interface ShaderRepositoryPort {
   /**
-   * Get a specific shader effect by type
+   * Get a specific shader effect by key
    *
-   * @param name - The shader type to retrieve
+   * @param name - The effect key to retrieve
    * @returns The shader effect
-   * @throws Error if shader type is not found
+   * @throws Error if no effect is registered under the key
    */
-  getShader(name: ShaderType): ShaderEffect;
+  getShader(name: EffectKey): ShaderEffect;
 
   /**
-   * Get a list of all available shader types
+   * Get a list of all available effect keys
    *
-   * @returns Array of shader type names
+   * @returns Array of effect keys
    */
-  getAvailableTypes(): ShaderType[];
+  getAvailableTypes(): EffectKey[];
 }

@@ -1,26 +1,33 @@
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
-import { ShaderEffect, ShaderType } from '@/types/shader';
+import { EffectKey, ShaderEffect } from '@/types/shader';
 import { shaderLibrary } from '@/lib/shaders';
 
 /**
- * In-memory implementation of ShaderRepositoryPort.
- * Wraps the existing shader library and provides access through the port interface.
+ * In-memory implementation of ShaderRepositoryPort: the builtin library plus
+ * any custom effects registered at runtime (loaded from the signed-in user's
+ * com.luminframe.effect records, keyed by AT-URI).
  *
  * This adapter isolates shader storage specifics from the application layer.
- * In the future, could be swapped with a database-backed or API-based implementation.
  */
 export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
-  private readonly shaders: Record<ShaderType, ShaderEffect>;
+  private readonly shaders: Record<EffectKey, ShaderEffect>;
 
   constructor() {
-    // Load all shaders from the library
     this.shaders = { ...shaderLibrary };
   }
 
   /**
-   * Get a specific shader effect by type
+   * Register a runtime-loaded effect under its key. Overwrites are deliberate:
+   * re-fetching after a republish updates the effect in place.
    */
-  getShader(name: ShaderType): ShaderEffect {
+  register(key: EffectKey, effect: ShaderEffect): void {
+    this.shaders[key] = effect;
+  }
+
+  /**
+   * Get a specific shader effect by key
+   */
+  getShader(name: EffectKey): ShaderEffect {
     const shader = this.shaders[name];
 
     if (!shader) {
@@ -33,9 +40,9 @@ export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
   }
 
   /**
-   * Get a list of all available shader types
+   * Get a list of all available effect keys
    */
-  getAvailableTypes(): ShaderType[] {
-    return Object.keys(this.shaders) as ShaderType[];
+  getAvailableTypes(): EffectKey[] {
+    return Object.keys(this.shaders);
   }
 }

@@ -1,5 +1,4 @@
 import { RenderingPort } from '@/application/ports/RenderingPort';
-import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { ImageLoaderPort } from '@/application/ports/ImageLoaderPort';
 import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRenderingAdapter';
@@ -9,6 +8,7 @@ import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase';
 import { LoadImageUseCase } from '@/application/usecases/LoadImageUseCase';
 import { ExportCanvasUseCase } from '@/application/usecases/ExportCanvasUseCase';
 import { SaveCanvasAsInputUseCase } from '@/application/usecases/SaveCanvasAsInputUseCase';
+import { EffectKey, ShaderEffect } from '@/types/shader';
 
 /**
  * Application context that holds all dependencies and provides them to use cases.
@@ -28,7 +28,9 @@ export class ApplicationContext {
 
   // Adapters (infrastructure layer)
   private renderingAdapter: RenderingPort;
-  private shaderRepository: ShaderRepositoryPort;
+  // Held concretely (not as the port) because the composition root is the one
+  // place allowed to register runtime-loaded effects; use cases see the port.
+  private shaderRepository: InMemoryShaderRepositoryAdapter;
   private fileSystemAdapter: ImageLoaderPort & ImageExportPort;
 
   // Use cases (application layer)
@@ -69,6 +71,17 @@ export class ApplicationContext {
       ApplicationContext.instance = new ApplicationContext();
     }
     return ApplicationContext.instance;
+  }
+
+  /**
+   * Register runtime-loaded custom effects (keyed by AT-URI) so the render
+   * path can resolve them alongside the builtins. Idempotent — re-registering
+   * a key overwrites, so a re-fetch after republish updates in place.
+   */
+  registerCustomEffects(effects: Record<EffectKey, ShaderEffect>): void {
+    for (const [key, effect] of Object.entries(effects)) {
+      this.shaderRepository.register(key, effect);
+    }
   }
 
   /**

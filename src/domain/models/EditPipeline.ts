@@ -1,12 +1,12 @@
 import { Image } from './Image';
-import { ShaderInputVars, ShaderType } from '@/types/shader';
+import { EffectKey, ShaderInputVars } from '@/types/shader';
 
 /**
  * A single effect committed into an edit: its type and the parameter values it
  * was committed with. Immutable — operations on the pipeline return new values.
  */
 export interface AppliedEffect {
-  readonly type: ShaderType;
+  readonly type: EffectKey;
   readonly params: ShaderInputVars;
 }
 
@@ -35,7 +35,7 @@ export class EditPipeline {
   }
 
   /** Commit an effect on top of the pipeline. */
-  append(type: ShaderType, params: ShaderInputVars): EditPipeline {
+  append(type: EffectKey, params: ShaderInputVars): EditPipeline {
     return new EditPipeline(this.source, [...this.effects, { type, params }]);
   }
 

@@ -28,10 +28,18 @@ describe('loadRecents', () => {
     expect(loadRecents()).toEqual(['wave', 'vignette'])
   })
 
-  it('drops keys that are not currently-known effects', () => {
-    // A removed/renamed effect from an older version must not reach shaderLibrary.
+  it('drops keys that could not name an effect', () => {
+    // A removed/renamed builtin from an older version must not reach the library.
     localStorage.setItem(STORAGE_KEY, JSON.stringify(['wave', 'notAnEffect', 'vignette']))
     expect(loadRecents()).toEqual(['wave', 'vignette'])
+  })
+
+  it('does not drop an at:// key', () => {
+    // Deliberate: custom effects load asynchronously, so membership can't be
+    // judged here — a stale at:// key dies at render in the picker instead.
+    const uri = 'at://did:plc:example/com.luminframe.effect/invert'
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([uri, 'wave']))
+    expect(loadRecents()).toEqual([uri, 'wave'])
   })
 
   it('returns empty for non-array or corrupt storage', () => {

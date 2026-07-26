@@ -26,14 +26,22 @@ export function subsequenceMatch(query: string, text: string): boolean {
 }
 
 /**
- * An effect matches when the query is a subsequence of its display name or its
- * plain-speech blurb — so "grayscale" finds Black & White by what it *does*, not
- * only by what it's called. An empty query matches everything.
+ * The matching rule stated once, over plain text: a query matches when it is a
+ * subsequence of the display name or the blurb — so "grayscale" finds Black &
+ * White by what it *does*, not only by what it's called. An empty query
+ * matches everything. Builtins go through effectMatchesQuery (which knows the
+ * catalog); custom effects, whose name and blurb live on their record, call
+ * this directly.
  */
-export function effectMatchesQuery(shader: ShaderType, query: string): boolean {
+export function textMatchesQuery(query: string, name: string, blurb: string): boolean {
   const q = query.trim()
   if (q === '') return true
-  return subsequenceMatch(q, shaderLibrary[shader].name) || subsequenceMatch(q, blurbOf(shader))
+  return subsequenceMatch(q, name) || subsequenceMatch(q, blurb)
+}
+
+/** A builtin matches by its library name or catalog blurb. */
+export function effectMatchesQuery(shader: ShaderType, query: string): boolean {
+  return textMatchesQuery(query, shaderLibrary[shader].name, blurbOf(shader))
 }
 
 /**

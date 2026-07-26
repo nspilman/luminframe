@@ -19,7 +19,11 @@ import { useSearchParams } from 'react-router-dom'
 export function useUrlParamAction<T>(
   param: string,
   resolve: (value: string) => Promise<T>,
-  commit: (resolved: T) => void
+  commit: (resolved: T) => void,
+  // While false, the instruction is left in the URL unconsumed — for callers
+  // whose resolve needs app state that is still assembling (e.g. a recipe that
+  // can only hydrate once the effect registry has settled).
+  enabled: boolean = true
 ): void {
   const [searchParams, setSearchParams] = useSearchParams()
   const value = searchParams.get(param)
@@ -30,7 +34,7 @@ export function useUrlParamAction<T>(
   commitRef.current = commit
 
   useEffect(() => {
-    if (!value) return
+    if (!value || !enabled) return
     let active = true
 
     ;(async () => {
@@ -50,5 +54,5 @@ export function useUrlParamAction<T>(
       active = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
+  }, [value, enabled])
 }

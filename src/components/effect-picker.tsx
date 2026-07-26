@@ -1,16 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight, Play } from 'lucide-react'
+import { EffectKey, ShaderType } from '@/types/shader'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight, Play, FlaskConical } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
 import { motionOf, EffectMotion } from '@/lib/shaders/animation'
 import { blurbOf } from '@/lib/shaders/catalog'
-import { filterEffectFamilies } from '@/lib/shaders/effectSearch'
+import { filterEffectFamilies, textMatchesQuery } from '@/lib/shaders/effectSearch'
 import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/collapsedFamilies'
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
+import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 
 // The desktop growing-column declaration: at md+ the picker fills the sidebar's
 // middle region, and CSS requires each nesting level to restate flex/min-h-0
@@ -85,14 +86,54 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
 
 type EffectPickerProps = {
   /** The chosen effect, or null when none is selected (nothing is highlighted). */
-  selectedShader: ShaderType | null
-  onShaderSelect: (shader: ShaderType) => void
+  selectedShader: EffectKey | null
+  onShaderSelect: (shader: EffectKey) => void
   /** Recently-used effects, most-recent first, surfaced as a section on top. */
-  recentShaders: readonly ShaderType[]
+  recentShaders: readonly EffectKey[]
+  /** The user's own published effects, shown as a Yours section. */
+  customEffects: readonly CustomEffectEntry[]
   source: Image | null
 }
 
-type PickerSection = { id: string; label: string; effects: readonly ShaderType[] }
+type PickerSection = { id: string; label: string; effects: readonly EffectKey[] }
+
+/** Everything a library card shows about one effect, resolved from its key. */
+type EffectRow = {
+  name: string
+  blurb: string
+  icon: React.ReactNode
+  motion: EffectMotion
+}
+
+/**
+ * The one bridge from a string key to displayable effect facts. The builtin
+ * branch's guarded cast is what lets shaderIcons/effectBlurbs stay total maps
+ * over the closed union; the custom branch reads the same facts off the loaded
+ * record entry. An unresolvable key (a recent whose custom-effect record is
+ * gone) returns null and its card simply isn't drawn — the picker is where
+ * stale keys die, which is what keeps unresolvable keys out of the pipeline
+ * downstream.
+ */
+function rowFor(
+  key: EffectKey,
+  customByKey: ReadonlyMap<EffectKey, CustomEffectEntry>
+): EffectRow | null {
+  if (key in shaderLibrary) {
+    const type = key as ShaderType
+    const effect = shaderLibrary[type]
+    return { name: effect.name, blurb: blurbOf(type), icon: shaderIcons[type], motion: motionOf(effect) }
+  }
+  const entry = customByKey.get(key)
+  if (entry) {
+    return {
+      name: entry.effect.name,
+      blurb: entry.description ?? 'Your custom effect',
+      icon: <FlaskConical className="h-5 w-5" />,
+      motion: motionOf(entry.effect),
+    }
+  }
+  return null
+}
 
 /**
  * The effect browser: a gallery grouped into families (Tone, Color, Focus, …)
@@ -102,24 +143,48 @@ type PickerSection = { id: string; label: string; effects: readonly ShaderType[]
  * effect. Order and grouping come from the curated catalog, so adding an effect
  * there places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, source }: EffectPickerProps) {
-  const thumbnails = useEffectThumbnails(source)
+export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, source }: EffectPickerProps) {
+  const customByKey = useMemo(
+    () => new Map(customEffects.map((e) => [e.key, e])),
+    [customEffects]
+  )
+  const customShaderMap = useMemo(
+    () => Object.fromEntries(customEffects.map((e) => [e.key, e.effect])),
+    [customEffects]
+  )
+  const thumbnails = useEffectThumbnails(source, customShaderMap)
 
   // Type-to-filter: narrows the families as the query is typed. Empty query
   // shows the full catalog, so search overlays browsing rather than replacing it.
   const [query, setQuery] = useState('')
   const families = useMemo(() => filterEffectFamilies(query), [query])
-  const topMatch = families[0]?.effects[0]
+
+  // The user's own effects, as a Yours section beside the builtin families —
+  // searched by the same rule (name or blurb), with name and blurb coming from
+  // the record rather than the catalog.
+  const yoursSection = useMemo<PickerSection[]>(() => {
+    const matches = customEffects.filter((e) =>
+      textMatchesQuery(query, e.effect.name, e.description ?? '')
+    )
+    return matches.length > 0
+      ? [{ id: 'yours', label: 'Yours', effects: matches.map((e) => e.key) }]
+      : []
+  }, [customEffects, query])
+
+  // Your own effects are few and lead the search results; on Enter the top
+  // match is the first effect of whatever the current query shows.
+  const topMatch = (yoursSection[0] ?? families[0])?.effects[0]
+  const hasResults = families.length > 0 || yoursSection.length > 0
 
   // While browsing (no query), lead with a Recent section so a look the user
   // just used is one click away — recognition over recall for the returning
   // hand. During a search the results stand alone; recents would only be noise.
   const sections = useMemo<PickerSection[]>(() => {
     if (query.trim() === '' && recentShaders.length > 0) {
-      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...families]
+      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...yoursSection, ...families]
     }
-    return families
-  }, [query, recentShaders, families])
+    return [...yoursSection, ...families]
+  }, [query, recentShaders, yoursSection, families])
 
   // Collapsible families: the explorer can fold sections they don't use, keeping
   // the picker short. The collapsed set is remembered across visits. Collapse is a
@@ -250,7 +315,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
               ))}
             </div>
           )}
-          {families.length === 0 ? (
+          {!hasResults ? (
             <p className="px-1 py-6 text-center text-xs text-zinc-500">
               No effects match “{query}”
             </p>
@@ -281,6 +346,8 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
                 {!isCollapsed && (
                 <div className="space-y-1">
                   {family.effects.map((shader) => {
+                    const row = rowFor(shader, customByKey)
+                    if (!row) return null
                     const thumb = thumbnails?.[shader]
                     const isSelected = selectedShader === shader
                     return (
@@ -299,7 +366,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
                           {thumb ? (
                             <img src={thumb} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <span className="text-zinc-500">{shaderIcons[shader]}</span>
+                            <span className="text-zinc-500">{row.icon}</span>
                           )}
                         </span>
                         <span className="min-w-0 flex-1">
@@ -308,13 +375,13 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, so
                               isSelected ? 'text-white' : 'text-zinc-200'
                             }`}
                           >
-                            {shaderLibrary[shader].name}
+                            {row.name}
                           </span>
                           <span className="block truncate text-[10px] leading-tight text-zinc-500">
-                            {blurbOf(shader)}
+                            {row.blurb}
                           </span>
                         </span>
-                        <MotionBadge motion={motionOf(shaderLibrary[shader])} />
+                        <MotionBadge motion={row.motion} />
                       </button>
                     )
                   })}

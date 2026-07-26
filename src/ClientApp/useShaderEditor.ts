@@ -3,11 +3,10 @@ import { useRenderingEngine } from '@/hooks/useRenderingEngine'
 import { useImageLoader } from '@/hooks/useImageLoader'
 import { useWindowSize } from '@/hooks/useWindowSize'
 import { useAsyncStatus } from '@/hooks/useAsyncStatus'
-import { ShaderType, ShaderInputVars, ShaderInputDefinition } from '@/types/shader'
+import { EffectKey, EffectRegistry, ShaderInputVars, ShaderInputDefinition } from '@/types/shader'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
-import { shaderLibrary } from '@/lib/shaders'
 import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
 import { StrongRef } from '@/types/atproto'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
@@ -90,22 +89,28 @@ export function freshDraftParams(
  * Owns the shader-editor state and orchestration: which effect is selected,
  * its parameter values, and the render/resize/save wiring against the
  * rendering engine. Keeps ClientApp purely presentational.
+ *
+ * `registry` is every effect resolvable right now — builtins plus the user's
+ * loaded custom effects — and is the only place a key becomes an effect here.
+ * `registryReady` is false only while custom effects are still being fetched;
+ * session restore waits for it so a snapshot referencing a custom effect
+ * isn't judged against a registry that hasn't finished assembling.
  */
-export function useShaderEditor() {
+export function useShaderEditor(registry: EffectRegistry, registryReady: boolean) {
   // No effect is selected on a fresh visit: the editor lands showing the image
   // untouched, and the picker highlights nothing until the user chooses one. An
   // empty pipeline renders the original (see RenderEditUseCase), so there's no
   // arbitrary default look imposed on the image. A restored session overrides
   // this with its saved selection.
-  const [selectedShader, setSelectedShader] = useState<ShaderType | null>(null)
+  const [selectedShader, setSelectedShader] = useState<EffectKey | null>(null)
   const [varValues, setVarValues] = useState<ShaderInputVars>(() => ({}))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
   // Effects the user has committed to (applied or downloaded), most-recent
   // first, seeded from and mirrored back to localStorage so they persist across
   // visits. Recording is deliberate — see recordRecent's callers, not selection.
-  const [recentShaders, setRecentShaders] = useState<ShaderType[]>(() => loadRecents())
-  const recordRecent = useCallback((type: ShaderType) => {
+  const [recentShaders, setRecentShaders] = useState<EffectKey[]>(() => loadRecents())
+  const recordRecent = useCallback((type: EffectKey) => {
     setRecentShaders((prev) => pushRecent(prev, type))
   }, [])
   // Mirror recents to storage whenever they change (the initial write-back of the
@@ -145,7 +150,9 @@ export function useShaderEditor() {
   // source. A ref (not state) — it's consumed inside the load task and needs no render.
   const pendingRecipeRef = useRef<HydratedStep[] | null>(null)
 
-  const effect = selectedShader ? shaderLibrary[selectedShader] : null
+  // Null when nothing is selected — or when the selection's key no longer
+  // resolves (a restored custom effect whose record is gone).
+  const effect = selectedShader ? registry[selectedShader] ?? null : null
   const hasImage =
     'imageTexture' in varValues && varValues.imageTexture instanceof Image
 
@@ -170,22 +177,38 @@ export function useShaderEditor() {
   const source = hasImage ? (varValues.imageTexture as Image) : null
   const sourceUrl = source ? source.data.url : null
 
-  // Restore a persisted edit once on mount. This is what carries the in-progress
-  // work across the OAuth sign-in redirect (and any reload): the snapshot taken
-  // before navigating away is rehydrated here — source image, committed effects,
-  // and live draft — then consumed so a later clean visit starts empty.
+  // Restore a persisted edit once, as soon as the registry has settled. This is
+  // what carries the in-progress work across the OAuth sign-in redirect (and any
+  // reload): the snapshot taken before navigating away is rehydrated here —
+  // source image, committed effects, and live draft — then consumed so a later
+  // clean visit starts empty. Waiting for registryReady matters: a snapshot may
+  // reference a custom effect still being fetched, and judging it against a
+  // half-assembled registry would wrongly drop it. Steps whose key still doesn't
+  // resolve after that (the record was deleted) are dropped with one warning —
+  // this is the door that keeps unresolvable keys out of the pipeline, so the
+  // render path never needs to guard.
+  const restoredRef = useRef(false)
   useEffect(() => {
+    if (!registryReady || restoredRef.current) return
+    restoredRef.current = true
     const saved = loadEditorSession()
     if (!saved) return
     let active = true
     deserializeSession(saved)
       .then(({ selectedShader: shader, draftVars, effects }) => {
         if (!active) return
-        setSelectedShader(shader)
+        const kept = effects.filter((e) => e.type in registry)
+        const droppedKeys = effects.filter((e) => !(e.type in registry)).map((e) => e.type)
+        const keptShader = shader && shader in registry ? shader : null
+        if (shader && !keptShader) droppedKeys.push(shader)
+        if (droppedKeys.length > 0) {
+          console.warn('Restored session referenced effects that no longer resolve; dropped:', droppedKeys)
+        }
+        setSelectedShader(keptShader)
         setVarValues(draftVars)
         setHistory(
           initHistory(
-            effects.reduce((p, e) => p.append(e.type, e.params), EditPipeline.empty())
+            kept.reduce((p, e) => p.append(e.type, e.params), EditPipeline.empty())
           )
         )
       })
@@ -194,7 +217,7 @@ export function useShaderEditor() {
     return () => {
       active = false
     }
-  }, [])
+  }, [registryReady, registry])
 
   // Snapshot the current edit to localStorage. Called right before a sign-in
   // redirect so the work isn't lost when the page navigates away. No-op without
@@ -214,12 +237,15 @@ export function useShaderEditor() {
   }, [hasImage, selectedShader, varValues, pipeline.effects])
 
   // Reconcile parameters when the selected effect changes. Nothing to reconcile
-  // when the selection is cleared to "no effect" — the draft params just go unused.
+  // when the selection is cleared to "no effect" — the draft params just go
+  // unused. Re-running when the registry updates is idempotent: reconciling
+  // against unchanged defaults returns the same values.
   useEffect(() => {
     if (!selectedShader) return
-    const next = shaderLibrary[selectedShader]
+    const next = registry[selectedShader]
+    if (!next) return
     setVarValues(prev => reconcileShaderParams(prev, next.defaultValues, next.inputs))
-  }, [selectedShader])
+  }, [selectedShader, registry])
 
   // Render whenever the committed pipeline, the live draft effect, its
   // parameters, or the canvas size change. The committed effects fold over the
@@ -258,24 +284,22 @@ export function useShaderEditor() {
   // on the new base. The committed values now live in the pipeline, so the
   // canvas keeps showing them — the fresh draft starts from defaults on top.
   const handleApply = useCallback(() => {
-    if (!selectedShader) return
+    if (!selectedShader || !effect) return
     setHistory(h => pushHistory(h, h.present.append(selectedShader, varValues)))
-    setVarValues(prev =>
-      freshDraftParams(prev, shaderLibrary[selectedShader].defaultValues)
-    )
+    setVarValues(prev => freshDraftParams(prev, effect.defaultValues))
     recordRecent(selectedShader)
     // The commit consumes the draft: the effect now lives in the pipeline, so
     // nothing stays selected. Without this, an applied animated effect kept
     // riding the chain as a live draft — turning every later download and save
     // into a video even when the committed edit was a still.
     setSelectedShader(null)
-  }, [selectedShader, varValues, recordRecent])
+  }, [selectedShader, effect, varValues, recordRecent])
 
   // Selecting from the library toggles: clicking the selected effect again
   // deselects it. Browsing an effect must always be reversible — otherwise a
   // glance at Wave leaves an animated draft stuck on the chain with no way off
   // short of picking a different effect.
-  const selectShader = useCallback((shader: ShaderType) => {
+  const selectShader = useCallback((shader: EffectKey) => {
     setSelectedShader(prev => (prev === shader ? null : shader))
   }, [])
 
@@ -328,14 +352,19 @@ export function useShaderEditor() {
       // Base name only — the exporter picks the extension by content (.mp4 for
       // an animated edit, .png for a still). Named for the effect being tuned,
       // else the last committed one — Apply clears the selection, so the
-      // committed stack is what usually carries the edit's name.
-      const namesake = selectedShader ?? pipeline.effects[pipeline.effects.length - 1]?.type
-      await downloadImage(`luminframe-${namesake ?? 'image'}`)
+      // committed stack is what usually carries the edit's name. The display
+      // name is slugified rather than using the key: a custom effect's key is
+      // an AT-URI, which has no business in a filename.
+      const namesakeKey = selectedShader ?? pipeline.effects[pipeline.effects.length - 1]?.type
+      const namesake = namesakeKey
+        ? registry[namesakeKey]?.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') ?? 'custom'
+        : 'image'
+      await downloadImage(`luminframe-${namesake}`)
       if (selectedShader) recordRecent(selectedShader)
     } catch (error) {
       console.error('Failed to download image:', error)
     }
-  }, [downloadImage, selectedShader, pipeline, recordRecent])
+  }, [downloadImage, selectedShader, pipeline, registry, recordRecent])
 
   // Loading a source is the slowest first-contact in the editor, so it is the
   // first surface to adopt the app's loading-state SoT: useAsyncStatus tracks the

@@ -14,6 +14,7 @@ import { useRemix } from '@/hooks/useRemix'
 import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
+import { useEffectRegistry } from '@/hooks/useEffectRegistry'
 import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
@@ -29,6 +30,12 @@ export function ClientApp(): JSX.Element {
   // the image page, which refines its own once its record loads — so this defers
   // there (null) rather than overwriting it with a neutral fallback.
   useDocumentMeta(onImage ? null : staticPageMeta(pathname, window.location.origin + pathname))
+
+  // The effect registry: everything resolvable right now — builtins plus the
+  // signed-in user's custom effects, loaded from their PDS. Signed out, it's
+  // the builtins alone, immediately ready.
+  const { registry, custom: customEffects, ready: registryReady } = useEffectRegistry(session.did)
+
   const {
     canvasRef,
     selectedShader,
@@ -60,7 +67,7 @@ export function ClientApp(): JSX.Element {
     handleCanvasResize,
     captureSession,
     encodeAnimatedEdit,
-  } = useShaderEditor()
+  } = useShaderEditor(registry, registryReady)
 
   // What's recorded on a saved Luminframe record beyond the pixels: the committed
   // effect stack. `effects` is the lightweight name list (display/back-compat);
@@ -84,7 +91,7 @@ export function ClientApp(): JSX.Element {
 
   // "Apply this recipe" from the gallery is /?recipe=<at-uri>: bring the saved
   // look (its effect stack) onto the current image, wherever it's clicked from.
-  useApplyRecipe(applyRecipe)
+  useApplyRecipe(applyRecipe, registry, registryReady)
 
   const deleteImage = useLuminframeDelete(session.agent)
 
@@ -115,6 +122,8 @@ export function ClientApp(): JSX.Element {
         <EditorSidebar
           hasImage={hasImage}
           source={source}
+          registry={registry}
+          customEffects={customEffects}
           selectedShader={selectedShader}
           onShaderSelect={selectShader}
           recentShaders={recentShaders}

@@ -4,8 +4,7 @@ import { EditPipeline } from '@/domain/models/EditPipeline'
 import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRenderingAdapter'
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter'
 import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase'
-import { registeredShaders, ShaderType } from '@/types/shader'
-import { shaderLibrary } from '@/lib/shaders'
+import { EffectKey, ShaderEffect, registeredShaders } from '@/types/shader'
 
 // The longest edge of a generated thumbnail, in device pixels. Small enough
 // that sixteen GPU passes are cheap and one-time per source.
@@ -30,8 +29,8 @@ export function thumbnailDimensions(source: Dimensions, maxEdge: number): Dimens
 }
 
 /**
- * Render every registered effect against the source at its default parameters,
- * returning a data-URL thumbnail per effect.
+ * Render every effect — builtins plus any loaded custom effects — against the
+ * source at its default parameters, returning a data-URL thumbnail per key.
  *
  * Runs on a short-lived, offscreen renderer so the live canvas never flickers.
  * The renderer is torn down before returning. Effects that read a second image
@@ -39,15 +38,18 @@ export function thumbnailDimensions(source: Dimensions, maxEdge: number): Dimens
  * thumbnails reflect that, and the picker falls back to an icon for them.
  */
 export async function renderEffectThumbnails(
-  source: Image
-): Promise<Record<ShaderType, string>> {
+  source: Image,
+  custom: Record<EffectKey, ShaderEffect> = {}
+): Promise<Record<EffectKey, string>> {
   const dims = thumbnailDimensions(source.getDimensions(), MAX_EDGE)
   const canvas = document.createElement('canvas')
   canvas.width = dims.width
   canvas.height = dims.height
 
   const adapter = new ThreeJSRenderingAdapter(canvas, dims)
-  const renderEdit = new RenderEditUseCase(new InMemoryShaderRepositoryAdapter(), adapter)
+  const repository = new InMemoryShaderRepositoryAdapter()
+  for (const [key, effect] of Object.entries(custom)) repository.register(key, effect)
+  const renderEdit = new RenderEditUseCase(repository, adapter)
 
   // Tearing down the offscreen adapter clears its texture cache, which disposes
   // every cached Image — including the source. A blob-less clone makes that
@@ -59,13 +61,16 @@ export async function renderEffectThumbnails(
   // door the live editor uses, with an empty committed pipeline and the effect
   // as the lone draft pass.
   const pipeline = EditPipeline.empty().withSource(safeSource)
-  const renderPass = (type: ShaderType) =>
+  const keys: EffectKey[] = [...registeredShaders, ...Object.keys(custom)]
+  // The repository already resolves every key here — builtins from its
+  // constructor, customs registered above — so it is the one resolver.
+  const renderPass = (type: EffectKey) =>
     renderEdit.execute(
       pipeline,
       {
         type,
         params: {
-          ...shaderLibrary[type].defaultValues,
+          ...repository.getShader(type).defaultValues,
           imageTexture: safeSource,
           resolution,
         },
@@ -76,8 +81,8 @@ export async function renderEffectThumbnails(
   try {
     await primeTexture(adapter, () => renderPass(registeredShaders[0]))
 
-    const thumbnails = {} as Record<ShaderType, string>
-    for (const type of registeredShaders) {
+    const thumbnails: Record<EffectKey, string> = {}
+    for (const type of keys) {
       renderPass(type)
       thumbnails[type] = canvas.toDataURL('image/png')
     }

@@ -1,7 +1,6 @@
 import { Color } from '@/domain/value-objects/Color'
 import { Image } from '@/domain/models/Image'
-import { shaderLibrary } from '@/lib/shaders'
-import { ShaderType, ShaderInputVars } from '@/types/shader'
+import { EffectKey, EffectRegistry, ShaderInputVars } from '@/types/shader'
 import { RawRecipeStep } from '@/types/recipe'
 
 /**
@@ -18,7 +17,7 @@ import { RawRecipeStep } from '@/types/recipe'
 
 /** One effect ready to append to an EditPipeline. */
 export interface HydratedStep {
-  type: ShaderType
+  type: EffectKey
   params: ShaderInputVars
 }
 
@@ -49,12 +48,19 @@ export function coerceToDefault(stored: unknown, sample: unknown): unknown {
   return stored ?? sample
 }
 
-export function hydrateRecipe(recipe: ReadonlyArray<RawRecipeStep>): HydratedStep[] {
+// `registry` is required, not defaulted to the builtin library on purpose: the
+// production caller must pass the live registry (builtins + loaded custom
+// effects), and a convenient default would let a caller silently drop custom
+// steps and still compile.
+export function hydrateRecipe(
+  recipe: ReadonlyArray<RawRecipeStep>,
+  registry: EffectRegistry
+): HydratedStep[] {
   const steps: HydratedStep[] = []
   for (const step of recipe) {
-    if (!(step.type in shaderLibrary)) continue // effect this build doesn't know — drop it
-    const type = step.type as ShaderType
-    const defaults = shaderLibrary[type].defaultValues
+    if (!(step.type in registry)) continue // effect this client can't resolve — drop it
+    const type = step.type
+    const defaults = registry[type].defaultValues
     const params: Record<string, unknown> = { ...defaults }
     for (const [key, stored] of Object.entries(step.params ?? {})) {
       if (key in defaults) params[key] = coerceToDefault(stored, defaults[key])

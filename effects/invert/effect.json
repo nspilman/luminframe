@@ -1,0 +1,16 @@
+{
+  "slug": "invert",
+  "name": "Invert",
+  "description": "Flip every color to its photographic negative",
+  "params": [
+    {
+      "type": "range",
+      "name": "amount",
+      "label": "Amount",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    }
+  ]
+}

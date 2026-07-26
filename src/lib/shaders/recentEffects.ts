@@ -1,4 +1,4 @@
-import { ShaderType, registeredShaders } from '@/types/shader'
+import { EffectKey, registeredShaders } from '@/types/shader'
 
 /**
  * The effects a person has recently used, most-recent first, persisted across
@@ -18,30 +18,38 @@ export const RECENTS_MAX = 6
  * Put `type` at the front, remove any earlier occurrence, cap the length.
  * Re-using an effect promotes it back to most-recent rather than duplicating it.
  */
-export function pushRecent(recents: ShaderType[], type: ShaderType, max = RECENTS_MAX): ShaderType[] {
+export function pushRecent(recents: EffectKey[], type: EffectKey, max = RECENTS_MAX): EffectKey[] {
   return [type, ...recents.filter((t) => t !== type)].slice(0, max)
 }
 
-const isShaderType = (value: unknown): value is ShaderType =>
-  typeof value === 'string' && (registeredShaders as readonly string[]).includes(value)
+/**
+ * A key that could name an effect: a builtin, or the AT-URI of a custom effect
+ * record. Deliberately syntactic — custom effects load asynchronously, so
+ * membership can't be checked here at storage-load time. An at:// key that no
+ * longer resolves survives the load and is dropped where keys are resolved
+ * (the picker), not destroyed here.
+ */
+const isPlausibleEffectKey = (value: unknown): value is EffectKey =>
+  typeof value === 'string' &&
+  ((registeredShaders as readonly string[]).includes(value) || value.startsWith('at://'))
 
 /**
- * Read the persisted recents, dropping anything that isn't a currently-known
- * effect. The store is untrusted across versions — an effect can be renamed or
- * removed between visits — so a stale key must never reach `shaderLibrary`.
+ * Read the persisted recents, dropping anything that couldn't name an effect.
+ * The store is untrusted across versions — a builtin can be renamed or removed
+ * between visits — so a stale builtin key must never reach the library.
  */
-export function loadRecents(): ShaderType[] {
+export function loadRecents(): EffectKey[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter(isShaderType).slice(0, RECENTS_MAX) : []
+    return Array.isArray(parsed) ? parsed.filter(isPlausibleEffectKey).slice(0, RECENTS_MAX) : []
   } catch {
     return []
   }
 }
 
-export function saveRecents(recents: ShaderType[]): void {
+export function saveRecents(recents: EffectKey[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(recents))
   } catch {

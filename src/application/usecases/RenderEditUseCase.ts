@@ -1,14 +1,14 @@
 import { RenderingPort, RenderPass } from '@/application/ports/RenderingPort';
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { EditPipeline } from '@/domain/models/EditPipeline';
-import { ShaderInputVars, ShaderType } from '@/types/shader';
+import { EffectKey, ShaderInputVars } from '@/types/shader';
 
 /**
  * The live effect being tuned on top of the committed pipeline. Committing it
  * (Apply) appends it to the pipeline and opens a fresh draft.
  */
 export interface DraftEffect {
-  type: ShaderType;
+  type: EffectKey;
   params: ShaderInputVars;
 }
 

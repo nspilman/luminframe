@@ -115,6 +115,17 @@ export const registeredShaders = [
 
 export type ShaderType = typeof registeredShaders[number]
 
+/**
+ * The key of any effect the editor can hold: a builtin `ShaderType`, or the
+ * AT-URI of a `com.luminframe.effect` record loaded at runtime. The editor and
+ * domain speak EffectKey; the closed `ShaderType` union remains the type of
+ * the builtin library and its keystone tests.
+ */
+export type EffectKey = string
+
+/** Every effect resolvable right now: builtins merged with loaded custom effects. */
+export type EffectRegistry = Record<EffectKey, ShaderEffect>
+
 
 
 

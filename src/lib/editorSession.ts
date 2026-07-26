@@ -1,6 +1,6 @@
 import { Image } from '@/domain/models/Image'
 import { Color } from '@/domain/value-objects/Color'
-import { ShaderInputVars, ShaderType } from '@/types/shader'
+import { EffectKey, ShaderInputVars } from '@/types/shader'
 
 /**
  * Persisting the in-progress edit so it survives a full-page navigation — most
@@ -42,14 +42,14 @@ interface SerializedImage {
 }
 
 interface SerializedEffect {
-  type: ShaderType
+  type: EffectKey
   params: SerializedVars
 }
 
 export interface SerializedSession {
   version: number
   /** The selected effect, or null when none is chosen (the pristine landing). */
-  selectedShader: ShaderType | null
+  selectedShader: EffectKey | null
   draft: SerializedVars
   effects: SerializedEffect[]
   images: SerializedImage[]
@@ -57,9 +57,9 @@ export interface SerializedSession {
 
 /** The live editor state we snapshot and restore. */
 export interface EditorSessionState {
-  selectedShader: ShaderType | null
+  selectedShader: EffectKey | null
   draftVars: ShaderInputVars
-  effects: ReadonlyArray<{ type: ShaderType; params: ShaderInputVars }>
+  effects: ReadonlyArray<{ type: EffectKey; params: ShaderInputVars }>
 }
 
 // --- pure value (de)serialization -----------------------------------------

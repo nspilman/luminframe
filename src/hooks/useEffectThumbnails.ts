@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Image } from '@/domain/models/Image'
-import { ShaderType } from '@/types/shader'
+import { EffectKey, ShaderEffect } from '@/types/shader'
 import { renderEffectThumbnails } from '@/lib/effectThumbnails'
 
 /**
- * Live effect previews for the picker: a data-URL thumbnail per effect,
- * rendered from the current source at each effect's defaults.
+ * Live effect previews for the picker: a data-URL thumbnail per effect —
+ * builtins plus any loaded custom effects — rendered from the current source
+ * at each effect's defaults.
  *
  * Returns null while there is no source or while a batch is in flight — the
- * picker shows icons until thumbnails arrive. Keyed on source identity, so a
- * batch runs once per loaded image, not on every parameter tweak. An in-flight
- * batch is abandoned if the source changes again before it resolves.
+ * picker shows icons until thumbnails arrive. Keyed on source identity and the
+ * custom map's identity (which is memoized upstream), so a batch runs once per
+ * loaded image plus once more when custom effects land, not on every render.
+ * An in-flight batch is abandoned if either changes again before it resolves.
  */
 export function useEffectThumbnails(
-  source: Image | null
-): Record<ShaderType, string> | null {
-  const [thumbnails, setThumbnails] = useState<Record<ShaderType, string> | null>(null)
+  source: Image | null,
+  custom: Record<EffectKey, ShaderEffect> = {}
+): Record<EffectKey, string> | null {
+  const [thumbnails, setThumbnails] = useState<Record<EffectKey, string> | null>(null)
 
   useEffect(() => {
     if (!source) {
@@ -24,7 +27,7 @@ export function useEffectThumbnails(
     }
     let cancelled = false
     setThumbnails(null)
-    renderEffectThumbnails(source)
+    renderEffectThumbnails(source, custom)
       .then((result) => {
         if (!cancelled) setThumbnails(result)
       })
@@ -37,7 +40,7 @@ export function useEffectThumbnails(
     return () => {
       cancelled = true
     }
-  }, [source])
+  }, [source, custom])
 
   return thumbnails
 }
