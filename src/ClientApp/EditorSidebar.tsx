@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Wand2 } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
+import { LookEntry } from '@/hooks/useLooks'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import { Image } from '@/domain/models/Image'
 
@@ -19,6 +20,9 @@ type EditorSidebarProps = {
   registry: EffectRegistry
   /** The user's own published effects, for the picker's Yours section. */
   customEffects: readonly CustomEffectEntry[]
+  /** The user's Looks, for the picker's one-gesture apply section. */
+  looks: readonly LookEntry[]
+  onApplyLook: (look: LookEntry) => void
   effect: ShaderEffect | null
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -52,6 +56,8 @@ export function EditorSidebar({
   source,
   registry,
   customEffects,
+  looks,
+  onApplyLook,
   selectedShader,
   onShaderSelect,
   recentShaders,
@@ -201,6 +207,8 @@ export function EditorSidebar({
             onShaderSelect={onShaderSelect}
             recentShaders={recentShaders}
             customEffects={customEffects}
+            looks={looks}
+            onApplyLook={onApplyLook}
             source={source}
           />
         </div>

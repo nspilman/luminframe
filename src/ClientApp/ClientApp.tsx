@@ -15,7 +15,8 @@ import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
-import { useLookLibrary } from '@/hooks/useLooks'
+import { LookEntry, useLookLibrary } from '@/hooks/useLooks'
+import { hydrateRecipe } from '@/lib/shaders/hydrateRecipe'
 import { SaveLookDialog } from '@/components/SaveLookDialog'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
@@ -84,11 +85,29 @@ export function ClientApp(): JSX.Element {
     handleImageDrop,
     handleRemixLoad,
     applyRecipe,
+    appendRecipe,
     remixParent,
     handleCanvasResize,
     captureSession,
     encodeAnimatedEdit,
   } = useShaderEditor(registry, registryReady)
+
+  // Clicking a Look in the picker: hydrate its chain against the registry and
+  // append it to the stack (one history push — a single undo removes the whole
+  // Look). A step whose effect this client can't resolve is dropped by
+  // hydrateRecipe; say so rather than silently thinning the chain.
+  const onApplyLook = useCallback(
+    (look: LookEntry) => {
+      const steps = hydrateRecipe(look.def.steps, registry)
+      if (steps.length < look.def.steps.length) {
+        console.warn(
+          `Look "${look.def.name}": ${look.def.steps.length - steps.length} step(s) reference effects this client can't resolve and were skipped.`
+        )
+      }
+      appendRecipe(steps)
+    },
+    [registry, appendRecipe]
+  )
 
   // What's recorded on a saved Luminframe record beyond the pixels: the committed
   // effect stack. `effects` is the lightweight name list (display/back-compat);
@@ -145,6 +164,8 @@ export function ClientApp(): JSX.Element {
           source={source}
           registry={registry}
           customEffects={customEffects}
+          looks={lookLibrary.looks}
+          onApplyLook={onApplyLook}
           selectedShader={selectedShader}
           onShaderSelect={selectShader}
           recentShaders={recentShaders}

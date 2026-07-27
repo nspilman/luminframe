@@ -417,6 +417,17 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     [hasImage]
   )
 
+  // Apply one of the user's Looks on top of the current work: appends the
+  // chain to the committed stack as ordinary steps, one history push — a
+  // single undo removes the whole Look. Only reachable from the picker, which
+  // exists only with an image, so there is no pending-until-load half.
+  const appendRecipe = useCallback((steps: HydratedStep[]) => {
+    if (steps.length === 0) return
+    setHistory(h =>
+      pushHistory(h, steps.reduce((p, s) => p.append(s.type, s.params), h.present))
+    )
+  }, [])
+
   return {
     canvasRef,
     selectedShader,
@@ -445,6 +456,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     handleImageDrop,
     handleRemixLoad,
     applyRecipe,
+    appendRecipe,
     remixParent,
     handleCanvasResize,
     captureSession,

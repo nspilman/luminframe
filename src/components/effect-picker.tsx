@@ -12,6 +12,7 @@ import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/col
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
+import { LookEntry } from '@/hooks/useLooks'
 
 // The desktop growing-column declaration: at md+ the picker fills the sidebar's
 // middle region, and CSS requires each nesting level to restate flex/min-h-0
@@ -92,6 +93,9 @@ type EffectPickerProps = {
   recentShaders: readonly EffectKey[]
   /** The user's own published effects, shown as a Yours section. */
   customEffects: readonly CustomEffectEntry[]
+  /** The user's Looks — saved chains, applied in one gesture rather than selected. */
+  looks: readonly LookEntry[]
+  onApplyLook: (look: LookEntry) => void
   source: Image | null
 }
 
@@ -143,7 +147,7 @@ function rowFor(
  * effect. Order and grouping come from the curated catalog, so adding an effect
  * there places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, looks, onApplyLook, source }: EffectPickerProps) {
   const customByKey = useMemo(
     () => new Map(customEffects.map((e) => [e.key, e])),
     [customEffects]
@@ -171,10 +175,18 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
       : []
   }, [customEffects, query])
 
+  // The user's Looks, searched by the same rule. They lead the list: a Look is
+  // a whole edit in one gesture, and the draft just saved should be the first
+  // thing the returning eye finds.
+  const lookMatches = useMemo(
+    () => looks.filter((l) => textMatchesQuery(query, l.def.name, l.def.description ?? '')),
+    [looks, query]
+  )
+
   // Your own effects are few and lead the search results; on Enter the top
   // match is the first effect of whatever the current query shows.
   const topMatch = (yoursSection[0] ?? families[0])?.effects[0]
-  const hasResults = families.length > 0 || yoursSection.length > 0
+  const hasResults = families.length > 0 || yoursSection.length > 0 || lookMatches.length > 0
 
   // While browsing (no query), lead with a Recent section so a look the user
   // just used is one click away — recognition over recall for the returning
@@ -326,6 +338,44 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
             onScroll={measureMoreBelow}
             className="max-h-[420px] space-y-3 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1"
           >
+            {/* Looks lead the list: a Look is a whole edit in one gesture —
+                clicking applies its chain to the stack (undo removes it all),
+                unlike effect cards, which select for tuning. */}
+            {lookMatches.length > 0 && (
+              <div className="space-y-2">
+                <span className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                  <Wand2 className="h-3 w-3" />
+                  Looks
+                </span>
+                <div className="space-y-1">
+                  {lookMatches.map((look) => (
+                    <button
+                      key={look.key}
+                      type="button"
+                      onClick={() => onApplyLook(look)}
+                      aria-label={`Apply look ${look.def.name}`}
+                      className="group flex w-full items-center gap-2.5 rounded-lg border border-zinc-800/60 p-1.5 text-left transition-colors hover:border-violet-500/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-black/30 text-violet-400/80">
+                        <Wand2 className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium leading-tight text-zinc-200">
+                          {look.def.name}
+                        </span>
+                        <span className="block truncate text-[10px] leading-tight text-zinc-500">
+                          {look.def.description ?? 'Your saved look'}
+                        </span>
+                      </span>
+                      <span className="shrink-0 pr-1 text-[10px] tabular-nums text-zinc-600">
+                        {look.key.startsWith('lookdraft://') ? 'draft · ' : ''}
+                        {look.def.steps.length} step{look.def.steps.length === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {sections.map((family) => {
               const isCollapsed = !isSearching && collapsed.includes(family.id)
               return (
