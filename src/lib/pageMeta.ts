@@ -82,11 +82,19 @@ export function staticPageMeta(pathname: string, url: string): PageMeta {
     }
   }
 
+  if (p === '/create/glsl') {
+    return {
+      ...base,
+      title: `Write a shader — ${SITE.name}`,
+      description: `Write a shader effect in GLSL and see it live on a test image — then publish it to your own repo on the AT Protocol.`,
+    }
+  }
+
   if (p === '/create' || p.startsWith('/create/')) {
     return {
       ...base,
-      title: `Create an effect — ${SITE.name}`,
-      description: `Write a shader effect and see it live on a test image — then publish it to your own repo on the AT Protocol.`,
+      title: `Build a shader — ${SITE.name}`,
+      description: `Build a shader effect from blocks — no code — and see it live on a test image. Publish it to your own repo on the AT Protocol.`,
     }
   }
 

@@ -1,6 +1,7 @@
 import {
   tabFromPath,
   pathForTab,
+  isCreateGlslPath,
   isCreatePath,
   isGalleryPath,
   editorRemixPath,
@@ -102,6 +103,20 @@ describe('isCreatePath', () => {
 
   it('does not match a path that merely starts with the word create', () => {
     expect(isCreatePath('/created-things')).toBe(false)
+  })
+
+  it('true for the GLSL room (a creator sub-place)', () => {
+    expect(isCreatePath('/create/glsl')).toBe(true)
+  })
+})
+
+describe('isCreateGlslPath', () => {
+  it('true for /create/glsl', () => {
+    expect(isCreateGlslPath('/create/glsl')).toBe(true)
+  })
+
+  it('false for the Blocks room root', () => {
+    expect(isCreateGlslPath('/create')).toBe(false)
   })
 })
 

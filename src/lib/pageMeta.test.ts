@@ -53,9 +53,15 @@ describe('staticPageMeta', () => {
     )
   })
 
-  it('describes the effect creator for /create', () => {
+  it('describes the Blocks room for /create', () => {
     expect(staticPageMeta('/create', 'https://luminframe.com/create').title).toBe(
-      'Create an effect — Luminframe'
+      'Build a shader — Luminframe'
+    )
+  })
+
+  it('describes the GLSL room for /create/glsl', () => {
+    expect(staticPageMeta('/create/glsl', 'https://luminframe.com/create/glsl').title).toBe(
+      'Write a shader — Luminframe'
     )
   })
 

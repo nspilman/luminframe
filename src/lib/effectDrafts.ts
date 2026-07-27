@@ -21,6 +21,12 @@ export interface StoredDraft {
   params: EffectParamDef[]
   body: string
   animatedBy?: string
+  /**
+   * The Blocks term JSON this draft was built from. Present ⇒ the Blocks
+   * room owns it (body and params are compiled); editing the body in the
+   * GLSL room detaches the blocks by clearing this.
+   */
+  source?: string
   updatedAt: string
 }
 
@@ -33,6 +39,7 @@ export function defFromDraft(draft: StoredDraft): EffectDefinition {
     params: draft.params,
     body: draft.body,
     ...(draft.animatedBy ? { animatedBy: draft.animatedBy } : {}),
+    ...(draft.source ? { source: draft.source } : {}),
   }
 }
 

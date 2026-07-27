@@ -15,8 +15,10 @@ import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
-import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { isCreateGlslPath, isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { CreatorPage } from '@/components/CreatorPage'
+import { BlocksPage } from '@/components/BlocksPage'
+import { CreatorTabs } from '@/components/creator/CreatorTabs'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
 
@@ -26,6 +28,7 @@ export function ClientApp(): JSX.Element {
   const onGallery = isGalleryPath(pathname)
   const onImage = isImagePath(pathname)
   const onCreate = isCreatePath(pathname)
+  const onCreateGlsl = isCreateGlslPath(pathname)
   // The editor is the fallback room for any unclaimed path, so every other
   // room must subtract itself here or the editor renders beneath it.
   const onEditor = !onGallery && !onImage && !onCreate
@@ -169,15 +172,28 @@ export function ClientApp(): JSX.Element {
 
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
-      {/* The creator mounts and unmounts (unlike the always-mounted editor):
-          it owns its own WebGL surface, and leaving the room disposes it. */}
+      {/* The creator wing mounts and unmounts (unlike the always-mounted
+          editor): each room owns its own WebGL surface, and leaving disposes
+          it. Blocks is the front door; GLSL is the expert door — two rooms
+          over one draft store, so a shader started in one opens in the other. */}
       {onCreate && (
-        <CreatorPage
-          session={headerSession}
-          published={customEffects.filter((e) => e.key.startsWith('at://'))}
-          publishedSkipped={publishedSkipped}
-          refreshPublished={refreshPublished}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <CreatorTabs active={onCreateGlsl ? 'glsl' : 'blocks'} />
+          {onCreateGlsl ? (
+            <CreatorPage
+              session={headerSession}
+              published={customEffects.filter((e) => e.key.startsWith('at://'))}
+              publishedSkipped={publishedSkipped}
+              refreshPublished={refreshPublished}
+            />
+          ) : (
+            <BlocksPage
+              session={headerSession}
+              published={customEffects.filter((e) => e.key.startsWith('at://'))}
+              refreshPublished={refreshPublished}
+            />
+          )}
+        </div>
       )}
     </div>
   )
