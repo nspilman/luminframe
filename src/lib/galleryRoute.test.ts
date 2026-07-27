@@ -2,7 +2,6 @@ import {
   tabFromPath,
   pathForTab,
   isCreatePath,
-  isCreateLookPath,
   isGalleryPath,
   editorRemixPath,
   editorApplyRecipePath,
@@ -103,24 +102,6 @@ describe('isCreatePath', () => {
 
   it('does not match a path that merely starts with the word create', () => {
     expect(isCreatePath('/created-things')).toBe(false)
-  })
-
-  it('true for the Compose room (a creator sub-place)', () => {
-    expect(isCreatePath('/create/look')).toBe(true)
-  })
-})
-
-describe('isCreateLookPath', () => {
-  it('true for /create/look', () => {
-    expect(isCreateLookPath('/create/look')).toBe(true)
-  })
-
-  it('true with a trailing slash', () => {
-    expect(isCreateLookPath('/create/look/')).toBe(true)
-  })
-
-  it('false for the GLSL creator root', () => {
-    expect(isCreateLookPath('/create')).toBe(false)
   })
 })
 

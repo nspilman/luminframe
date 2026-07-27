@@ -82,14 +82,6 @@ export function staticPageMeta(pathname: string, url: string): PageMeta {
     }
   }
 
-  if (p === '/create/look') {
-    return {
-      ...base,
-      title: `Compose a look — ${SITE.name}`,
-      description: `Chain effects into a Look, tune it live on a test image — then publish it to your own repo on the AT Protocol.`,
-    }
-  }
-
   if (p === '/create' || p.startsWith('/create/')) {
     return {
       ...base,

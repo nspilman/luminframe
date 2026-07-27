@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
@@ -12,19 +12,11 @@ import { useAtprotoSession } from '@/hooks/useAtprotoSession'
 import { usePublish } from '@/hooks/usePublish'
 import { useRemix } from '@/hooks/useRemix'
 import { useApplyRecipe } from '@/hooks/useApplyRecipe'
-import { useApplyLook } from '@/hooks/useApplyLook'
-import { registryWithForeign, resolveForeignEffects } from '@/lib/shaders/foreignEffects'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
-import { LookEntry, useLookLibrary } from '@/hooks/useLooks'
-import { hydrateRecipe } from '@/lib/shaders/hydrateRecipe'
-import { SaveLookDialog } from '@/components/SaveLookDialog'
-import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
-import { isCreateLookPath, isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { CreatorPage } from '@/components/CreatorPage'
-import { ComposePage } from '@/components/ComposePage'
-import { CreatorTabs } from '@/components/creator/CreatorTabs'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
 
@@ -34,7 +26,6 @@ export function ClientApp(): JSX.Element {
   const onGallery = isGalleryPath(pathname)
   const onImage = isImagePath(pathname)
   const onCreate = isCreatePath(pathname)
-  const onCreateLook = isCreateLookPath(pathname)
   // The editor is the fallback room for any unclaimed path, so every other
   // room must subtract itself here or the editor renders beneath it.
   const onEditor = !onGallery && !onImage && !onCreate
@@ -48,20 +39,6 @@ export function ClientApp(): JSX.Element {
   // signed-in user's custom effects, loaded from their PDS. Signed out, it's
   // the builtins alone, immediately ready.
   const { registry, custom: customEffects, ready: registryReady, publishedSkipped, refreshPublished } = useEffectRegistry(session.did)
-
-  // The user's Looks — composed effect chains, drafts and published. They live
-  // beside the registry, not in it: a Look is data (a chain of effect keys),
-  // hydrated against the registry at apply time.
-  const lookLibrary = useLookLibrary(session.did)
-  const [saveLookOpen, setSaveLookOpen] = useState(false)
-  const publishedLookSlugs = useMemo(
-    () =>
-      lookLibrary.looks
-        .filter((l) => l.key.startsWith('at://'))
-        .map((l) => parseAtUri(l.key)?.rkey)
-        .filter((r): r is string => !!r),
-    [lookLibrary.looks]
-  )
 
   const {
     canvasRef,
@@ -90,43 +67,11 @@ export function ClientApp(): JSX.Element {
     handleImageDrop,
     handleRemixLoad,
     applyRecipe,
-    appendRecipe,
-    stagedLook,
-    stageLook,
-    updateMacroValue,
-    applyStagedLook,
-    clearStagedLook,
     remixParent,
     handleCanvasResize,
     captureSession,
     encodeAnimatedEdit,
   } = useShaderEditor(registry, registryReady)
-
-  // Clicking a Look in the picker: a look with knobs opens its knobs (staged,
-  // tune, then Apply); a look without applies in the same gesture — hydrated
-  // against the registry, appended in one history push (a single undo removes
-  // the whole Look). A step whose effect this client can't resolve is dropped
-  // by hydrateRecipe; say so rather than silently thinning the chain.
-  const onApplyLook = useCallback(
-    async (look: LookEntry) => {
-      // A step may reference another author's effect — resolve those first,
-      // through the same pipeline every effect source takes.
-      await resolveForeignEffects(look.def.steps.map((s) => s.type), registry)
-      const merged = registryWithForeign(registry)
-      if (look.def.macros && look.def.macros.length > 0) {
-        stageLook(look.def.name, look.def)
-        return
-      }
-      const steps = hydrateRecipe(look.def.steps, merged)
-      if (steps.length < look.def.steps.length) {
-        console.warn(
-          `Look "${look.def.name}": ${look.def.steps.length - steps.length} step(s) reference effects this client can't resolve and were skipped.`
-        )
-      }
-      appendRecipe(steps)
-    },
-    [registry, appendRecipe, stageLook]
-  )
 
   // What's recorded on a saved Luminframe record beyond the pixels: the committed
   // effect stack. `effects` is the lightweight name list (display/back-compat);
@@ -151,10 +96,6 @@ export function ClientApp(): JSX.Element {
   // "Apply this recipe" from the gallery is /?recipe=<at-uri>: bring the saved
   // look (its effect stack) onto the current image, wherever it's clicked from.
   useApplyRecipe(applyRecipe, registry, registryReady)
-
-  // A shared Look is /?look=<at-uri of a recipe record>: fetch it, resolve any
-  // foreign effects, and wear it — macro knobs at the author's defaults.
-  useApplyLook(applyRecipe, registry, registryReady)
 
   const deleteImage = useLuminframeDelete(session.agent)
 
@@ -187,12 +128,6 @@ export function ClientApp(): JSX.Element {
           source={source}
           registry={registry}
           customEffects={customEffects}
-          looks={lookLibrary.looks}
-          onApplyLook={onApplyLook}
-          stagedLook={stagedLook}
-          onMacroChange={updateMacroValue}
-          onApplyStagedLook={applyStagedLook}
-          onClearStagedLook={clearStagedLook}
           selectedShader={selectedShader}
           onShaderSelect={selectShader}
           recentShaders={recentShaders}
@@ -204,7 +139,6 @@ export function ClientApp(): JSX.Element {
           onUseRenderAsSecondImage={handleSaveAsSecondImage}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
-          onSaveLook={() => setSaveLookOpen(true)}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -233,35 +167,17 @@ export function ClientApp(): JSX.Element {
         </div>
       </div>
 
-      <SaveLookDialog
-        open={saveLookOpen}
-        onClose={() => setSaveLookOpen(false)}
-        appliedEffects={appliedEffects}
-        registry={registry}
-        session={headerSession}
-        publishedLookSlugs={publishedLookSlugs}
-        refreshLooks={lookLibrary.refresh}
-      />
-
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
-      {/* The creator wing mounts and unmounts (unlike the always-mounted
-          editor): each room owns its own WebGL surface, and leaving disposes
-          it. Two rooms, two addresses — the tabs are navigation. */}
+      {/* The creator mounts and unmounts (unlike the always-mounted editor):
+          it owns its own WebGL surface, and leaving the room disposes it. */}
       {onCreate && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <CreatorTabs active={onCreateLook ? 'look' : 'effect'} />
-          {onCreateLook ? (
-            <ComposePage session={headerSession} registry={registry} library={lookLibrary} />
-          ) : (
-            <CreatorPage
-              session={headerSession}
-              published={customEffects.filter((e) => e.key.startsWith('at://'))}
-              publishedSkipped={publishedSkipped}
-              refreshPublished={refreshPublished}
-            />
-          )}
-        </div>
+        <CreatorPage
+          session={headerSession}
+          published={customEffects.filter((e) => e.key.startsWith('at://'))}
+          publishedSkipped={publishedSkipped}
+          refreshPublished={refreshPublished}
+        />
       )}
     </div>
   )

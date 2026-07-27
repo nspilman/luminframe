@@ -59,12 +59,6 @@ describe('staticPageMeta', () => {
     )
   })
 
-  it('describes the Compose room for /create/look', () => {
-    expect(staticPageMeta('/create/look', 'https://luminframe.com/create/look').title).toBe(
-      'Compose a look — Luminframe'
-    )
-  })
-
   it('describes the editor for the root path', () => {
     expect(staticPageMeta('/', 'https://luminframe.com/').title).toContain('edit photos')
   })

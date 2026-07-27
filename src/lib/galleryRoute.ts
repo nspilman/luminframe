@@ -4,13 +4,11 @@
  *   /                     the editor
  *   /gallery              the gallery, network scope
  *   /gallery/mine         the gallery, the signed-in user's scope
- *   /create               the Effect Creator (GLSL room)
- *   /create/look          the Compose room (Looks)
+ *   /create               the Effect Creator
  *   /image/:did/:rkey     one image's canonical page (its home)
  *   …?image=<at-uri>      an image opened as a quick preview over the gallery
  *   /?remix=<at-uri>      the editor, loading that image as its source
  *   /?recipe=<at-uri>     the editor, wearing a saved image's effect stack
- *   /?look=<at-uri>       the editor, wearing a published Look record
  *
  * The gallery scope is a path segment (a genuine sub-place); the quick-preview
  * image and the remix are query params (transient focuses over a place). An
@@ -44,18 +42,10 @@ export function isGalleryPath(pathname: string): boolean {
 /** The Effect Creator's home: where custom shader effects are authored. */
 export const CREATE_ROOT = '/create'
 
-/** True when a path addresses the creator rooms (GLSL or Compose). */
+/** True when a path addresses the Effect Creator. */
 export function isCreatePath(pathname: string): boolean {
   const p = pathname.replace(/\/$/, '')
   return p === CREATE_ROOT || p.startsWith(CREATE_ROOT + '/')
-}
-
-/** The Compose room: where Looks — composed effect chains — are authored. */
-export const CREATE_LOOK_PATH = '/create/look'
-
-/** True when a path addresses the Compose room specifically. */
-export function isCreateLookPath(pathname: string): boolean {
-  return pathname.replace(/\/$/, '') === CREATE_LOOK_PATH
 }
 
 /** The search-param key under which the open image's AT-URI travels. */
@@ -99,17 +89,6 @@ export const RECIPE_PARAM = 'recipe'
 /** The editor address that applies a given record's recipe to the working image. */
 export function editorApplyRecipePath(uri: string): string {
   return `/?${RECIPE_PARAM}=${encodeURIComponent(uri)}`
-}
-
-/**
- * The search-param key that asks the editor to apply a published Look (a
- * com.luminframe.recipe record) — the shareable "wear this look" address.
- */
-export const LOOK_PARAM = 'look'
-
-/** The editor address that applies a given Look record to the working image. */
-export function editorApplyLookPath(uri: string): string {
-  return `/?${LOOK_PARAM}=${encodeURIComponent(uri)}`
 }
 
 const IMAGE_PAGE_PREFIX = '/image'

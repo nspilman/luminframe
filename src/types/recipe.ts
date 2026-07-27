@@ -9,14 +9,8 @@
  *     from the network is untrusted.
  */
 
-import { StepParamValue } from '@/effects-contract'
-
-/**
- * A recipe param value, once serialized to plain JSON — the same shapes the
- * recipe record grammar accepts as step params, aliased so the two can never
- * drift apart.
- */
-export type RecipeParamValue = StepParamValue
+/** A recipe param value, once serialized to plain JSON. */
+export type RecipeParamValue = number | string | boolean | number[]
 
 /** One effect in a written recipe: its key and its serialized params. */
 export interface RecipeStep {
