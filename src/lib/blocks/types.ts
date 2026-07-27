@@ -72,6 +72,10 @@ export interface EmitCtx {
   arg: (name: string) => string | null
   /** The knob's expression: the param uniform when exposed, a literal when baked. */
   knob: (name: string) => string
+  /** The knob's authored value — for emitters that skip work a baked value can't do. */
+  knobValue: (name: string) => KnobValue
+  /** Whether the knob is a published param (so its value can change after compile). */
+  isExposed: (name: string) => boolean
 }
 
 /** One operation in the catalog. */

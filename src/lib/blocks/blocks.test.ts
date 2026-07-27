@@ -155,6 +155,70 @@ describe('compileBlocks', () => {
     }
   })
 
+  it('pins the glitch program — noise displacing where the photo is read', () => {
+    const glitch: ShaderSourceDoc = {
+      version: 1,
+      ops: [
+        { op: 'noise', knobs: { scale: 3 }, tap: 'n' },
+        { op: 'displace', args: { by: { tap: 'n' } }, knobs: { across: 0.1 } },
+        { op: 'sample', args: { uv: 'current' } },
+        { op: 'posterize', knobs: { levels: 5 } },
+      ],
+    }
+    const parsed = parseShaderSource(glitch)
+    expect(parsed.ok).toBe(true)
+    const { body } = compileBlocks(glitch)
+    expect(body).toMatchInlineSnapshot(`
+"float lfbHash(vec2 co) {
+  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+  vec3 lf_source = texture2D(imageTexture, vUv).rgb;
+  float lf_v0 = lfbHash(floor((vUv) * 3.0));
+  vec2 lf_v1 = vUv + (lf_v0 - 0.5) * vec2(0.1, 0.0);
+  vec3 lf_v2 = texture2D(imageTexture, lf_v1).rgb;
+  vec3 lf_v3 = floor(lf_v2 * 5.0) / 5.0;
+  gl_FragColor = vec4(lf_v3, 1.0);
+}"
+`)
+  })
+
+  it('the duotone program parses and compiles clean', () => {
+    const duotone: ShaderSourceDoc = {
+      version: 1,
+      ops: [
+        { op: 'luminance' },
+        { op: 'threshold', knobs: { softness: 0.3 }, exposed: ['center'] },
+        { op: 'colorize' },
+      ],
+    }
+    const parsed = parseShaderSource(duotone)
+    expect(parsed.ok).toBe(true)
+    const { params } = compileBlocks(duotone)
+    expect(params.map((p) => p.name)).toEqual(['threshold_center'])
+  })
+
+  it('still noise never reads the clock', () => {
+    // drift baked at 0 must not emit `time` — the host reads any time
+    // reference as "this shader animates" and starts the rAF loop.
+    const still: ShaderSourceDoc = { version: 1, ops: [{ op: 'noise' }, { op: 'colorize' }] }
+    expect(compileBlocks(still).body).not.toMatch(/\btime\b/)
+  })
+
+  it('drifting (or exposed-drift) noise does read the clock', () => {
+    const drifting: ShaderSourceDoc = {
+      version: 1,
+      ops: [{ op: 'noise', knobs: { drift: 0.5 } }, { op: 'colorize' }],
+    }
+    const exposed: ShaderSourceDoc = {
+      version: 1,
+      ops: [{ op: 'noise', exposed: ['drift'] }, { op: 'colorize' }],
+    }
+    expect(compileBlocks(drifting).body).toMatch(/\btime\b/)
+    expect(compileBlocks(exposed).body).toMatch(/\btime\b/)
+  })
+
   it('every catalog op compiles into a body the effect grammar accepts', () => {
     // The keystone: Blocks may never emit what the record pipeline refuses
     // (a `uniform` token, reserved names, a second main). Each op is compiled

@@ -79,16 +79,28 @@ export function compileBlocks(
     for (const helper of spec.helpers ?? []) {
       if (!helpers.includes(helper)) helpers.push(helper)
     }
+    // Memoized per row: an emitter may reference a knob several times
+    // (threshold reads `center` twice) and must get the same expression —
+    // one param, not one per mention.
+    const knobExprs = new Map<string, string>()
     const knobExpr = (name: string): string => {
+      const memo = knobExprs.get(name)
+      if (memo) return memo
       const knobSpec = spec.knobs[name]
       const value = op.knobs?.[name] ?? knobSpec.default
-      if (!op.exposed?.includes(name)) return knobLiteral(value)
-      let paramName = `${spec.key}_${name}`
-      let n = 2
-      while (usedParamNames.has(paramName)) paramName = `${spec.key}_${name}${n++}`
-      usedParamNames.add(paramName)
-      params.push(paramFor(paramName, `${spec.name} ${knobSpec.label}`, knobSpec, value))
-      return paramName
+      let expr: string
+      if (!op.exposed?.includes(name)) {
+        expr = knobLiteral(value)
+      } else {
+        let paramName = `${spec.key}_${name}`
+        let n = 2
+        while (usedParamNames.has(paramName)) paramName = `${spec.key}_${name}${n++}`
+        usedParamNames.add(paramName)
+        params.push(paramFor(paramName, `${spec.name} ${knobSpec.label}`, knobSpec, value))
+        expr = paramName
+      }
+      knobExprs.set(name, expr)
+      return expr
     }
     const expr = spec.emit({
       arg: (name) => {
@@ -96,6 +108,8 @@ export function compileBlocks(
         return ref ? resolveRef(ref, row) : null
       },
       knob: knobExpr,
+      knobValue: (name) => op.knobs?.[name] ?? spec.knobs[name].default,
+      isExposed: (name) => op.exposed?.includes(name) ?? false,
     })
     if (op.tap) tapRows.set(op.tap, row)
     return `  ${spec.out} lf_v${row} = ${expr};`
