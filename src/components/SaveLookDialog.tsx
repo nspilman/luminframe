@@ -12,6 +12,7 @@ import { putRecipeRecord } from '@/infrastructure/atproto/recipePublish'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { saveLookDraft } from '@/lib/lookDrafts'
 import { isValidSlug, slugify } from '@/lib/slugify'
+import { editorApplyLookPath } from '@/lib/galleryRoute'
 import { RecipeDefinition, buildRecipeRecord, parseRecipeRecord } from '@/effects-contract'
 
 type SaveLookDialogProps = {
@@ -207,9 +208,17 @@ export function SaveLookDialog({
               </p>
             )}
             {publishState.phase === 'published' && (
-              <p className="break-all text-xs text-emerald-400/80">
-                Published: <code>{publishState.uri}</code>
-              </p>
+              <div className="space-y-1">
+                <p className="break-all text-xs text-emerald-400/80">
+                  Published: <code>{publishState.uri}</code>
+                </p>
+                <a
+                  href={editorApplyLookPath(publishState.uri)}
+                  className="block text-xs text-violet-300 hover:text-violet-200"
+                >
+                  Wear it in the editor — this link is shareable.
+                </a>
+              </div>
             )}
             {publishState.phase === 'error' && (
               <p className="break-all text-xs text-red-400">✗ {publishState.message}</p>

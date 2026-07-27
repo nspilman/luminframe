@@ -14,6 +14,7 @@ import { AtprotoSession } from '@/hooks/useAtprotoSession'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { putRecipeRecord } from '@/infrastructure/atproto/recipePublish'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
+import { editorApplyLookPath } from '@/lib/galleryRoute'
 import {
   EFFECT_SLUG_PATTERN,
   RecipeStepDef,
@@ -439,9 +440,17 @@ export function ComposePage({ session, registry, library }: ComposePageProps) {
                       : 'Publish to your repo'}
                 </Button>
                 {publishState.phase === 'published' && (
-                  <p className="break-all text-xs text-emerald-400/80">
-                    Published: {publishState.uri}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="break-all text-xs text-emerald-400/80">
+                      Published: {publishState.uri}
+                    </p>
+                    <a
+                      href={editorApplyLookPath(publishState.uri)}
+                      className="block text-xs text-violet-300 hover:text-violet-200"
+                    >
+                      Wear it in the editor — this link is shareable.
+                    </a>
+                  </div>
                 )}
                 {publishState.phase === 'error' && (
                   <p className="break-all text-xs text-red-400">{publishState.message}</p>

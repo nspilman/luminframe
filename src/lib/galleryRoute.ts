@@ -4,9 +4,13 @@
  *   /                     the editor
  *   /gallery              the gallery, network scope
  *   /gallery/mine         the gallery, the signed-in user's scope
+ *   /create               the Effect Creator (GLSL room)
+ *   /create/look          the Compose room (Looks)
  *   /image/:did/:rkey     one image's canonical page (its home)
  *   …?image=<at-uri>      an image opened as a quick preview over the gallery
  *   /?remix=<at-uri>      the editor, loading that image as its source
+ *   /?recipe=<at-uri>     the editor, wearing a saved image's effect stack
+ *   /?look=<at-uri>       the editor, wearing a published Look record
  *
  * The gallery scope is a path segment (a genuine sub-place); the quick-preview
  * image and the remix are query params (transient focuses over a place). An
