@@ -139,8 +139,9 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
     persistedSlugRef.current = null
     setCurrent(draft)
     setTuning({})
+    resetPublish()
     persist(draft)
-  }, [persist])
+  }, [persist, resetPublish])
 
   const removeDraft = useCallback(
     (slug: string) => {
@@ -174,14 +175,14 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
 
   const compileErrors = useMemo(
     () =>
-      validation.compile?.status === 'failed' && validation.effect === null && current
+      validation.compile?.status === 'failed' && current
         ? bodyLinesFromCompileLog(
             validation.compile.log,
             // K = declared params + imageTexture + resolution + opacity
             current.params.length + 3
           )
         : [],
-    [validation.compile, validation.effect, current]
+    [validation.compile, current]
   )
 
   // Tuning writes back into the authored defaults only by explicit request.

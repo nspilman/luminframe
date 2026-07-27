@@ -38,8 +38,8 @@ export function GlslEditor({ body, onChange, grammarErrors, compileErrors, pendi
         className={`space-y-1 text-xs transition-opacity ${pending ? 'opacity-50' : ''}`}
       >
         {clean && <p className="text-emerald-400/80">Compiles clean.</p>}
-        {grammarErrors.map((error) => (
-          <p key={error} className="text-red-400">
+        {grammarErrors.map((error, i) => (
+          <p key={i} className="text-red-400">
             ✗ {error}
           </p>
         ))}
