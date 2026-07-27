@@ -125,14 +125,27 @@ export function BlocksPage({ session, published, refreshPublished }: BlocksPageP
   }, [persist])
 
   // The program, parsed from the draft it lives in. A doc the grammar refuses
-  // (say, a removed row orphaning a tap) keeps its named errors on screen
-  // while body/params — and so the preview — hold the last good compile.
-  const parsed = useMemo(
-    () => (current?.source ? parseShaderSource(JSON.parse(current.source)) : null),
-    [current?.source]
-  )
-  const doc = parsed?.ok ? parsed.doc : null
+  // (say, a chain that ends on a mask mid-build) keeps its named errors on
+  // screen while body/params — and so the preview — hold the last good
+  // compile. The PANEL renders anyway whenever the rows are drawable (an ops
+  // list of known blocks): the author fixes a broken program by editing it,
+  // so it must never vanish behind its own error.
+  const stored = useMemo(() => {
+    if (!current?.source) return null
+    try {
+      return JSON.parse(current.source) as ShaderSourceDoc
+    } catch {
+      // Corrupted storage: the room stays up; parse reports nothing to fix
+      // here, and the draft still holds its last compiled body.
+      return null
+    }
+  }, [current?.source])
+  const parsed = useMemo(() => (stored ? parseShaderSource(stored) : null), [stored])
   const blockErrors = parsed && !parsed.ok ? parsed.errors : []
+  const doc =
+    stored && Array.isArray(stored.ops) && stored.ops.every((o) => o && o.op in OP_CATALOG)
+      ? stored
+      : null
 
   const commitDoc = useCallback(
     (nextDoc: ShaderSourceDoc) => {
@@ -184,12 +197,14 @@ export function BlocksPage({ session, published, refreshPublished }: BlocksPageP
   const publishDef = useMemo(() => (current ? defFromDraft(current) : null), [current])
   const previewDef = useMemo<EffectDefinition | null>(() => {
     if (!current) return null
-    if (doc && soloRow !== null && soloRow < doc.ops.length) {
+    // Solo only compiles a prefix of a VALID program — a broken chain keeps
+    // showing its last good whole.
+    if (parsed?.ok && doc && soloRow !== null && soloRow < doc.ops.length) {
       const compiled = compileBlocks(soloDocFor(doc, soloRow))
       return { name: 'solo', env: ENV_VERSION, params: compiled.params, body: compiled.body }
     }
     return publishDef
-  }, [current, doc, soloRow, publishDef])
+  }, [current, parsed, doc, soloRow, publishDef])
 
   const validation = useDraftValidation(previewDef)
   const preview = useEffectPreview()
