@@ -97,6 +97,17 @@ export function editorApplyRecipePath(uri: string): string {
   return `/?${RECIPE_PARAM}=${encodeURIComponent(uri)}`
 }
 
+/**
+ * The search-param key that asks the editor to apply a published Look (a
+ * com.luminframe.recipe record) — the shareable "wear this look" address.
+ */
+export const LOOK_PARAM = 'look'
+
+/** The editor address that applies a given Look record to the working image. */
+export function editorApplyLookPath(uri: string): string {
+  return `/?${LOOK_PARAM}=${encodeURIComponent(uri)}`
+}
+
 const IMAGE_PAGE_PREFIX = '/image'
 
 /** The canonical page for one image, keyed by its author DID and record key. */

@@ -5,15 +5,19 @@ import { EffectRegistry } from '@/types/shader'
 import { useCustomEffects, CustomEffectEntry } from './useCustomEffects'
 import { useDraftEffects } from './useDraftEffects'
 import { useLocalEffects } from './useLocalEffects'
+import { useForeignEffects } from './useForeignEffects'
 
 /**
  * The one place the effect registry is assembled: builtins, the signed-in
  * user's published custom effects, the Effect Creator's saved drafts
- * (draft:// keys, any build), and — in dev — the effects/ authoring
- * directory (local:// keys). Everything that resolves a key — the editor
- * hook, the sidebar, recipe hydration — receives this registry, and the same
- * custom effects are mirrored into the ApplicationContext's shader
- * repository so the render path resolves the identical set.
+ * (draft:// keys, any build), other authors' effects resolved on demand
+ * (foreign at:// keys, from applied Looks and shared recipes), and — in
+ * dev — the effects/ authoring directory (local:// keys). Everything that
+ * resolves a key — the editor hook, the sidebar, recipe hydration — receives
+ * this registry, and the same custom effects are mirrored into the
+ * ApplicationContext's shader repository so the render path resolves the
+ * identical set. Foreign effects join the registry but not `custom` — the
+ * picker's Yours section stays the user's own.
  *
  * Works-in-progress lead the custom list: they are what's being worked on.
  * The three schemes (local://, draft://, at://) can't collide, so a
@@ -45,10 +49,11 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const drafts = useDraftEffects()
 
   const custom = useMemo(() => [...local, ...drafts, ...published], [local, drafts, published])
+  const foreign = useForeignEffects()
 
   const effectsByKey = useMemo(
-    () => Object.fromEntries(custom.map((e) => [e.key, e.effect])),
-    [custom]
+    () => Object.fromEntries([...foreign, ...custom].map((e) => [e.key, e.effect])),
+    [custom, foreign]
   )
 
   useEffect(() => {
