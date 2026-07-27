@@ -19,8 +19,10 @@ import { LookEntry, useLookLibrary } from '@/hooks/useLooks'
 import { hydrateRecipe } from '@/lib/shaders/hydrateRecipe'
 import { SaveLookDialog } from '@/components/SaveLookDialog'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
-import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { isCreateLookPath, isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { CreatorPage } from '@/components/CreatorPage'
+import { ComposePage } from '@/components/ComposePage'
+import { CreatorTabs } from '@/components/creator/CreatorTabs'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
 
@@ -30,6 +32,7 @@ export function ClientApp(): JSX.Element {
   const onGallery = isGalleryPath(pathname)
   const onImage = isImagePath(pathname)
   const onCreate = isCreatePath(pathname)
+  const onCreateLook = isCreateLookPath(pathname)
   // The editor is the fallback room for any unclaimed path, so every other
   // room must subtract itself here or the editor renders beneath it.
   const onEditor = !onGallery && !onImage && !onCreate
@@ -218,15 +221,23 @@ export function ClientApp(): JSX.Element {
 
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
-      {/* The creator mounts and unmounts (unlike the always-mounted editor):
-          it owns its own WebGL surface, and leaving the room disposes it. */}
+      {/* The creator wing mounts and unmounts (unlike the always-mounted
+          editor): each room owns its own WebGL surface, and leaving disposes
+          it. Two rooms, two addresses — the tabs are navigation. */}
       {onCreate && (
-        <CreatorPage
-          session={headerSession}
-          published={customEffects.filter((e) => e.key.startsWith('at://'))}
-          publishedSkipped={publishedSkipped}
-          refreshPublished={refreshPublished}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <CreatorTabs active={onCreateLook ? 'look' : 'effect'} />
+          {onCreateLook ? (
+            <ComposePage session={headerSession} registry={registry} library={lookLibrary} />
+          ) : (
+            <CreatorPage
+              session={headerSession}
+              published={customEffects.filter((e) => e.key.startsWith('at://'))}
+              publishedSkipped={publishedSkipped}
+              refreshPublished={refreshPublished}
+            />
+          )}
+        </div>
       )}
     </div>
   )

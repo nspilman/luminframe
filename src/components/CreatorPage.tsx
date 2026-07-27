@@ -6,7 +6,7 @@ import { DraftListPanel } from '@/components/creator/DraftListPanel'
 import { EffectMetaForm } from '@/components/creator/EffectMetaForm'
 import { ParamBuilder } from '@/components/creator/ParamBuilder'
 import { GlslEditor } from '@/components/creator/GlslEditor'
-import { MyEffectsPanel } from '@/components/creator/MyEffectsPanel'
+import { PublishedListPanel } from '@/components/creator/PublishedListPanel'
 import { useDraftValidation } from '@/hooks/useDraftValidation'
 import { useEffectPreview } from '@/hooks/useEffectPreview'
 import { useRecordPublish } from '@/hooks/useRecordPublish'
@@ -229,9 +229,10 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
   // rkey (so publishing the edit updates in place), delete retracts it.
   const deleteRecord = useLuminframeDelete(agent)
   const editPublished = useCallback(
-    (entry: CustomEffectEntry) => {
-      const rkey = parseAtUri(entry.key)?.rkey
-      if (!rkey) return
+    (key: string) => {
+      const entry = published.find((e) => e.key === key)
+      const rkey = entry && parseAtUri(entry.key)?.rkey
+      if (!entry || !rkey) return
       if (pendingSaveRef.current) {
         persist(pendingSaveRef.current)
         pendingSaveRef.current = null
@@ -252,7 +253,7 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
       setTuning({})
       resetPublish()
     },
-    [persist, resetPublish]
+    [published, persist, resetPublish]
   )
   const deletePublished = useCallback(
     async (uri: string) => {
@@ -276,8 +277,8 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
           onNew={newDraft}
           onDelete={removeDraft}
         />
-        <MyEffectsPanel
-          published={published}
+        <PublishedListPanel
+          published={published.map((e) => ({ key: e.key, name: e.effect.name }))}
           skipped={publishedSkipped}
           onEdit={editPublished}
           onDelete={deletePublished}

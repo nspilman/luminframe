@@ -1,25 +1,25 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 
-type MyEffectsPanelProps = {
-  /** The signed-in user's published effects (at:// entries). */
-  published: readonly CustomEffectEntry[]
+type PublishedListPanelProps = {
+  /** The signed-in user's published records (at:// keys) with display names. */
+  published: readonly { key: string; name: string }[]
   /** Published records that failed the pipeline, with their reasons. */
   skipped: readonly { uri: string; reasons: string[] }[]
-  /** Seed a draft from a published effect (slug = its rkey) and open it. */
-  onEdit: (entry: CustomEffectEntry) => void
+  /** Seed a draft from a published record (slug = its rkey) and open it. */
+  onEdit: (key: string) => void
   /** Delete the record; the caller refreshes the list afterwards. */
   onDelete: (uri: string) => Promise<void>
 }
 
 /**
- * What the user has published, including the records the pipeline refused —
- * a broken record is exactly what its author needs to see, with the named
- * reasons, not a silent absence from the picker.
+ * What the user has published — effects in one room, Looks in the other —
+ * including the records the pipeline refused: a broken record is exactly what
+ * its author needs to see, with the named reasons, not a silent absence from
+ * the picker.
  */
-export function MyEffectsPanel({ published, skipped, onEdit, onDelete }: MyEffectsPanelProps) {
+export function PublishedListPanel({ published, skipped, onEdit, onDelete }: PublishedListPanelProps) {
   const [confirming, setConfirming] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -62,20 +62,20 @@ export function MyEffectsPanel({ published, skipped, onEdit, onDelete }: MyEffec
         {published.map((entry) => (
           <li key={entry.key} className="group flex items-center gap-1">
             <span className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm text-zinc-300">
-              {entry.effect.name}
+              {entry.name}
               <span className="ml-1.5 font-mono text-[10px] text-zinc-600">
                 {parseAtUri(entry.key)?.rkey}
               </span>
             </span>
             <button
               type="button"
-              onClick={() => onEdit(entry)}
-              aria-label={`Edit ${entry.effect.name}`}
+              onClick={() => onEdit(entry.key)}
+              aria-label={`Edit ${entry.name}`}
               className="shrink-0 rounded p-1.5 text-zinc-600 hover:text-zinc-200"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
-            {deleteButton(entry.key, entry.effect.name)}
+            {deleteButton(entry.key, entry.name)}
           </li>
         ))}
         {skipped.map((skip) => (

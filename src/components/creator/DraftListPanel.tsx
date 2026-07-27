@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { StoredDraft } from '@/lib/effectDrafts'
 
 type DraftListPanelProps = {
-  drafts: readonly StoredDraft[]
+  /** Anything slug-keyed with a display name — GLSL drafts and look drafts alike. */
+  drafts: readonly { slug: string; name: string }[]
   selectedSlug: string | null
   onSelect: (slug: string) => void
   onNew: () => void

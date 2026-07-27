@@ -40,10 +40,18 @@ export function isGalleryPath(pathname: string): boolean {
 /** The Effect Creator's home: where custom shader effects are authored. */
 export const CREATE_ROOT = '/create'
 
-/** True when a path addresses the Effect Creator. */
+/** True when a path addresses the creator rooms (GLSL or Compose). */
 export function isCreatePath(pathname: string): boolean {
   const p = pathname.replace(/\/$/, '')
   return p === CREATE_ROOT || p.startsWith(CREATE_ROOT + '/')
+}
+
+/** The Compose room: where Looks — composed effect chains — are authored. */
+export const CREATE_LOOK_PATH = '/create/look'
+
+/** True when a path addresses the Compose room specifically. */
+export function isCreateLookPath(pathname: string): boolean {
+  return pathname.replace(/\/$/, '') === CREATE_LOOK_PATH
 }
 
 /** The search-param key under which the open image's AT-URI travels. */
