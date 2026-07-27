@@ -1,0 +1,60 @@
+{
+  "lexicon": 1,
+  "id": "com.luminframe.recipe",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A Look: a named chain of effect steps with parameters, publishable to the author's repo and applicable to any image in Luminframe. Composition as data — a Look is rendered as its steps, so it can always be reopened and remixed. Steps reference builtin effect keys or com.luminframe.effect records; a Look may not reference another Look.",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": ["name", "steps", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Display name shown in the effect library."
+          },
+          "description": {
+            "type": "string",
+            "maxGraphemes": 300,
+            "maxLength": 3000,
+            "description": "One-line blurb shown under the name."
+          },
+          "steps": {
+            "type": "array",
+            "maxLength": 64,
+            "items": { "type": "ref", "ref": "#recipeStep" },
+            "description": "The ordered effect chain, applied first to last."
+          },
+          "macros": {
+            "type": "string",
+            "maxLength": 10000,
+            "description": "The Look's exposed knobs, a JSON-encoded array of macro definitions (normalized 0..1 values bound onto step parameters). A string rather than an array of objects because the atproto data model has no float type — the same encoding as effectStep.params."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "When the record was created."
+          }
+        }
+      }
+    },
+    "recipeStep": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "A builtin effect key or the AT-URI of a com.luminframe.effect record."
+        },
+        "params": {
+          "type": "string",
+          "maxLength": 10000,
+          "description": "JSON-encoded parameter values for this step — same encoding as com.luminframe.image's effectStep.params."
+        }
+      }
+    }
+  }
+}

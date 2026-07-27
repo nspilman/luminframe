@@ -9,7 +9,8 @@ import { GlslEditor } from '@/components/creator/GlslEditor'
 import { MyEffectsPanel } from '@/components/creator/MyEffectsPanel'
 import { useDraftValidation } from '@/hooks/useDraftValidation'
 import { useEffectPreview } from '@/hooks/useEffectPreview'
-import { useEffectPublish } from '@/hooks/useEffectPublish'
+import { useRecordPublish } from '@/hooks/useRecordPublish'
+import { putEffectRecord } from '@/infrastructure/atproto/effectPublish'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { AtprotoSession } from '@/hooks/useAtprotoSession'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
@@ -116,7 +117,7 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
     [published]
   )
   const agent = session.status === 'signed-in' ? session.agent : null
-  const { state: publishState, publish, reset: resetPublish } = useEffectPublish(agent, refreshPublished)
+  const { state: publishState, publish, reset: resetPublish } = useRecordPublish(agent, putEffectRecord, refreshPublished)
 
   const selectDraft = useCallback(
     (slug: string) => {
