@@ -3,10 +3,11 @@ import { Button } from './ui/button'
 import { Github } from 'lucide-react'
 import { BlueskyAuth } from './BlueskyAuth'
 import { AtprotoSession } from '@/hooks/useAtprotoSession'
-import { GALLERY_ROOT } from '@/lib/galleryRoute'
+import { CREATE_ROOT, GALLERY_ROOT } from '@/lib/galleryRoute'
 
 const NAV: { to: string; label: string; end: boolean }[] = [
   { to: '/', label: 'Editor', end: true },
+  { to: CREATE_ROOT, label: 'Create', end: false },
   { to: GALLERY_ROOT, label: 'Gallery', end: false },
 ]
 
@@ -22,7 +23,7 @@ export function HeaderBar({ session }: HeaderBarProps) {
             mark, the two views, sign-in. The wordmark and the GitHub label
             return as the width affords them. */}
         <div className="flex items-center gap-2">
-          <img src="/luminframe.png" alt="Luminframe Logo" className="h-8 w-8" />
+          <img src="/luminframe.png" alt="Luminframe Logo" className="h-8 w-8 shrink-0" />
           <h1 className="hidden bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 bg-clip-text text-2xl font-bold text-transparent sm:block">
             Luminframe
           </h1>
@@ -36,7 +37,7 @@ export function HeaderBar({ session }: HeaderBarProps) {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `rounded px-3 py-1 text-sm transition-colors ${
+                  `rounded px-2 py-1 text-sm transition-colors sm:px-3 ${
                     isActive ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:bg-white/5'
                   }`
                 }
@@ -45,7 +46,9 @@ export function HeaderBar({ session }: HeaderBarProps) {
               </NavLink>
             ))}
           </div>
-          <Button variant="ghost" size="sm" asChild>
+          {/* Three nav pills + sign-in take the full width on a phone; the
+              repo link is the one thing the narrow header can spare. */}
+          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <a href="https://github.com/nspilman/luminframe" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
               <Github className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">GitHub</span>

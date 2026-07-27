@@ -3,21 +3,22 @@ import { shaderLibrary } from '@/lib/shaders'
 import { ApplicationContext } from '@/application/ApplicationContext'
 import { EffectRegistry } from '@/types/shader'
 import { useCustomEffects, CustomEffectEntry } from './useCustomEffects'
+import { useDraftEffects } from './useDraftEffects'
 import { useLocalEffects } from './useLocalEffects'
 
 /**
  * The one place the effect registry is assembled: builtins, the signed-in
- * user's published custom effects, and — in dev — the effects/ authoring
- * directory (local:// keys), so a shader is testable in the editor before it
- * is ever published. Everything that resolves a key — the editor hook, the
- * sidebar, recipe hydration — receives this registry, and the same custom
- * effects are mirrored into the ApplicationContext's shader repository so the
- * render path resolves the identical set.
+ * user's published custom effects, the Effect Creator's saved drafts
+ * (draft:// keys, any build), and — in dev — the effects/ authoring
+ * directory (local:// keys). Everything that resolves a key — the editor
+ * hook, the sidebar, recipe hydration — receives this registry, and the same
+ * custom effects are mirrored into the ApplicationContext's shader
+ * repository so the render path resolves the identical set.
  *
- * Local drafts lead the custom list: they are what's being worked on. Their
- * keys can't collide with published ones (local:// vs at://), so a published
- * effect and its local draft show side by side — visible, not deduped, since
- * the two bodies may genuinely differ mid-edit.
+ * Works-in-progress lead the custom list: they are what's being worked on.
+ * The three schemes (local://, draft://, at://) can't collide, so a
+ * published effect and its in-progress twin show side by side — visible, not
+ * deduped, since the bodies may genuinely differ mid-edit.
  *
  * `ready` is false only while either source is still loading. Signed out with
  * no dev directory, it is immediately true: the registry is just the
@@ -37,8 +38,9 @@ export interface EffectRegistryState {
 export function useEffectRegistry(did: string | null): EffectRegistryState {
   const { status, entries: published } = useCustomEffects(did)
   const { entries: local, ready: localReady } = useLocalEffects()
+  const drafts = useDraftEffects()
 
-  const custom = useMemo(() => [...local, ...published], [local, published])
+  const custom = useMemo(() => [...local, ...drafts, ...published], [local, drafts, published])
 
   const effectsByKey = useMemo(
     () => Object.fromEntries(custom.map((e) => [e.key, e.effect])),

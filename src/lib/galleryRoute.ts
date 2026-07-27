@@ -37,6 +37,15 @@ export function isGalleryPath(pathname: string): boolean {
   return p === GALLERY_ROOT || p.startsWith(GALLERY_ROOT + '/')
 }
 
+/** The Effect Creator's home: where custom shader effects are authored. */
+export const CREATE_ROOT = '/create'
+
+/** True when a path addresses the Effect Creator. */
+export function isCreatePath(pathname: string): boolean {
+  const p = pathname.replace(/\/$/, '')
+  return p === CREATE_ROOT || p.startsWith(CREATE_ROOT + '/')
+}
+
 /** The search-param key under which the open image's AT-URI travels. */
 export const IMAGE_PARAM = 'image'
 

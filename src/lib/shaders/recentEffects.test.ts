@@ -42,6 +42,11 @@ describe('loadRecents', () => {
     expect(loadRecents()).toEqual([uri, 'wave'])
   })
 
+  it('does not drop a draft:// key', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(['draft://warmth', 'wave']))
+    expect(loadRecents()).toEqual(['draft://warmth', 'wave'])
+  })
+
   it('returns empty for non-array or corrupt storage', () => {
     localStorage.setItem(STORAGE_KEY, 'not json{')
     expect(loadRecents()).toEqual([])

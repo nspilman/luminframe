@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Check, AlertCircle, Circle, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { Textarea } from './ui/textarea'
 import { Switch } from './ui/switch'
 import { Spinner } from './ui/spinner'
 import { ModalPortal } from './ui/modal-portal'
@@ -190,14 +191,13 @@ export function PublishDialog({
               <label htmlFor="publish-caption" className="mb-1 block text-xs text-zinc-400">
                 Caption (optional)
               </label>
-              <textarea
+              <Textarea
                 id="publish-caption"
                 rows={2}
                 placeholder="Say something about it…"
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 disabled={publishing}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 

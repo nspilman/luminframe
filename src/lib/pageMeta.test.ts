@@ -53,6 +53,12 @@ describe('staticPageMeta', () => {
     )
   })
 
+  it('describes the effect creator for /create', () => {
+    expect(staticPageMeta('/create', 'https://luminframe.com/create').title).toBe(
+      'Create an effect — Luminframe'
+    )
+  })
+
   it('describes the editor for the root path', () => {
     expect(staticPageMeta('/', 'https://luminframe.com/').title).toContain('edit photos')
   })

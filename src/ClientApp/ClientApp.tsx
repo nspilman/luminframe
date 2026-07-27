@@ -15,7 +15,8 @@ import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
-import { isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
+import { CreatorPage } from '@/components/CreatorPage'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
 
@@ -24,7 +25,10 @@ export function ClientApp(): JSX.Element {
   const pathname = useLocation().pathname
   const onGallery = isGalleryPath(pathname)
   const onImage = isImagePath(pathname)
-  const onEditor = !onGallery && !onImage
+  const onCreate = isCreatePath(pathname)
+  // The editor is the fallback room for any unclaimed path, so every other
+  // room must subtract itself here or the editor renders beneath it.
+  const onEditor = !onGallery && !onImage && !onCreate
 
   // Keep share metadata in step with the URL. The shell owns every route except
   // the image page, which refines its own once its record loads — so this defers
@@ -112,7 +116,7 @@ export function ClientApp(): JSX.Element {
     // Apply never leave view. On a phone — and on the document routes (gallery,
     // image page) — the page scrolls normally; the phone editor keeps its
     // subject present by sticking the canvas to the top instead.
-    <div className={`flex min-h-screen flex-col bg-[#030305] ${onEditor ? 'md:h-screen md:overflow-hidden' : ''}`}>
+    <div className={`flex min-h-screen flex-col bg-[#030305] ${onEditor || onCreate ? 'md:h-screen md:overflow-hidden' : ''}`}>
       <HeaderBar session={headerSession} />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
           on every visit) — it's just hidden while another view is shown. Which
@@ -165,6 +169,9 @@ export function ClientApp(): JSX.Element {
 
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
+      {/* The creator mounts and unmounts (unlike the always-mounted editor):
+          it owns its own WebGL surface, and leaving the room disposes it. */}
+      {onCreate && <CreatorPage />}
     </div>
   )
 }

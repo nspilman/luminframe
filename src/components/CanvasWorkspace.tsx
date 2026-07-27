@@ -12,11 +12,8 @@ import { SourcePickerDialog } from './SourcePickerDialog'
 import { Publisher } from '@/hooks/usePublish'
 import { useSurpriseMe } from '@/hooks/useSurpriseMe'
 import { urlToFile } from '@/lib/urlToFile'
+import { SAMPLE_IMAGE_URL } from '@/lib/sampleImage'
 
-// A bundled photo (served same-origin from public/, so the render stays
-// exportable) that a newcomer can load in one click — play before committing
-// their own image. It flows through the same load door as a drop or a remix.
-const SAMPLE_IMAGE_URL = '/pink-car-space-needle4.jpg'
 
 interface CanvasWorkspaceProps {
   dimensions: [number, number]

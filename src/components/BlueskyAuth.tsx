@@ -129,7 +129,10 @@ export function BlueskyAuth({ session }: BlueskyAuthProps) {
         className="bg-violet-600 text-white hover:bg-violet-500"
         onClick={() => setOpen((v) => !v)}
       >
-        Sign in with Bluesky
+        {/* The narrow header spends its width on the mark and three nav
+            pills; "with Bluesky" returns when the width affords it. */}
+        <span className="sm:hidden">Sign in</span>
+        <span className="hidden sm:inline">Sign in with Bluesky</span>
       </Button>
 
       {open && (

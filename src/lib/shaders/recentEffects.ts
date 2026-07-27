@@ -24,16 +24,18 @@ export function pushRecent(recents: EffectKey[], type: EffectKey, max = RECENTS_
 
 /**
  * A key that could name an effect: a builtin, the AT-URI of a custom effect
- * record, or a local:// dev draft. Deliberately syntactic — custom effects
- * load asynchronously, so membership can't be checked here at storage-load
- * time. A key that no longer resolves survives the load and is dropped where
- * keys are resolved (the picker), not destroyed here.
+ * record, a local:// directory effect (dev), or a draft:// creator draft.
+ * Deliberately syntactic — custom effects load asynchronously, so membership
+ * can't be checked here at storage-load time. A key that no longer resolves
+ * survives the load and is dropped where keys are resolved (the picker), not
+ * destroyed here.
  */
 const isPlausibleEffectKey = (value: unknown): value is EffectKey =>
   typeof value === 'string' &&
   ((registeredShaders as readonly string[]).includes(value) ||
     value.startsWith('at://') ||
-    value.startsWith('local://'))
+    value.startsWith('local://') ||
+    value.startsWith('draft://'))
 
 /**
  * Read the persisted recents, dropping anything that couldn't name an effect.

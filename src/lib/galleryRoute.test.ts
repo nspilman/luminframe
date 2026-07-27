@@ -1,6 +1,7 @@
 import {
   tabFromPath,
   pathForTab,
+  isCreatePath,
   isGalleryPath,
   editorRemixPath,
   editorApplyRecipePath,
@@ -83,6 +84,24 @@ describe('pathForTab', () => {
 
   it('network → /gallery (bare, its canonical home)', () => {
     expect(pathForTab('network')).toBe('/gallery')
+  })
+})
+
+describe('isCreatePath', () => {
+  it('true for /create', () => {
+    expect(isCreatePath('/create')).toBe(true)
+  })
+
+  it('true with a trailing slash', () => {
+    expect(isCreatePath('/create/')).toBe(true)
+  })
+
+  it('false for the editor root', () => {
+    expect(isCreatePath('/')).toBe(false)
+  })
+
+  it('does not match a path that merely starts with the word create', () => {
+    expect(isCreatePath('/created-things')).toBe(false)
   })
 })
 

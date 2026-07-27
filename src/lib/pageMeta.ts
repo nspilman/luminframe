@@ -82,6 +82,14 @@ export function staticPageMeta(pathname: string, url: string): PageMeta {
     }
   }
 
+  if (p === '/create' || p.startsWith('/create/')) {
+    return {
+      ...base,
+      title: `Create an effect — ${SITE.name}`,
+      description: `Write a shader effect and see it live on a test image — then publish it to your own repo on the AT Protocol.`,
+    }
+  }
+
   if (p === '/image' || p.startsWith('/image/')) {
     // A neutral image-page fallback; the edge function and the client refine this
     // with the actual record once it resolves.

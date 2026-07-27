@@ -46,3 +46,10 @@ export const MAX_PARAMS_JSON_LENGTH = 10000
 
 /** Param names must be plain GLSL identifiers. */
 export const PARAM_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+
+/**
+ * An effect's slug becomes its record key (rkey), so its shape is grammar:
+ * lowercase letters, digits, hyphens, starting alphanumeric. Enforced here by
+ * the in-app creator and by scripts/publish-effect.ts.
+ */
+export const EFFECT_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/
