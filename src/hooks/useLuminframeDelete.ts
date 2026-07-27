@@ -3,9 +3,10 @@ import { AtprotoSession } from './useAtprotoSession'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 
 /**
- * Returns a function that deletes one of the signed-in user's own
- * com.luminframe.image records by AT-URI — the retract half of ownership (you
- * can already write to your PDS; this lets you take it back).
+ * Returns a function that deletes one of the signed-in user's own records by
+ * AT-URI — the retract half of ownership (you can already write to your PDS;
+ * this lets you take it back). Generic over collections: the gallery deletes
+ * com.luminframe.image records with it, the Effect Creator com.luminframe.effect.
  *
  * The write always targets the agent's own repo (`assertDid`), so it can only
  * ever delete the caller's records; the collection + rkey come from the URI.

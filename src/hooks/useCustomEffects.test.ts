@@ -32,6 +32,17 @@ describe('buildCustomEffectEntries', () => {
     expect(entries[0].description).toBe('Flip every color')
   })
 
+  it('carries the validated definition on the entry', () => {
+    // The creator's edit-into-draft seeds from this — an entry without its
+    // def would leave published effects uneditable.
+    const { entries } = buildCustomEffectEntries(
+      [{ uri: 'at://did:plc:x/com.luminframe.effect/invert', value: validRecord }],
+      () => ({ status: 'ok' })
+    )
+    expect(entries[0].def.body).toContain('gl_FragColor')
+    expect(entries[0].def.params[0].name).toBe('amount')
+  })
+
   it('skips an invalid record with its parse errors', () => {
     const { entries, skipped } = buildCustomEffectEntries(
       [{ uri: 'at://bad', value: { name: 'X' } }],

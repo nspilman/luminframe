@@ -13,14 +13,20 @@
  *  - `repo:com.luminframe.image?action=create&action=delete`
  *                                                   Luminframe: save an image to the user's
  *                                                   PDS, and delete one they own
+ *  - `repo:com.luminframe.effect?action=create&action=update&action=delete`
+ *                                                   Effect Creator: publish a custom shader
+ *                                                   effect (update = republish in place under
+ *                                                   its slug rkey), and delete one they own
  *  - `blob:image/*`                                 upload image blobs (all targets)
  *  - `rpc:app.bsky.actor.getProfile?aud=…`          read the profile, only to show
  *                                                   the signed-in user's handle
  *
- * Each `repo:` grant is create-only on one collection — never update, delete,
- * or any other record type. Shared by the runtime OAuth client and the
- * build-time client-metadata generator so the requested scope and the declared
- * scope can never drift.
+ * Each `repo:` grant names one collection and exactly the actions that
+ * collection's feature needs — effects are the one collection with `update`,
+ * because an effect's rkey is its author-chosen slug and editing republishes
+ * in place. Shared by the runtime OAuth client and the build-time
+ * client-metadata generator so the requested scope and the declared scope can
+ * never drift.
  *
  * Note: adding a collection here widens the requested scope, so sessions
  * authorized before the change won't carry the new grant — a user must
@@ -36,6 +42,7 @@ export const ATPROTO_OAUTH_SCOPE = [
   'repo:social.grain.gallery?action=create',
   'repo:social.grain.gallery.item?action=create',
   'repo:com.luminframe.image?action=create&action=delete',
+  'repo:com.luminframe.effect?action=create&action=update&action=delete',
   'blob:image/*',
   'rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app#bsky_appview',
 ].join(' ')

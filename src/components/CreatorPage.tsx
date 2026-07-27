@@ -6,8 +6,15 @@ import { DraftListPanel } from '@/components/creator/DraftListPanel'
 import { EffectMetaForm } from '@/components/creator/EffectMetaForm'
 import { ParamBuilder } from '@/components/creator/ParamBuilder'
 import { GlslEditor } from '@/components/creator/GlslEditor'
+import { MyEffectsPanel } from '@/components/creator/MyEffectsPanel'
 import { useDraftValidation } from '@/hooks/useDraftValidation'
 import { useEffectPreview } from '@/hooks/useEffectPreview'
+import { useEffectPublish } from '@/hooks/useEffectPublish'
+import { CustomEffectEntry } from '@/hooks/useCustomEffects'
+import { AtprotoSession } from '@/hooks/useAtprotoSession'
+import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
+import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
+import { EFFECT_SLUG_PATTERN } from '@/effects-contract'
 import { defFromDraft, deleteDraft, loadDrafts, saveDraft, StoredDraft } from '@/lib/effectDrafts'
 import { bodyLinesFromCompileLog } from '@/lib/effectDraftValidation'
 import { Color } from '@/domain/value-objects/Color'
@@ -46,7 +53,17 @@ void main() {
  * live: named grammar errors, compiler complaints on the author's own lines,
  * and the effect itself on a test image the moment both judges pass.
  */
-export function CreatorPage() {
+type CreatorPageProps = {
+  session: AtprotoSession
+  /** The user's published effects (at:// entries from the registry). */
+  published: readonly CustomEffectEntry[]
+  /** Published records that failed the pipeline, with their named reasons. */
+  publishedSkipped: readonly { uri: string; reasons: string[] }[]
+  /** Re-fetch published effects after a publish or delete. */
+  refreshPublished: () => void
+}
+
+export function CreatorPage({ session, published, publishedSkipped, refreshPublished }: CreatorPageProps) {
   const [drafts, setDrafts] = useState<StoredDraft[]>(() => loadDrafts())
   const [current, setCurrent] = useState<StoredDraft | null>(drafts[0] ?? null)
   const [tuning, setTuning] = useState<ShaderInputVars>({})
@@ -92,6 +109,15 @@ export function CreatorPage() {
     })
   }, [])
 
+  // Publishing: slug is the rkey, so a slug the user has already published
+  // means this publish updates that record in place.
+  const publishedSlugs = useMemo(
+    () => published.map((e) => parseAtUri(e.key)?.rkey).filter((r): r is string => !!r),
+    [published]
+  )
+  const agent = session.status === 'signed-in' ? session.agent : null
+  const { state: publishState, publish, reset: resetPublish } = useEffectPublish(agent, refreshPublished)
+
   const selectDraft = useCallback(
     (slug: string) => {
       if (pendingSaveRef.current) {
@@ -103,8 +129,9 @@ export function CreatorPage() {
       setCurrent(draft)
       persistedSlugRef.current = draft.slug
       setTuning({})
+      resetPublish()
     },
-    [persist]
+    [persist, resetPublish]
   )
 
   const newDraft = useCallback(() => {
@@ -184,6 +211,55 @@ export function CreatorPage() {
     updateDraft({ params })
   }, [current, tuning, updateDraft])
 
+  const publishDraft = useCallback(() => {
+    if (!current || !def) return
+    // The store must hold what publishes: flush the debounced save first.
+    if (pendingSaveRef.current) {
+      persist(pendingSaveRef.current)
+      pendingSaveRef.current = null
+    }
+    void publish(current.slug, def)
+  }, [current, def, persist, publish])
+  const slugPublishable = current ? EFFECT_SLUG_PATTERN.test(current.slug) : false
+  const isUpdate = current ? publishedSlugs.includes(current.slug) : false
+
+  // Managing what's already published: edit seeds a draft under the record's
+  // rkey (so publishing the edit updates in place), delete retracts it.
+  const deleteRecord = useLuminframeDelete(agent)
+  const editPublished = useCallback(
+    (entry: CustomEffectEntry) => {
+      const rkey = parseAtUri(entry.key)?.rkey
+      if (!rkey) return
+      if (pendingSaveRef.current) {
+        persist(pendingSaveRef.current)
+        pendingSaveRef.current = null
+      }
+      const draft: StoredDraft = {
+        slug: rkey,
+        name: entry.def.name,
+        ...(entry.def.description ? { description: entry.def.description } : {}),
+        params: entry.def.params,
+        body: entry.def.body,
+        ...(entry.def.animatedBy ? { animatedBy: entry.def.animatedBy } : {}),
+        updatedAt: new Date().toISOString(),
+      }
+      saveDraft(draft)
+      setDrafts(loadDrafts())
+      setCurrent(draft)
+      persistedSlugRef.current = rkey
+      setTuning({})
+      resetPublish()
+    },
+    [persist, resetPublish]
+  )
+  const deletePublished = useCallback(
+    async (uri: string) => {
+      await deleteRecord(uri)
+      refreshPublished()
+    },
+    [deleteRecord, refreshPublished]
+  )
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const tuned = Object.keys(tuning).length > 0
 
@@ -198,9 +274,15 @@ export function CreatorPage() {
           onNew={newDraft}
           onDelete={removeDraft}
         />
+        <MyEffectsPanel
+          published={published}
+          skipped={publishedSkipped}
+          onEdit={editPublished}
+          onDelete={deletePublished}
+        />
         {current && (
           <>
-            <EffectMetaForm draft={current} onChange={updateDraft} publishedSlugs={[]} />
+            <EffectMetaForm draft={current} onChange={updateDraft} publishedSlugs={publishedSlugs} />
             <ParamBuilder params={current.params} onChange={(params) => updateDraft({ params })} />
           </>
         )}
@@ -276,6 +358,38 @@ export function CreatorPage() {
               <Button type="button" variant="ghost" size="sm" onClick={applyTuningAsDefaults} className="text-zinc-400">
                 Use current values as defaults
               </Button>
+            )}
+          </div>
+        )}
+        {current && (
+          <div className="space-y-2 border-t border-zinc-800/50 pt-3">
+            {session.status !== 'signed-in' ? (
+              <p className="text-xs text-zinc-500">
+                Sign in (top right) to publish this effect to your repo.
+              </p>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  onClick={publishDraft}
+                  disabled={!validation.effect || !slugPublishable || publishState.phase === 'publishing'}
+                  className="w-full gap-2 bg-violet-600 text-white hover:bg-violet-700"
+                >
+                  {publishState.phase === 'publishing'
+                    ? 'Publishing…'
+                    : isUpdate
+                      ? `Update “${current.slug}”`
+                      : 'Publish to your repo'}
+                </Button>
+                {publishState.phase === 'published' && (
+                  <p className="break-all text-xs text-emerald-400/80">
+                    Published: {publishState.uri}
+                  </p>
+                )}
+                {publishState.phase === 'error' && (
+                  <p className="break-all text-xs text-red-400">{publishState.message}</p>
+                )}
+              </>
             )}
           </div>
         )}

@@ -38,7 +38,7 @@ export function ClientApp(): JSX.Element {
   // The effect registry: everything resolvable right now — builtins plus the
   // signed-in user's custom effects, loaded from their PDS. Signed out, it's
   // the builtins alone, immediately ready.
-  const { registry, custom: customEffects, ready: registryReady } = useEffectRegistry(session.did)
+  const { registry, custom: customEffects, ready: registryReady, publishedSkipped, refreshPublished } = useEffectRegistry(session.did)
 
   const {
     canvasRef,
@@ -171,7 +171,14 @@ export function ClientApp(): JSX.Element {
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}
       {/* The creator mounts and unmounts (unlike the always-mounted editor):
           it owns its own WebGL surface, and leaving the room disposes it. */}
-      {onCreate && <CreatorPage />}
+      {onCreate && (
+        <CreatorPage
+          session={headerSession}
+          published={customEffects.filter((e) => e.key.startsWith('at://'))}
+          publishedSkipped={publishedSkipped}
+          refreshPublished={refreshPublished}
+        />
+      )}
     </div>
   )
 }

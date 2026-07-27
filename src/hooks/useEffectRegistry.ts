@@ -33,10 +33,14 @@ export interface EffectRegistryState {
   registry: EffectRegistry
   custom: CustomEffectEntry[]
   ready: boolean
+  /** Published records that failed the pipeline — the creator's fix list. */
+  publishedSkipped: Array<{ uri: string; reasons: string[] }>
+  /** Re-fetch the published effects (after a publish or delete). */
+  refreshPublished: () => void
 }
 
 export function useEffectRegistry(did: string | null): EffectRegistryState {
-  const { status, entries: published } = useCustomEffects(did)
+  const { status, entries: published, skipped: publishedSkipped, refresh: refreshPublished } = useCustomEffects(did)
   const { entries: local, ready: localReady } = useLocalEffects()
   const drafts = useDraftEffects()
 
@@ -54,7 +58,7 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const registry = useMemo(() => ({ ...shaderLibrary, ...effectsByKey }), [effectsByKey])
 
   return useMemo(
-    () => ({ registry, custom, ready: status !== 'loading' && localReady }),
-    [registry, custom, status, localReady]
+    () => ({ registry, custom, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),
+    [registry, custom, status, localReady, publishedSkipped, refreshPublished]
   )
 }

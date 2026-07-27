@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { parseEffectRecord } from '@/effects-contract'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { EffectDefinition, parseEffectRecord } from '@/effects-contract'
 import { hydrateEffectDefinition } from '@/lib/shaders/customEffects'
 import { checkEffectCompiles, CompileCheck } from '@/lib/shaders/compileCheck'
 import { fetchRepoEffectRecords, RawEffectRecord } from '@/infrastructure/atproto/effectRecords'
@@ -18,11 +18,15 @@ export interface CustomEffectEntry {
   effect: ShaderEffect
   /** The record's blurb, shown on the library card. */
   description?: string
+  /** The validated definition the record carries — what an editor seeds a draft from. */
+  def: EffectDefinition
 }
 
 export interface CustomEffectsState {
   status: 'idle' | 'loading' | 'loaded'
   entries: CustomEffectEntry[]
+  /** Records that failed the pipeline, with their named reasons — the author's fix list. */
+  skipped: Array<{ uri: string; reasons: string[] }>
 }
 
 /**
@@ -55,33 +59,40 @@ export function buildCustomEffectEntries(
       key: record.uri,
       effect,
       ...(parsed.def.description ? { description: parsed.def.description } : {}),
+      def: parsed.def,
     })
   }
   return { entries, skipped }
 }
 
-export function useCustomEffects(did: string | null): CustomEffectsState {
-  const [state, setState] = useState<CustomEffectsState>({ status: 'idle', entries: [] })
+const EMPTY: CustomEffectsState = { status: 'idle', entries: [], skipped: [] }
+
+export function useCustomEffects(did: string | null): CustomEffectsState & { refresh: () => void } {
+  const [state, setState] = useState<CustomEffectsState>(EMPTY)
+  // Bumping re-runs the fetch with the same did — how a publish or delete
+  // makes the published list catch up without a reload.
+  const [generation, setGeneration] = useState(0)
+  const refresh = useCallback(() => setGeneration((g) => g + 1), [])
 
   useEffect(() => {
     if (!did) {
-      setState({ status: 'idle', entries: [] })
+      setState(EMPTY)
       return
     }
     let active = true
-    setState({ status: 'loading', entries: [] })
+    setState({ status: 'loading', entries: [], skipped: [] })
     fetchRepoEffectRecords(did).then((records) => {
       if (!active) return
       const { entries, skipped } = buildCustomEffectEntries(records)
       for (const skip of skipped) {
         console.warn(`Skipping effect record ${skip.uri}:`, skip.reasons)
       }
-      setState({ status: 'loaded', entries })
+      setState({ status: 'loaded', entries, skipped })
     })
     return () => {
       active = false
     }
-  }, [did])
+  }, [did, generation])
 
-  return state
+  return useMemo(() => ({ ...state, refresh }), [state, refresh])
 }
