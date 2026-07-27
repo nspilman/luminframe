@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { HeaderBar } from '@/components/header-bar'
 import { CanvasWorkspace } from '@/components/CanvasWorkspace'
@@ -15,6 +15,9 @@ import { useApplyRecipe } from '@/hooks/useApplyRecipe'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
+import { useLookLibrary } from '@/hooks/useLooks'
+import { SaveLookDialog } from '@/components/SaveLookDialog'
+import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { CreatorPage } from '@/components/CreatorPage'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -39,6 +42,20 @@ export function ClientApp(): JSX.Element {
   // signed-in user's custom effects, loaded from their PDS. Signed out, it's
   // the builtins alone, immediately ready.
   const { registry, custom: customEffects, ready: registryReady, publishedSkipped, refreshPublished } = useEffectRegistry(session.did)
+
+  // The user's Looks — composed effect chains, drafts and published. They live
+  // beside the registry, not in it: a Look is data (a chain of effect keys),
+  // hydrated against the registry at apply time.
+  const lookLibrary = useLookLibrary(session.did)
+  const [saveLookOpen, setSaveLookOpen] = useState(false)
+  const publishedLookSlugs = useMemo(
+    () =>
+      lookLibrary.looks
+        .filter((l) => l.key.startsWith('at://'))
+        .map((l) => parseAtUri(l.key)?.rkey)
+        .filter((r): r is string => !!r),
+    [lookLibrary.looks]
+  )
 
   const {
     canvasRef,
@@ -139,6 +156,7 @@ export function ClientApp(): JSX.Element {
           onUseRenderAsSecondImage={handleSaveAsSecondImage}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
+          onSaveLook={() => setSaveLookOpen(true)}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -166,6 +184,16 @@ export function ClientApp(): JSX.Element {
           </div>
         </div>
       </div>
+
+      <SaveLookDialog
+        open={saveLookOpen}
+        onClose={() => setSaveLookOpen(false)}
+        appliedEffects={appliedEffects}
+        registry={registry}
+        session={headerSession}
+        publishedLookSlugs={publishedLookSlugs}
+        refreshLooks={lookLibrary.refresh}
+      />
 
       {onGallery && <GalleryPage did={session.did} onDeleteImage={deleteImage} />}
       {onImage && <ImagePage viewerDid={session.did} onDeleteImage={deleteImage} />}

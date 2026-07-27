@@ -3,7 +3,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Wand2 } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
@@ -28,6 +28,8 @@ type EditorSidebarProps = {
   onUseRenderAsSecondImage: () => void
   onRemoveEffect: (index: number) => void
   onMoveEffect: (from: number, to: number) => void
+  /** Open the Save-this-look dialog for the committed stack. */
+  onSaveLook: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -61,6 +63,7 @@ export function EditorSidebar({
   onUseRenderAsSecondImage,
   onRemoveEffect,
   onMoveEffect,
+  onSaveLook,
   onUndo,
   onRedo,
   canUndo,
@@ -128,6 +131,16 @@ export function EditorSidebar({
               </li>
             ))}
           </ol>
+          {/* The stack IS a composition — this is where it gets a name. Lives
+              beside the list it names, not in the global action bar. */}
+          <button
+            type="button"
+            onClick={onSaveLook}
+            className="mt-2 inline-flex items-center gap-1.5 px-2 text-xs text-zinc-400 transition-colors hover:text-violet-300 focus-visible:text-violet-300 focus-visible:outline-none"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Save this look
+          </button>
         </CardContent>
       </Card>
     </div>
