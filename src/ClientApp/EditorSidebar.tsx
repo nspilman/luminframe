@@ -7,6 +7,8 @@ import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Wand2 } from '
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { LookEntry } from '@/hooks/useLooks'
+import { RecipeDefinition } from '@/effects-contract'
+import { macroControlsFor } from '@/lib/shaders/macros'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import { Image } from '@/domain/models/Image'
 
@@ -23,6 +25,11 @@ type EditorSidebarProps = {
   /** The user's Looks, for the picker's one-gesture apply section. */
   looks: readonly LookEntry[]
   onApplyLook: (look: LookEntry) => void
+  /** A Look with macro knobs, mid-tune — its knobs replace the tuning column. */
+  stagedLook: { name: string; def: RecipeDefinition; values: Record<string, number> } | null
+  onMacroChange: (name: string, value: number) => void
+  onApplyStagedLook: () => void
+  onClearStagedLook: () => void
   effect: ShaderEffect | null
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -58,6 +65,10 @@ export function EditorSidebar({
   customEffects,
   looks,
   onApplyLook,
+  stagedLook,
+  onMacroChange,
+  onApplyStagedLook,
+  onClearStagedLook,
   selectedShader,
   onShaderSelect,
   recentShaders,
@@ -213,10 +224,10 @@ export function EditorSidebar({
           />
         </div>
 
-        {/* With no effect selected there is no tuning column, so the workflow
+        {/* With nothing being tuned there is no tuning column, so the workflow
             state rests at the library's foot (capped so it can't squeeze the
             library out of its own column). */}
-        {!effect && (
+        {!effect && !stagedLook && (
           <>
             <div className="space-y-4 border-t border-zinc-800/50 p-4 md:max-h-[45vh] md:overflow-y-auto">
               <p className="px-1 text-sm text-zinc-500">
@@ -228,6 +239,52 @@ export function EditorSidebar({
           </>
         )}
       </div>
+
+      {/* A staged Look: the tuning column holds its macro knobs — the same
+          renderer registry as effect params, via a synthetic controls-only
+          effect — and Apply expands the whole chain into the stack. */}
+      {stagedLook && (
+        <div className={tuningShell}>
+          <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-200">
+              <Wand2 className="h-4 w-4 text-violet-400" />
+              {stagedLook.name}
+            </span>
+            <button
+              type="button"
+              onClick={onClearStagedLook}
+              aria-label="Close look"
+              className="rounded-full bg-white/5 p-1.5 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+            <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <ShaderControls
+                  effect={macroControlsFor(stagedLook.name, stagedLook.def.macros ?? [])}
+                  values={stagedLook.values}
+                  onChange={(key, value) => {
+                    if (typeof value === 'number') onMacroChange(String(key), value)
+                  }}
+                />
+              </CardContent>
+            </Card>
+            {appliedList}
+          </div>
+          <div className="flex items-center gap-2 border-t border-zinc-800/50 p-4">
+            <Button
+              type="button"
+              onClick={onApplyStagedLook}
+              className="flex-1 gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              <Plus className="h-4 w-4" />
+              Apply look
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* effect and selectedShader are one fact under two names — the effect is
           the selected shader's, so the door checks both once and TypeScript

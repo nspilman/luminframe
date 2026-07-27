@@ -72,7 +72,7 @@ describe('RenderEditUseCase', () => {
       const rendering = new RecordingRenderingPort();
       makeUseCase(rendering).execute(
         EditPipeline.empty(),
-        { type: 'colorTint' as ShaderType, params: {} },
+        [{ type: 'colorTint' as ShaderType, params: {} }],
         [4, 2]
       );
 
@@ -86,7 +86,7 @@ describe('RenderEditUseCase', () => {
 
       makeUseCase(rendering).execute(
         pipeline,
-        { type: 'colorTint' as ShaderType, params: { strength: 0.5 } },
+        [{ type: 'colorTint' as ShaderType, params: { strength: 0.5 } }],
         [4, 2]
       );
 
@@ -109,7 +109,7 @@ describe('RenderEditUseCase', () => {
 
       makeUseCase(rendering).execute(
         pipeline,
-        { type: 'pixelate' as ShaderType, params: { size: 4 } },
+        [{ type: 'pixelate' as ShaderType, params: { size: 4 } }],
         [4, 2]
       );
 
@@ -135,8 +135,8 @@ describe('RenderEditUseCase', () => {
         .withSource(source)
         .append('colorTint' as ShaderType, { strength: 1 });
 
-      // No effect selected (the landing state) — draft is null.
-      makeUseCase(rendering).execute(pipeline, null, [4, 2]);
+      // No effect selected (the landing state) — no draft passes.
+      makeUseCase(rendering).execute(pipeline, [], [4, 2]);
 
       expect(rendering.calls).toHaveLength(1);
       expect(rendering.calls[0].passes.map((p) => p.effect.name)).toEqual(['effect:colorTint']);
@@ -148,7 +148,7 @@ describe('RenderEditUseCase', () => {
       const rendering = new RecordingRenderingPort();
       const source = makeSource();
 
-      makeUseCase(rendering).execute(EditPipeline.empty().withSource(source), null, [4, 2]);
+      makeUseCase(rendering).execute(EditPipeline.empty().withSource(source), [], [4, 2]);
 
       expect(rendering.calls).toHaveLength(1);
       expect(rendering.calls[0].passes).toHaveLength(0);

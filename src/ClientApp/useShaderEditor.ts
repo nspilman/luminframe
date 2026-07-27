@@ -7,7 +7,9 @@ import { EffectKey, EffectRegistry, ShaderInputVars, ShaderInputDefinition } fro
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 import { Image } from '@/domain/models/Image'
 import { EditPipeline } from '@/domain/models/EditPipeline'
-import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
+import { HydratedStep, hydrateRecipe } from '@/lib/shaders/hydrateRecipe'
+import { applyMacroValues } from '@/lib/shaders/macros'
+import { RecipeDefinition } from '@/effects-contract'
 import { StrongRef } from '@/types/atproto'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
@@ -103,6 +105,13 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // arbitrary default look imposed on the image. A restored session overrides
   // this with its saved selection.
   const [selectedShader, setSelectedShader] = useState<EffectKey | null>(null)
+  // A Look with macro knobs, mid-tune: its chain renders as draft passes and
+  // its knob values live here until Apply expands them into the stack.
+  const [stagedLook, setStagedLook] = useState<{
+    name: string
+    def: RecipeDefinition
+    values: Record<string, number>
+  } | null>(null)
   const [varValues, setVarValues] = useState<ShaderInputVars>(() => ({}))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
@@ -247,20 +256,26 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     setVarValues(prev => reconcileShaderParams(prev, next.defaultValues, next.inputs))
   }, [selectedShader, registry])
 
-  // Render whenever the committed pipeline, the live draft effect, its
-  // parameters, or the canvas size change. The committed effects fold over the
-  // source; the selected effect renders as the live draft on top.
+  // Render whenever the committed pipeline, the live draft (a selected effect
+  // or a staged Look), its parameters, or the canvas size change. The
+  // committed effects fold over the source; the drafts render on top.
   useEffect(() => {
     if (!isInitialized || !hasImage || !canvasDimensions) {
       return
     }
     const source = varValues.imageTexture as Image
     const committed = pipeline.withSource(source)
-    // No selected effect → no draft; with an empty committed stack the chain is
-    // empty and the renderer shows the original.
-    const draft = selectedShader ? { type: selectedShader, params: varValues } : null
-    renderEdit(committed, draft, resolution)
-  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
+    // Nothing being tuned → no draft passes; with an empty committed stack the
+    // chain is empty and the renderer shows the original.
+    const drafts = stagedLook
+      ? hydrateRecipe(applyMacroValues(stagedLook.def, stagedLook.values, registry), registry).map(
+          s => ({ type: s.type, params: { ...s.params, imageTexture: source } })
+        )
+      : selectedShader
+        ? [{ type: selectedShader, params: varValues }]
+        : []
+    renderEdit(committed, drafts, resolution)
+  }, [isInitialized, selectedShader, stagedLook, registry, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
@@ -298,8 +313,10 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // Selecting from the library toggles: clicking the selected effect again
   // deselects it. Browsing an effect must always be reversible — otherwise a
   // glance at Wave leaves an animated draft stuck on the chain with no way off
-  // short of picking a different effect.
+  // short of picking a different effect. Selecting also ends any staged Look —
+  // one thing is tuned at a time.
   const selectShader = useCallback((shader: EffectKey) => {
+    setStagedLook(null)
     setSelectedShader(prev => (prev === shader ? null : shader))
   }, [])
 
@@ -428,6 +445,37 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     )
   }, [])
 
+  // A Look with macro knobs stages instead of applying: its whole chain
+  // renders live as draft passes over the committed stack while the knobs are
+  // scrubbed, and Apply commits the expanded steps (macro values written
+  // through their bindings) via appendRecipe. Macros exist only here — the
+  // committed stack holds ordinary steps.
+  const stageLook = useCallback((name: string, def: RecipeDefinition) => {
+    setSelectedShader(null)
+    setStagedLook({
+      name,
+      def,
+      values: Object.fromEntries((def.macros ?? []).map(m => [m.name, m.default])),
+    })
+  }, [])
+
+  const updateMacroValue = useCallback((name: string, value: number) => {
+    setStagedLook(prev =>
+      prev ? { ...prev, values: { ...prev.values, [name]: value } } : prev
+    )
+  }, [])
+
+  const clearStagedLook = useCallback(() => setStagedLook(null), [])
+
+  const applyStagedLook = useCallback(() => {
+    setStagedLook(prev => {
+      if (prev) {
+        appendRecipe(hydrateRecipe(applyMacroValues(prev.def, prev.values, registry), registry))
+      }
+      return null
+    })
+  }, [appendRecipe, registry])
+
   return {
     canvasRef,
     selectedShader,
@@ -457,6 +505,11 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     handleRemixLoad,
     applyRecipe,
     appendRecipe,
+    stagedLook,
+    stageLook,
+    updateMacroValue,
+    applyStagedLook,
+    clearStagedLook,
     remixParent,
     handleCanvasResize,
     captureSession,

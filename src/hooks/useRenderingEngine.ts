@@ -48,11 +48,12 @@ export function useRenderingEngine() {
   }, []);
 
   /**
-   * Render an edit: the committed pipeline folded, then the live draft on top.
-   * With an empty committed pipeline this is a single render on the source.
+   * Render an edit: the committed pipeline folded, then the live draft
+   * passes on top (usually one; a staged Look is a chain of them). With an
+   * empty committed pipeline this is a single render on the source.
    */
   const renderEdit = useCallback(
-    (pipeline: EditPipeline, draft: DraftEffect | null, resolution: [number, number]) => {
+    (pipeline: EditPipeline, drafts: readonly DraftEffect[], resolution: [number, number]) => {
       if (!contextRef.current || !isInitialized) {
         console.warn('Rendering engine not initialized yet');
         return;
@@ -60,7 +61,7 @@ export function useRenderingEngine() {
       try {
         contextRef.current
           .getRenderEditUseCase()
-          .execute(pipeline, draft, resolution);
+          .execute(pipeline, drafts, resolution);
       } catch (error) {
         console.error('Failed to render edit:', error);
       }

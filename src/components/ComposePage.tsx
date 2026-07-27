@@ -6,6 +6,7 @@ import { DraftListPanel } from '@/components/creator/DraftListPanel'
 import { PublishedListPanel } from '@/components/creator/PublishedListPanel'
 import { LookMetaForm } from '@/components/creator/LookMetaForm'
 import { StepListPanel, StepOption } from '@/components/creator/StepListPanel'
+import { MacroPanel } from '@/components/creator/MacroPanel'
 import { useEffectPreview } from '@/hooks/useEffectPreview'
 import { useRecordPublish } from '@/hooks/useRecordPublish'
 import { LookLibrary } from '@/hooks/useLooks'
@@ -353,6 +354,13 @@ export function ComposePage({ session, registry, library }: ComposePageProps) {
                 ✗ This step's effect ({selected.type}) doesn't resolve on this device.
               </p>
             )}
+            <MacroPanel
+              macros={current.macros ?? []}
+              steps={current.steps}
+              registry={registry}
+              nameOf={(type) => registry[type]?.name ?? type}
+              onChange={(macros) => updateDraft({ macros })}
+            />
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-center">

@@ -112,10 +112,12 @@ export function useEffectPreview(): EffectPreview {
     repoRef.current.register(DRAFT_PREVIEW_KEY, effect)
     renderEdit.execute(
       EditPipeline.empty().withSource(image),
-      {
-        type: DRAFT_PREVIEW_KEY,
-        params: { ...effect.defaultValues, ...values, imageTexture: image },
-      },
+      [
+        {
+          type: DRAFT_PREVIEW_KEY,
+          params: { ...effect.defaultValues, ...values, imageTexture: image },
+        },
+      ],
       dims.toArray()
     )
   }, [engine, image])
@@ -132,7 +134,7 @@ export function useEffectPreview(): EffectPreview {
       repoRef.current!.register(key, pass.effect)
       return p.append(key, { ...pass.effect.defaultValues, ...pass.values, imageTexture: image })
     }, EditPipeline.empty().withSource(image))
-    renderEdit.execute(pipeline, null, dims.toArray())
+    renderEdit.execute(pipeline, [], dims.toArray())
   }, [engine, image])
 
   return { canvasRef, image, loadSample, loadFile, showEffect, showChain }

@@ -4,8 +4,9 @@ import { EditPipeline } from '@/domain/models/EditPipeline';
 import { EffectKey, ShaderInputVars } from '@/types/shader';
 
 /**
- * The live effect being tuned on top of the committed pipeline. Committing it
- * (Apply) appends it to the pipeline and opens a fresh draft.
+ * A live effect being tuned on top of the committed pipeline. Committing
+ * (Apply) appends to the pipeline and opens a fresh draft. Usually one at a
+ * time — a staged Look is a whole chain of them.
  */
 export interface DraftEffect {
   type: EffectKey;
@@ -22,9 +23,9 @@ export interface DraftEffect {
  * pass's output in an offscreen framebuffer), so there is no canvas readback and
  * no async round-trip between passes.
  *
- * The draft is optional: none is being tuned when no effect is selected (the
- * landing state, before the user picks one). With no draft and no committed
- * effects the chain is empty — the port renders the source unchanged, so the
+ * The drafts list is empty when nothing is being tuned (the landing state,
+ * before the user picks an effect). With no drafts and no committed effects
+ * the chain is empty — the port renders the source unchanged, so the
  * original shows until an effect is chosen.
  */
 export class RenderEditUseCase {
@@ -35,7 +36,7 @@ export class RenderEditUseCase {
 
   execute(
     pipeline: EditPipeline,
-    draft: DraftEffect | null,
+    drafts: readonly DraftEffect[],
     resolution: [number, number]
   ): void {
     if (!pipeline.source) {
@@ -47,7 +48,7 @@ export class RenderEditUseCase {
         effect: this.shaders.getShader(effect.type),
         params: effect.params,
       })),
-      ...(draft ? [{ effect: this.shaders.getShader(draft.type), params: draft.params }] : []),
+      ...drafts.map((draft) => ({ effect: this.shaders.getShader(draft.type), params: draft.params })),
     ];
 
     this.rendering.renderChain(pipeline.source, passes, resolution);

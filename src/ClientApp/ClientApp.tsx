@@ -89,18 +89,28 @@ export function ClientApp(): JSX.Element {
     handleRemixLoad,
     applyRecipe,
     appendRecipe,
+    stagedLook,
+    stageLook,
+    updateMacroValue,
+    applyStagedLook,
+    clearStagedLook,
     remixParent,
     handleCanvasResize,
     captureSession,
     encodeAnimatedEdit,
   } = useShaderEditor(registry, registryReady)
 
-  // Clicking a Look in the picker: hydrate its chain against the registry and
-  // append it to the stack (one history push — a single undo removes the whole
-  // Look). A step whose effect this client can't resolve is dropped by
-  // hydrateRecipe; say so rather than silently thinning the chain.
+  // Clicking a Look in the picker: a look with knobs opens its knobs (staged,
+  // tune, then Apply); a look without applies in the same gesture — hydrated
+  // against the registry, appended in one history push (a single undo removes
+  // the whole Look). A step whose effect this client can't resolve is dropped
+  // by hydrateRecipe; say so rather than silently thinning the chain.
   const onApplyLook = useCallback(
     (look: LookEntry) => {
+      if (look.def.macros && look.def.macros.length > 0) {
+        stageLook(look.def.name, look.def)
+        return
+      }
       const steps = hydrateRecipe(look.def.steps, registry)
       if (steps.length < look.def.steps.length) {
         console.warn(
@@ -109,7 +119,7 @@ export function ClientApp(): JSX.Element {
       }
       appendRecipe(steps)
     },
-    [registry, appendRecipe]
+    [registry, appendRecipe, stageLook]
   )
 
   // What's recorded on a saved Luminframe record beyond the pixels: the committed
@@ -169,6 +179,10 @@ export function ClientApp(): JSX.Element {
           customEffects={customEffects}
           looks={lookLibrary.looks}
           onApplyLook={onApplyLook}
+          stagedLook={stagedLook}
+          onMacroChange={updateMacroValue}
+          onApplyStagedLook={applyStagedLook}
+          onClearStagedLook={clearStagedLook}
           selectedShader={selectedShader}
           onShaderSelect={selectShader}
           recentShaders={recentShaders}

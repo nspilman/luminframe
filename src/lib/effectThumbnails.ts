@@ -68,14 +68,16 @@ export async function renderEffectThumbnails(
   const renderPass = (type: EffectKey) =>
     renderEdit.execute(
       pipeline,
-      {
-        type,
-        params: {
-          ...repository.getShader(type).defaultValues,
-          imageTexture: safeSource,
-          resolution,
+      [
+        {
+          type,
+          params: {
+            ...repository.getShader(type).defaultValues,
+            imageTexture: safeSource,
+            resolution,
+          },
         },
-      },
+      ],
       resolution
     )
 
