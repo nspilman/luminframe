@@ -155,6 +155,17 @@ describe('parseEffectRecord', () => {
     )
   })
 
+  it('carries source through the round trip', () => {
+    const result = parseEffectRecord(wire({ source: '{"version":1,"ops":[]}' }))
+    expect(result).toEqual({ ok: true, def: { ...validDef, source: '{"version":1,"ops":[]}' } })
+  })
+
+  it('source over the cap → source error', () => {
+    expect(errorsOf({ source: 'x'.repeat(20001) })).toContain(
+      'source: must be a string of at most 20000 chars when present'
+    )
+  })
+
   it('collects every violation, not just the first', () => {
     const errors = errorsOf({ name: '', env: 9, body: 'void main() { }' })
     expect(errors).toEqual([
@@ -184,5 +195,6 @@ describe('buildEffectRecord', () => {
     const record = buildEffectRecord({ name: 'Bare', env: 1, params: [], body: validDef.body }, '2026-07-26T00:00:00.000Z')
     expect('description' in record).toBe(false)
     expect('animatedBy' in record).toBe(false)
+    expect('source' in record).toBe(false)
   })
 })

@@ -52,6 +52,13 @@ export interface EffectDefinition {
   body: string
   /** Name of the range param that gates motion (0 ⇒ still); see the env contract. */
   animatedBy?: string
+  /**
+   * The higher-level source this effect was compiled from (the Blocks
+   * editor's term JSON), carried so the shader can be reopened at the level
+   * it was written. The body remains the truth — the grammar never interprets
+   * this beyond its shape.
+   */
+  source?: string
 }
 
 export interface EffectRecordWire {
@@ -63,5 +70,7 @@ export interface EffectRecordWire {
   params: string
   body: string
   animatedBy?: string
+  /** JSON-encoded Blocks term doc — see EffectDefinition.source. */
+  source?: string
   createdAt: string
 }

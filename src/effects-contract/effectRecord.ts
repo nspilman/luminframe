@@ -3,6 +3,7 @@ import {
   MAX_BODY_LENGTH,
   MAX_NAME_LENGTH,
   MAX_PARAMS_JSON_LENGTH,
+  MAX_SOURCE_LENGTH,
   PARAM_NAME_PATTERN,
   RESERVED_TOKENS,
   RESERVED_UNIFORMS,
@@ -161,6 +162,11 @@ export function parseEffectRecord(value: unknown): ParseResult {
     }
   }
 
+  const source = value.source
+  if (source !== undefined && (typeof source !== 'string' || source.length > MAX_SOURCE_LENGTH)) {
+    errors.push(`source: must be a string of at most ${MAX_SOURCE_LENGTH} chars when present`)
+  }
+
   if (errors.length > 0) return { ok: false, errors }
   return {
     ok: true,
@@ -171,6 +177,7 @@ export function parseEffectRecord(value: unknown): ParseResult {
       params,
       body: body as string,
       ...(typeof animatedBy === 'string' ? { animatedBy } : {}),
+      ...(typeof source === 'string' ? { source } : {}),
     },
   }
 }
@@ -184,6 +191,7 @@ export function buildEffectRecord(def: EffectDefinition, createdAt: string): Eff
     params: JSON.stringify(def.params),
     body: def.body,
     ...(def.animatedBy ? { animatedBy: def.animatedBy } : {}),
+    ...(def.source ? { source: def.source } : {}),
     createdAt,
   }
 }
