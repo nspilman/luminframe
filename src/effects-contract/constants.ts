@@ -50,6 +50,26 @@ export const PARAM_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 /**
  * An effect's slug becomes its record key (rkey), so its shape is grammar:
  * lowercase letters, digits, hyphens, starting alphanumeric. Enforced here by
- * the in-app creator and by scripts/publish-effect.ts.
+ * the in-app creator and by scripts/publish-effect.ts. Look slugs follow the
+ * same rule (a slug may repeat across the two collections without conflict).
  */
 export const EFFECT_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/
+
+/*
+ * The recipe record — a "Look": a named chain of effect steps, optionally
+ * with macro knobs. Composition as data: a Look is rendered as N passes and
+ * can always be reopened into its chain, never fused into one shader.
+ */
+
+export const RECIPE_COLLECTION = 'com.luminframe.recipe'
+
+/** Matches the image record's recipe maxLength — one saved edit is one Look. */
+export const MAX_STEPS = 64
+
+export const MAX_MACROS = 8
+
+/** A step key: a builtin effect name or an at:// effect URI (lexicon caps it). */
+export const MAX_STEP_KEY_LENGTH = 128
+
+/** Builtin effect keys are plain identifiers (blur, crossHatch, …). */
+export const STEP_KEY_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/

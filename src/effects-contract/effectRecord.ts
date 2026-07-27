@@ -8,6 +8,7 @@ import {
   RESERVED_UNIFORMS,
 } from './constants'
 import { EffectDefinition, EffectParamDef, EffectRecordWire } from './types'
+import { isFiniteNumber, isRecord } from './predicates'
 
 /**
  * The two directions across the wire boundary. `parseEffectRecord` is the
@@ -21,11 +22,6 @@ import { EffectDefinition, EffectParamDef, EffectRecordWire } from './types'
 export type ParseResult =
   | { ok: true; def: EffectDefinition }
   | { ok: false; errors: string[] }
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v)
-
-const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 const isNumberPair = (v: unknown): v is [number, number] =>
   Array.isArray(v) && v.length === 2 && v.every(isFiniteNumber)
