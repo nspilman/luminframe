@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { EffectKey, EffectRegistry, ShaderEffect, ShaderInputVars } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Minus } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
@@ -66,12 +67,41 @@ export function EditorSidebar({
   canUndo,
   canRedo,
 }: EditorSidebarProps) {
+  // Desktop-only panel chrome: either tool column minimizes to a slim rail,
+  // conceding its width to the canvas — the editor's version of the creator's
+  // focus mode. A phone doesn't need it: the canvas already leads there, and
+  // the tuning sheet has its own close button. Collapse is CSS (md:!hidden),
+  // not unmount, so the picker's search and scroll state survive.
+  const [collapsed, setCollapsed] = useState({ library: false, tuning: false })
+
   // Image-first: the tools have no subject to act on until a source is loaded,
   // so the sidebar doesn't exist yet — the canvas invitation is the whole stage,
   // with no dead tool rack beside it.
   if (!hasImage) {
     return null
   }
+
+  const rail = (label: string, expand: () => void) => (
+    <button
+      type="button"
+      onClick={expand}
+      aria-label={`Expand ${label}`}
+      className="hidden w-9 shrink-0 flex-col items-center border-r border-zinc-800/50 bg-black/20 py-3 text-xs text-zinc-500 backdrop-blur-xl hover:text-zinc-300 md:flex"
+    >
+      <span className="[writing-mode:vertical-rl]">{label}</span>
+    </button>
+  )
+
+  const minimizeButton = (label: string, minimize: () => void) => (
+    <button
+      type="button"
+      onClick={minimize}
+      aria-label={`Minimize ${label}`}
+      className="hidden rounded p-1 text-zinc-600 hover:text-zinc-300 md:block"
+    >
+      <Minus className="h-3.5 w-3.5" />
+    </button>
+  )
 
   // The applied stack and the action row live wherever the work-in-progress
   // is: at the tuning column's foot while an effect is selected, at the
@@ -181,7 +211,11 @@ export function EditorSidebar({
   // look is previewed, so the library must stay browsable mid-tune.
   return (
     <>
-      <div className={libraryShell}>
+      {collapsed.library && rail('Library', () => setCollapsed((c) => ({ ...c, library: false })))}
+      <div className={`relative ${libraryShell} ${collapsed.library ? 'md:!hidden' : ''}`}>
+        <div className="absolute right-2 top-4 z-10">
+          {minimizeButton('Library', () => setCollapsed((c) => ({ ...c, library: true })))}
+        </div>
         <div className="flex min-h-0 flex-col p-4 md:flex-1">
           <EffectPicker
             selectedShader={selectedShader}
@@ -211,8 +245,10 @@ export function EditorSidebar({
       {/* effect and selectedShader are one fact under two names — the effect is
           the selected shader's, so the door checks both once and TypeScript
           knows it, rather than each handler re-guarding an impossible null. */}
+      {effect && selectedShader && collapsed.tuning &&
+        rail('Adjustments', () => setCollapsed((c) => ({ ...c, tuning: false })))}
       {effect && selectedShader && (
-        <div className={tuningShell}>
+        <div className={`${tuningShell} ${collapsed.tuning ? 'md:!hidden' : ''}`}>
           {/* Sheet header, phone only: names what's being tuned and offers the
               way out (deselect) — on desktop the column's presence and the
               library beside it already say both. */}
@@ -230,9 +266,12 @@ export function EditorSidebar({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             <div className="space-y-1">
               {/* The sheet header already names the effect on a phone. */}
-              <h3 className="hidden text-sm font-medium text-zinc-400 md:block">
-                Adjustments — {effect.name}
-              </h3>
+              <div className="hidden items-center justify-between md:flex">
+                <h3 className="text-sm font-medium text-zinc-400">
+                  Adjustments — {effect.name}
+                </h3>
+                {minimizeButton('Adjustments', () => setCollapsed((c) => ({ ...c, tuning: true })))}
+              </div>
               <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
                 <CardContent className="p-4">
                   <ShaderControls effect={effect} values={values} onChange={onChange} />
