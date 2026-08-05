@@ -30,12 +30,16 @@ export interface RenderingPort {
    *
    * @param source - The image the chain starts from
    * @param passes - The effects to fold over the source, in order
-   * @param resolution - The [width, height] uniform fed to each pass
+   * @param sourceSize - The source image's [width, height] in pixels, fed to
+   *   each pass as the `resolution` uniform. Deliberately NOT the size of the
+   *   buffer being drawn into, which follows the canvas in the editor and the
+   *   image in export: sizing grain, dots and cells off the source is what
+   *   makes the live view predict the exported file.
    */
   renderChain(
     source: Image,
     passes: ReadonlyArray<RenderPass>,
-    resolution: [number, number]
+    sourceSize: [number, number]
   ): void;
 
   /**

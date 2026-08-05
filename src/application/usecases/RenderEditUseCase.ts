@@ -37,7 +37,7 @@ export class RenderEditUseCase {
   execute(
     pipeline: EditPipeline,
     drafts: readonly DraftEffect[],
-    resolution: [number, number]
+    sourceSize: [number, number]
   ): void {
     if (!pipeline.source) {
       return;
@@ -51,6 +51,6 @@ export class RenderEditUseCase {
       ...drafts.map((draft) => ({ effect: this.shaders.getShader(draft.type), params: draft.params })),
     ];
 
-    this.rendering.renderChain(pipeline.source, passes, resolution);
+    this.rendering.renderChain(pipeline.source, passes, sourceSize);
   }
 }

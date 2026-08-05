@@ -1,4 +1,4 @@
-import { serializeValue, deserializeValue } from './editorSession'
+import { serializeValue, deserializeValue, deserializeSession } from './editorSession'
 import { Image } from '@/domain/models/Image'
 import { Color } from '@/domain/value-objects/Color'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
@@ -51,5 +51,25 @@ describe('serializeValue / deserializeValue', () => {
 
   it('resolves a dangling image reference to null', () => {
     expect(deserializeValue({ t: 'imageRef', id: 'missing' }, noImages)).toBeNull()
+  })
+})
+
+describe('deserializeSession', () => {
+  it('rejects a snapshot whose source image is missing', async () => {
+    // A dangling *param* image degrades to null, but a dangling source does not:
+    // restoring an edit without its photo would leave the editor looking dormant
+    // with a stack of effects behind it. Failing here is what makes the caller
+    // fall back to a clean start. (The successful path rebuilds images through
+    // window.Image, which jsdom never loads — it's verified in the browser.)
+    await expect(
+      deserializeSession({
+        version: 3,
+        sourceId: 'img-gone',
+        selectedShader: null,
+        draft: {},
+        effects: [],
+        images: [],
+      })
+    ).rejects.toThrow('no source image')
   })
 })

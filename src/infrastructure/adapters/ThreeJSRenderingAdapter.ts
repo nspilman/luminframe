@@ -42,12 +42,18 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   // Allocated lazily (single-pass renders never need them) and resized with the
   // canvas. null until the first multi-pass chain runs.
   private renderTargets: [THREE.WebGLRenderTarget, THREE.WebGLRenderTarget] | null = null;
+  // Two sizes live in this adapter and they are not the same thing.
+  // `currentDimensions` is the buffer being drawn into — it follows the on-screen
+  // canvas, and export temporarily swaps it (see withRenderSize). `sourceSize`
+  // below is the source image's pixel size, which is what passes read as the
+  // `resolution` uniform. Confusing them is what makes an effect look right in
+  // one surface and wrong in another.
   // The last chain rendered, replayed when a streaming texture finishes loading
   // so the frame fills in once its pixels arrive.
   private lastChainParams: {
     source: Image;
     passes: ReadonlyArray<RenderPass>;
-    resolution: [number, number];
+    sourceSize: [number, number];
   } | null = null;
   // The animation clock. When the current chain has a time-dependent effect, a
   // requestAnimationFrame loop re-draws it each frame with an advancing `time`
@@ -75,8 +81,8 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // an unloaded texture is blank, and this fills it in when the pixels land.
     this.textureAdapter.setOnTextureLoad(() => {
       if (this.lastChainParams) {
-        const { source, passes, resolution } = this.lastChainParams;
-        this.renderChain(source, passes, resolution);
+        const { source, passes, sourceSize } = this.lastChainParams;
+        this.renderChain(source, passes, sourceSize);
       }
     });
 
@@ -221,11 +227,11 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   renderChain(
     source: Image,
     passes: ReadonlyArray<RenderPass>,
-    resolution: [number, number]
+    sourceSize: [number, number]
   ): void {
     // Remember the chain so a late-arriving texture (or the animation loop) can
     // replay it. See the texture-load callback wired in the constructor.
-    this.lastChainParams = { source, passes, resolution };
+    this.lastChainParams = { source, passes, sourceSize };
     this.drawChain();
     this.syncAnimation();
   }
@@ -240,7 +246,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     if (!params) {
       return;
     }
-    const { source, resolution } = params;
+    const { source, sourceSize } = params;
 
     if (!this.renderer || !this.scene || !this.camera) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
@@ -285,7 +291,7 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
         passes[i].effect,
         passes[i].params,
         inputTexture,
-        resolution
+        sourceSize
       );
       this.setMeshMaterial(material);
 
@@ -376,13 +382,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     effect: ShaderEffect,
     params: ShaderInputVars,
     inputTexture: THREE.Texture,
-    resolution: [number, number]
+    sourceSize: [number, number]
   ): THREE.ShaderMaterial {
     // imageTexture and resolution are owned by the chain, not the params.
     const { imageTexture: _img, resolution: _res, ...rest } = params;
     const uniforms = this.convertToUniforms(rest);
     uniforms.imageTexture = { value: inputTexture };
-    uniforms.resolution = { value: new THREE.Vector2(resolution[0], resolution[1]) };
+    uniforms.resolution = { value: new THREE.Vector2(sourceSize[0], sourceSize[1]) };
 
     // A feedback effect reads last frame's output; bind it when present.
     if (this.feedbackTexture && this.effectUsesFeedback(effect)) {

@@ -33,10 +33,10 @@ import {
  *
  * The new effect's defaults define the parameter surface. A prior value carries
  * forward when the new effect shares that parameter, or when it is a loaded
- * image — the source image is the subject of the editor and outlives any single
- * effect. Settings unique to the effect being left are intentionally forgotten,
- * so the resulting params mirror the active effect's surface exactly (no stale
- * keys reaching the renderer as phantom uniforms).
+ * image — a second-image input (blend, displacement) is expensive to re-pick and
+ * survives a switch. Settings unique to the effect being left are intentionally
+ * forgotten, so the resulting params mirror the active effect's surface exactly
+ * (no stale keys reaching the renderer as phantom uniforms).
  *
  * A shared name means different things in different effects, though — one
  * effect's `amount` ranges 0–0.6, another's -8–8. So a carried number is clamped
@@ -63,27 +63,6 @@ export function reconcileShaderParams(
   return reconciled
 }
 
-/**
- * The parameters a fresh draft starts with after the current effect is applied:
- * the effect's own defaults, but with the source image carried forward.
- *
- * Carrying the source is load-bearing — `hasImage` is derived from
- * `imageTexture`, so dropping it would send the whole editor back to its
- * dormant, image-less state the instant the user clicks Apply. Unlike
- * reconcileShaderParams (an effect *switch*, where tuned values survive), an
- * Apply deliberately resets the knobs: the tuned values were just committed into
- * the pipeline, so the new draft is a clean slate on top of them.
- */
-export function freshDraftParams(
-  prev: ShaderInputVars,
-  defaults: ShaderInputVars
-): ShaderInputVars {
-  const fresh: ShaderInputVars = { ...defaults }
-  if (prev.imageTexture instanceof Image) {
-    fresh.imageTexture = prev.imageTexture
-  }
-  return fresh
-}
 
 /**
  * Owns the shader-editor state and orchestration: which effect is selected,
@@ -105,6 +84,14 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   const [selectedShader, setSelectedShader] = useState<EffectKey | null>(null)
   const [varValues, setVarValues] = useState<ShaderInputVars>(() => ({}))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
+
+  // The photo being edited — the subject of the whole session, so it gets a
+  // place of its own rather than riding in varValues (the effect's knobs) or in
+  // the pipeline (which lives inside the undo history, where an undo would swap
+  // the user's photo out from under them). The pipeline borrows it at render
+  // time via withSource; that join is the only place the two meet.
+  const [source, setSource] = useState<Image | null>(null)
+  const hasImage = source !== null
 
   // Effects the user has committed to (applied or downloaded), most-recent
   // first, seeded from and mirrored back to localStorage so they persist across
@@ -153,29 +140,23 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // Null when nothing is selected — or when the selection's key no longer
   // resolves (a restored custom effect whose record is gone).
   const effect = selectedShader ? registry[selectedShader] ?? null : null
-  const hasImage =
-    'imageTexture' in varValues && varValues.imageTexture instanceof Image
 
   // Derive aspect ratio from image dimensions (or 1:1 if no image).
-  const aspectRatio = useMemo(() => {
-    if (hasImage) {
-      return (varValues.imageTexture as Image).getDimensions()
-    }
-    return new Dimensions(1, 1)
-  }, [hasImage, varValues.imageTexture])
+  const aspectRatio = useMemo(
+    () => source?.getDimensions() ?? new Dimensions(1, 1),
+    [source]
+  )
 
   const aspectRatioArray = useMemo(() => aspectRatio.toArray(), [aspectRatio])
 
-  // Resolution prefers the image's dimensions, falling back to the window.
-  const resolution: [number, number] = hasImage
-    ? (varValues.imageTexture as Image).getDimensions().toArray()
+  // What passes read as the `resolution` uniform: the source's own pixel size,
+  // so the live view predicts the export. Falls back to the window before a
+  // photo is loaded, when there is nothing else to size against.
+  const sourceSize: [number, number] = source
+    ? source.getDimensions().toArray()
     : windowSize.toArray()
 
-  // The untouched source image, anchor of the edit. Null until one is loaded.
-  // Its identity is stable across param tweaks — only a new load or save-as-
-  // source swaps it — so consumers can key expensive work (thumbnails) on it.
-  const source = hasImage ? (varValues.imageTexture as Image) : null
-  const sourceUrl = source ? source.data.url : null
+  const sourceUrl = source?.data.url ?? null
 
   // Restore a persisted edit once, as soon as the registry has settled. This is
   // what carries the in-progress work across the OAuth sign-in redirect (and any
@@ -195,7 +176,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     if (!saved) return
     let active = true
     deserializeSession(saved)
-      .then(({ selectedShader: shader, draftVars, effects }) => {
+      .then(({ source: restoredSource, selectedShader: shader, draftVars, effects }) => {
         if (!active) return
         const kept = effects.filter((e) => e.type in registry)
         const droppedKeys = effects.filter((e) => !(e.type in registry)).map((e) => e.type)
@@ -204,6 +185,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
         if (droppedKeys.length > 0) {
           console.warn('Restored session referenced effects that no longer resolve; dropped:', droppedKeys)
         }
+        setSource(restoredSource)
         setSelectedShader(keptShader)
         setVarValues(draftVars)
         setHistory(
@@ -223,9 +205,10 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // redirect so the work isn't lost when the page navigates away. No-op without
   // an image — there's nothing worth restoring.
   const captureSession = useCallback(async (): Promise<void> => {
-    if (!hasImage) return
+    if (!source) return
     try {
       const snapshot = await serializeSession({
+        source,
         selectedShader,
         draftVars: varValues,
         effects: pipeline.effects,
@@ -251,16 +234,18 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // parameters, or the canvas size change. The committed effects fold over the
   // source; the selected effect renders as the live draft on top.
   useEffect(() => {
-    if (!isInitialized || !hasImage || !canvasDimensions) {
+    if (!isInitialized || !source || !canvasDimensions) {
       return
     }
-    const source = varValues.imageTexture as Image
+    // Where the source and the pipeline meet: the pipeline is anchored to the
+    // current photo for this render only, so undo can move through the stack
+    // without ever moving the photo.
     const committed = pipeline.withSource(source)
     // No selected effect → no draft passes; with an empty committed stack the
     // chain is empty and the renderer shows the original.
     const drafts = selectedShader ? [{ type: selectedShader, params: varValues }] : []
-    renderEdit(committed, drafts, resolution)
-  }, [isInitialized, selectedShader, varValues, hasImage, renderEdit, resolution, canvasDimensions, pipeline])
+    renderEdit(committed, drafts, sourceSize)
+  }, [isInitialized, selectedShader, varValues, source, renderEdit, sourceSize, canvasDimensions, pipeline])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
@@ -272,9 +257,6 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   const updateVarValue = useCallback(
     (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => {
       setVarValues(prev => ({ ...prev, [key]: value }))
-      // Swapping the source image (e.g. via the sidebar) is not a remix — drop
-      // any lineage so it isn't wrongly attributed to the new source.
-      if (key === 'imageTexture') setRemixParent(null)
     },
     []
   )
@@ -286,7 +268,9 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   const handleApply = useCallback(() => {
     if (!selectedShader || !effect) return
     setHistory(h => pushHistory(h, h.present.append(selectedShader, varValues)))
-    setVarValues(prev => freshDraftParams(prev, effect.defaultValues))
+    // The tuned values were just committed into the pipeline, so the fresh draft
+    // on top of them is a clean slate.
+    setVarValues({ ...effect.defaultValues })
     recordRecent(selectedShader)
     // The commit consumes the draft: the effect now lives in the pipeline, so
     // nothing stays selected. Without this, an applied animated effect kept
@@ -383,10 +367,10 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
         ? pending.reduce((p, s) => p.append(s.type, s.params), EditPipeline.empty())
         : EditPipeline.empty()
       setHistory(initHistory(base))
-      // Set the source directly (not via updateVarValue, whose imageTexture clear
-      // would wipe the provenance we set here for a remix). A plain load passes no
-      // parent, so provenance clears; a remix passes the record it came from.
-      setVarValues(prev => ({ ...prev, imageTexture: image }))
+      setSource(image)
+      // A plain load passes no parent, so provenance clears; a remix passes the
+      // record it came from. Set here because this is the one door a source
+      // enters by, which is what keeps a fresh photo from inheriting a false parent.
       setRemixParent(parent ?? null)
     }, [loadFromFile])
   )
@@ -424,7 +408,9 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     recentShaders,
     effect,
     varValues,
-    resolution,
+    // Named for the uniform here because that is what the sidebar merges it in
+    // as: an effect declaring a `resolution` input reads this live value.
+    resolution: sourceSize,
     updateVarValue,
     aspectRatioArray,
     hasImage,

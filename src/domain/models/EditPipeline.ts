@@ -11,10 +11,16 @@ export interface AppliedEffect {
 }
 
 /**
- * The center the editor organizes around: a source image with an ordered
- * pipeline of committed effects folded over it. "Apply" appends, and undo,
- * reorder, and before/after are all views onto this one structure rather than
- * separate features — which is why the edit is modelled as a pipeline.
+ * The center the editor organizes around: an ordered stack of committed
+ * effects, folded over a source. "Apply" appends, and undo, reorder, and
+ * before/after are all views onto this one structure rather than separate
+ * features — which is why the edit is modelled as a pipeline.
+ *
+ * `source` is borrowed, not owned. The editor keeps the photo in its own state
+ * and anchors a pipeline to it with `withSource` at render time, because the
+ * pipeline lives inside the undo history: were the photo held here, an undo
+ * would swap the user's photo out from under them. So instances the editor
+ * *stores* have a null source, and the one it *renders* carries it.
  *
  * Every operation returns a new EditPipeline; instances are never mutated.
  */

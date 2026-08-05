@@ -1,4 +1,4 @@
-import { reconcileShaderParams, freshDraftParams } from './useShaderEditor';
+import { reconcileShaderParams } from './useShaderEditor';
 import { Image } from '@/domain/models/Image';
 import { Dimensions } from '@/domain/value-objects/Dimensions';
 
@@ -15,12 +15,12 @@ describe('reconcileShaderParams', () => {
     expect(result.radius).toBe(3);
   });
 
-  it('retains the loaded image even when the new defaults omit it', () => {
-    // The source image lives under imageTexture; switching to an effect whose
-    // defaults don't mention it must not drop the user's loaded image.
+  it('retains a loaded image even when the new defaults omit it', () => {
+    // A second-image input (blend, displacement) costs the user a file pick, so
+    // it survives a switch to an effect whose defaults don't mention it.
     const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' });
-    const result = reconcileShaderParams({ imageTexture: image }, { intensity: 0.5 });
-    expect(result.imageTexture).toBe(image);
+    const result = reconcileShaderParams({ imageTextureTwo: image }, { intensity: 0.5 });
+    expect(result.imageTextureTwo).toBe(image);
   });
 
   it('drops a scalar setting that belongs only to the previous effect', () => {
@@ -39,25 +39,5 @@ describe('reconcileShaderParams', () => {
       { amount: { type: 'range', label: 'Amount', min: -1, max: 1, step: 0.01 } }
     );
     expect(result.amount).toBe(1);
-  });
-});
-
-// freshDraftParams builds the draft that opens right after an effect is applied.
-// Unlike reconcileShaderParams (an effect switch, where tuned values survive),
-// Apply resets the knobs to defaults but must keep the loaded source image.
-describe('freshDraftParams', () => {
-  it('carries the source image into the fresh draft', () => {
-    // hasImage is derived from imageTexture; dropping it here would send the
-    // editor back to its dormant, image-less state the instant Apply is clicked.
-    const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' });
-    const result = freshDraftParams({ imageTexture: image, intensity: 0.8 }, { intensity: 0.5 });
-    expect(result.imageTexture).toBe(image);
-  });
-
-  it('resets a tuned knob back to the effect default', () => {
-    // The tuned value was just committed into the pipeline, so the new draft
-    // starts clean — it must not inherit the previous value the way a switch does.
-    const result = freshDraftParams({ intensity: 0.8 }, { intensity: 0.5 });
-    expect(result.intensity).toBe(0.5);
   });
 });

@@ -53,7 +53,7 @@ export function useRenderingEngine() {
    * empty committed pipeline this is a single render on the source.
    */
   const renderEdit = useCallback(
-    (pipeline: EditPipeline, drafts: readonly DraftEffect[], resolution: [number, number]) => {
+    (pipeline: EditPipeline, drafts: readonly DraftEffect[], sourceSize: [number, number]) => {
       if (!contextRef.current || !isInitialized) {
         console.warn('Rendering engine not initialized yet');
         return;
@@ -61,7 +61,7 @@ export function useRenderingEngine() {
       try {
         contextRef.current
           .getRenderEditUseCase()
-          .execute(pipeline, drafts, resolution);
+          .execute(pipeline, drafts, sourceSize);
       } catch (error) {
         console.error('Failed to render edit:', error);
       }

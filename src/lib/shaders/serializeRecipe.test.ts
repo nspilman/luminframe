@@ -25,7 +25,7 @@ describe('serializeParamValue', () => {
     expect(serializeParamValue([0.5, 0.5, 0.5])).toEqual([0.5, 0.5, 0.5])
   })
 
-  it('drops an Image — the source photo is never recipe data', () => {
+  it('drops an Image — pixels are never recipe data', () => {
     const img = Object.create(Image.prototype)
     expect(serializeParamValue(img)).toBeUndefined()
   })
@@ -49,10 +49,10 @@ describe('serializeRecipe', () => {
   })
 
   it('emits a step with no params key when every param was dropped', () => {
-    // An effect whose only param is the source image carries no recipe params —
-    // the step is just its type, not `{ type, params: {} }`.
+    // An effect whose only param is an image carries no recipe params — the
+    // step is just its type, not `{ type, params: {} }`.
     const img = Object.create(Image.prototype)
-    const recipe = serializeRecipe([{ type: 'blend', params: { imageTexture: img } }])
+    const recipe = serializeRecipe([{ type: 'blend', params: { imageTextureTwo: img } }])
 
     expect(recipe).toEqual([{ type: 'blend' }])
   })

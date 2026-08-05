@@ -60,7 +60,7 @@ export type ShaderInputDefinition =
 export interface ShaderEffect {
   name: string;
   declarationVars: { [k: string]: string };
-  defaultValues: { [k: string]: any };
+  defaultValues: ShaderInputVars;
   inputs: { [k: string]: ShaderInputDefinition };
   getBody: () => string;
   /**

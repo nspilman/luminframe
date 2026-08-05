@@ -4,7 +4,8 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Minus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, ChevronDown, ChevronRight } from 'lucide-react'
+import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
@@ -85,26 +86,18 @@ export function EditorSidebar({
     return null
   }
 
+  // The shared motif, skinned for this surface: rails here are flush strips
+  // against the canvas, and both halves are desktop-only.
   const rail = (label: string, expand: () => void) => (
-    <button
-      type="button"
-      onClick={expand}
-      aria-label={`Expand ${label}`}
-      className="hidden w-9 shrink-0 flex-col items-center border-r border-zinc-800/50 bg-black/20 py-3 text-xs text-zinc-500 backdrop-blur-xl hover:text-zinc-300 md:flex"
-    >
-      <span className="[writing-mode:vertical-rl]">{label}</span>
-    </button>
+    <PanelRail
+      label={label}
+      onExpand={expand}
+      className="hidden w-9 shrink-0 flex-col border-r border-zinc-800/50 bg-black/20 py-3 backdrop-blur-xl md:flex"
+    />
   )
 
   const minimizeButton = (label: string, minimize: () => void) => (
-    <button
-      type="button"
-      onClick={minimize}
-      aria-label={`Minimize ${label}`}
-      className="hidden rounded p-1 text-zinc-600 hover:text-zinc-300 md:block"
-    >
-      <Minus className="h-3.5 w-3.5" />
-    </button>
+    <MinimizeButton label={label} onMinimize={minimize} className="hidden md:block" />
   )
 
   // The applied stack and the action row live wherever the work-in-progress

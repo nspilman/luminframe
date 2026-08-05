@@ -7,10 +7,10 @@ export type { RecipeParamValue, RecipeStep } from '@/types/recipe'
 /**
  * Turns the committed effect stack into the plain-JSON `recipe` stored on a
  * com.luminframe.image record. Effect params are domain values — numbers, but
- * also `Color` instances, `Float32Array`s, and even the source `Image` — so they
- * can't go into a record as-is. This flattens each to serializable JSON and,
- * crucially, DROPS images: an `imageTexture` param is the source photo, not
- * recipe data, and must never be embedded in the record.
+ * also `Color` instances, `Float32Array`s, and images — so they can't go into a
+ * record as-is. This flattens each to serializable JSON and DROPS images: a
+ * second-image param (blend, displacement) is pixels, not recipe data, and
+ * embedding it would put a whole photo inside the record.
  *
  * Colors serialize to hex (round-trippable via Color.fromHex on reconstruction,
  * which knows a given param is a color from the effect's input definition).

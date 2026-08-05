@@ -12,16 +12,19 @@ import { EffectKey, ShaderInputVars } from '@/types/shader'
  * die on reload, so we convert them to data URLs; and a `ShaderInputVars` value
  * can be a primitive, a number array, a Float32Array, a Color, or an Image — so
  * each value is tagged on the way out and rebuilt on the way in. Images are
- * de-duplicated by id (the source is referenced by the draft and every applied
- * effect) so localStorage holds one copy, not one per reference.
+ * de-duplicated by id (the source, plus any second-image param) so localStorage
+ * holds one copy, not one per reference.
  */
 
 const STORAGE_KEY = 'luminframe:editor-session'
-// v2: shader keys were normalized (e.g. pixelateEffect → pixelate). A v1
-// snapshot can reference a key that no longer exists in the library, which would
-// fault on restore — so loadEditorSession rejects mismatched versions, quietly
-// discarding any stale in-flight snapshot rather than rehydrating a dead effect.
-const VERSION = 2
+// v2: shader keys were normalized (e.g. pixelateEffect → pixelate).
+// v3: the source image is named by the snapshot (`sourceId`) instead of being
+// found among the draft's params, following the editor, where the photo is its
+// own state rather than a shader knob. A v2 snapshot has no source to name and
+// would restore an image-less editor — so loadEditorSession rejects mismatched
+// versions, quietly discarding a stale in-flight snapshot rather than
+// rehydrating a broken one.
+const VERSION = 3
 
 type SerializedValue =
   | { t: 'str'; v: string }
@@ -48,6 +51,8 @@ interface SerializedEffect {
 
 export interface SerializedSession {
   version: number
+  /** The photo being edited, by id into `images`. */
+  sourceId: string
   /** The selected effect, or null when none is chosen (the pristine landing). */
   selectedShader: EffectKey | null
   draft: SerializedVars
@@ -57,6 +62,8 @@ export interface SerializedSession {
 
 /** The live editor state we snapshot and restore. */
 export interface EditorSessionState {
+  /** The photo. Never null — a snapshot without one has nothing worth restoring. */
+  source: Image
   selectedShader: EffectKey | null
   draftVars: ShaderInputVars
   effects: ReadonlyArray<{ type: EffectKey; params: ShaderInputVars }>
@@ -137,7 +144,7 @@ async function toDataUrl(url: string): Promise<string> {
 // --- session (de)serialization ---------------------------------------------
 
 export async function serializeSession(state: EditorSessionState): Promise<SerializedSession> {
-  const imageMap = new Map<string, Image>()
+  const imageMap = new Map<string, Image>([[state.source.id, state.source]])
   collectImages(state.draftVars, imageMap)
   state.effects.forEach((e) => collectImages(e.params, imageMap))
 
@@ -150,6 +157,7 @@ export async function serializeSession(state: EditorSessionState): Promise<Seria
 
   return {
     version: VERSION,
+    sourceId: state.source.id,
     selectedShader: state.selectedShader,
     draft: serializeVars(state.draftVars),
     effects: state.effects.map((e) => ({ type: e.type, params: serializeVars(e.params) })),
@@ -157,6 +165,11 @@ export async function serializeSession(state: EditorSessionState): Promise<Seria
   }
 }
 
+/**
+ * Throws when the snapshot's source image can't be rebuilt: an edit without its
+ * photo is nothing to restore, and the caller's catch already treats a failed
+ * restore as "start clean".
+ */
 export async function deserializeSession(s: SerializedSession): Promise<EditorSessionState> {
   const imagesById = new Map<string, Image>()
   await Promise.all(
@@ -165,7 +178,11 @@ export async function deserializeSession(s: SerializedSession): Promise<EditorSe
     })
   )
 
+  const source = imagesById.get(s.sourceId)
+  if (!source) throw new Error('Snapshot has no source image')
+
   return {
+    source,
     selectedShader: s.selectedShader,
     draftVars: deserializeVars(s.draft, imagesById),
     effects: s.effects.map((e) => ({ type: e.type, params: deserializeVars(e.params, imagesById) })),

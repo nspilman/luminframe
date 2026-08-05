@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ImagePlus, Maximize2, Minus, Wand2 } from 'lucide-react'
+import { ImagePlus, Maximize2, Wand2 } from 'lucide-react'
+import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { Button } from '@/components/ui/button'
 import { ShaderControls } from '@/ClientApp/shader-controls'
 import { DraftListPanel } from '@/components/creator/DraftListPanel'
@@ -54,18 +55,15 @@ function PanelChrome({
 }) {
   return (
     <>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={`Expand ${title}`}
+      <PanelRail
+        label={title}
+        onExpand={onToggle}
         className={
           collapsed
-            ? `flex items-center justify-center rounded-lg border border-zinc-800/60 px-2 py-1.5 text-xs text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 md:w-9 md:shrink-0 md:flex-col md:py-3 ${railClassName}`
-            : 'hidden'
+            ? `rounded-lg border border-zinc-800/60 px-2 py-1.5 hover:border-zinc-700 md:w-9 md:shrink-0 md:flex-col md:py-3 ${railClassName}`
+            : '!hidden'
         }
-      >
-        <span className="md:[writing-mode:vertical-rl]">{title}</span>
-      </button>
+      />
       <div className={collapsed ? 'hidden' : expandedClassName}>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-600">{title}</span>
@@ -78,14 +76,7 @@ function PanelChrome({
             >
               <Maximize2 className="h-3 w-3" />
             </button>
-            <button
-              type="button"
-              onClick={onToggle}
-              aria-label={`Minimize ${title}`}
-              className="rounded p-1 text-zinc-600 hover:text-zinc-300"
-            >
-              <Minus className="h-3 w-3" />
-            </button>
+            <MinimizeButton label={title} onMinimize={onToggle} />
           </div>
         </div>
         {children}
