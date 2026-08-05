@@ -4,7 +4,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Minus } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, Minus, ChevronDown, ChevronRight } from 'lucide-react'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
@@ -72,7 +72,11 @@ export function EditorSidebar({
   // focus mode. A phone doesn't need it: the canvas already leads there, and
   // the tuning sheet has its own close button. Collapse is CSS (md:!hidden),
   // not unmount, so the picker's search and scroll state survive.
-  const [collapsed, setCollapsed] = useState({ library: false, tuning: false })
+  // `applied` is the odd one out and deliberately so: it's a section inside a
+  // column, not a column itself, so it collapses in place to its own header
+  // (the picker's family idiom) at every width — a rail would be a lie about
+  // what it is, and on a phone a long stack is exactly what needs folding.
+  const [collapsed, setCollapsed] = useState({ library: false, tuning: false, applied: false })
 
   // Image-first: the tools have no subject to act on until a source is loaded,
   // so the sidebar doesn't exist yet — the canvas invitation is the whole stage,
@@ -113,11 +117,24 @@ export function EditorSidebar({
 
   const appliedList = appliedEffects.length > 0 && (
     <div className="space-y-1">
-      <h3 className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => ({ ...c, applied: !c.applied }))}
+        aria-expanded={!collapsed.applied}
+        className="flex w-full items-center gap-2 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+      >
         <Layers className="h-4 w-4" />
         Applied
-      </h3>
-      <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
+        {/* The count carries the folded stack: collapsed, it's all that's left
+            to say how much work is stacked up. */}
+        <span className="tabular-nums text-zinc-600">{appliedEffects.length}</span>
+        {collapsed.applied ? (
+          <ChevronRight className="ml-auto h-3.5 w-3.5" />
+        ) : (
+          <ChevronDown className="ml-auto h-3.5 w-3.5" />
+        )}
+      </button>
+      <Card className={`border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm ${collapsed.applied ? 'hidden' : ''}`}>
         <CardContent className="p-2">
           <ol className="space-y-0.5">
             {appliedEffects.map((applied, index) => (
