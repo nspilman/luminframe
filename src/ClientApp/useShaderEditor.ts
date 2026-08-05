@@ -358,15 +358,17 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   const loadImage = useAsyncStatus(
     useCallback(async (file: File, parent?: StrongRef) => {
       const image = await loadFromFile(file)
-      // A new source is a fresh edit — the prior stack belonged to the old image.
-      // The exception: a recipe applied before any image was loaded is waiting to
-      // land on the first source, so it becomes the fresh stack instead of nothing.
+      // The stack survives the swap. It holds no source of its own — it borrows
+      // one at render time — so it belongs to the session, not to the photo, and
+      // trying the same look on a second photo costs one drop rather than a
+      // rebuild. A recipe applied before any image was loaded has been waiting
+      // for exactly this moment, so it lands here as the stack.
       const pending = pendingRecipeRef.current
       pendingRecipeRef.current = null
-      const base = pending
-        ? pending.reduce((p, s) => p.append(s.type, s.params), EditPipeline.empty())
-        : EditPipeline.empty()
-      setHistory(initHistory(base))
+      if (pending) {
+        const recipe = pending.reduce((p, s) => p.append(s.type, s.params), EditPipeline.empty())
+        setHistory(h => pushHistory(h, recipe))
+      }
       setSource(image)
       // A plain load passes no parent, so provenance clears; a remix passes the
       // record it came from. Set here because this is the one door a source

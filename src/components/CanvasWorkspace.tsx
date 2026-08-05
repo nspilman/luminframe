@@ -3,7 +3,7 @@
 import { forwardRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { RenderCanvas } from './RenderCanvas'
-import { Upload, Download, Eye, EyeOff, Send, Sparkles, Shuffle, Images } from 'lucide-react'
+import { Upload, Download, Eye, EyeOff, Send, Sparkles, Shuffle, Images, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingOverlay, Spinner } from '@/components/ui/spinner'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
@@ -106,7 +106,9 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
         </div>
         {isDragActive && (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl ring-2 ring-inset ring-violet-500 bg-violet-500/10 backdrop-blur-sm pointer-events-none">
-            <p className="text-lg font-medium text-violet-200">Drop to load image</p>
+            <p className="text-lg font-medium text-violet-200">
+              {hasImage ? 'Drop to swap the photo — your effects stay' : 'Drop to load image'}
+            </p>
           </div>
         )}
         {!hasImage ? (
@@ -173,6 +175,19 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
           </div>
         ) : (
           <div className="absolute inset-x-4 top-4 flex flex-wrap justify-end gap-2">
+            {/* Try the stack you just built on a different photo. The canvas has
+                always taken a drop, but nothing said so once it was occupied —
+                this is that same door, made visible. */}
+            <Button
+              onClick={open}
+              variant="secondary"
+              size="icon"
+              aria-label="Swap photo, keeping your effects"
+              title="Swap photo, keeping your effects"
+              className="bg-zinc-900/50 hover:bg-zinc-900/70"
+            >
+              <ImagePlus className="h-4 w-4" />
+            </Button>
             {/* Hold-to-peek at the untouched original: an icon is enough — the
                 action is momentary and the label was the widest thing here. */}
             <Button
