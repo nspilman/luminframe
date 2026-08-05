@@ -15,7 +15,7 @@ import { creatorRemixEffectPath } from '@/lib/galleryRoute'
 import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
-  hasImage: boolean
+  /** The photo being edited, or null before one is loaded — the sidebar's subject. */
   source: Image | null
   selectedShader: EffectKey | null
   onShaderSelect: (shader: EffectKey) => void
@@ -53,7 +53,6 @@ const tuningShell =
   'md:static md:z-auto md:order-none md:max-h-none md:min-h-0 md:w-[260px] md:rounded-none md:border-t-0 md:border-r md:bg-black/20 md:backdrop-blur-xl lg:w-72'
 
 export function EditorSidebar({
-  hasImage,
   source,
   registry,
   customEffects,
@@ -97,8 +96,10 @@ export function EditorSidebar({
 
   // Image-first: the tools have no subject to act on until a source is loaded,
   // so the sidebar doesn't exist yet — the canvas invitation is the whole stage,
-  // with no dead tool rack beside it.
-  if (!hasImage) {
+  // with no dead tool rack beside it. The photo itself is the door's condition,
+  // not a boolean beside it, so "we have an image" and "here it is" can never
+  // disagree.
+  if (!source) {
     return null
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { fetchNetworkEffectRecords } from '@/infrastructure/atproto/effectRecords'
 import { parseAtUri, resolveIdentity } from '@/infrastructure/atproto/luminframeFeed'
 import { buildCustomEffectEntries, CustomEffectEntry } from './useCustomEffects'
@@ -45,23 +45,26 @@ async function handlesFor(entries: readonly CustomEffectEntry[]): Promise<Record
 
 export function useNetworkEffects(): NetworkEffectsState {
   const [state, setState] = useState<Loaded>(IDLE)
+  // The once-only latch. A ref rather than a read of `status` inside a state
+  // updater: the fan-out is one request per author, and an updater React is
+  // free to call more than once is no place to start it from.
+  const startedRef = useRef(false)
 
   const load = useCallback(() => {
-    setState((prev) => {
-      if (prev.status !== 'idle') return prev
-      fetchNetworkEffectRecords()
-        .then(async ({ records, unreadRepos }) => {
-          const { entries } = buildCustomEffectEntries(records)
-          setState({ status: 'loaded', entries, handles: await handlesFor(entries), unreadRepos })
-        })
-        .catch(() => {
-          // The relay or a PDS is unreachable. Land on an empty loaded state —
-          // "nobody to show right now" reads the same to the user as an empty
-          // network, and leaves the section closable rather than stuck loading.
-          setState({ ...IDLE, status: 'loaded' })
-        })
-      return { ...prev, status: 'loading' }
-    })
+    if (startedRef.current) return
+    startedRef.current = true
+    setState((prev) => ({ ...prev, status: 'loading' }))
+    fetchNetworkEffectRecords()
+      .then(async ({ records, unreadRepos }) => {
+        const { entries } = buildCustomEffectEntries(records)
+        setState({ status: 'loaded', entries, handles: await handlesFor(entries), unreadRepos })
+      })
+      .catch(() => {
+        // The relay or a PDS is unreachable. Land on an empty loaded state —
+        // "nobody to show right now" reads the same to the user as an empty
+        // network, and leaves the section closable rather than stuck loading.
+        setState({ ...IDLE, status: 'loaded' })
+      })
   }, [])
 
   return useMemo(() => ({ ...state, load }), [state, load])

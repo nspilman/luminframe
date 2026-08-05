@@ -124,7 +124,6 @@ export function ClientApp(): JSX.Element {
           a real, bookmarkable address. */}
       <div className={onEditor ? 'flex min-h-0 flex-1 flex-col md:flex-row' : 'hidden'}>
         <EditorSidebar
-          hasImage={hasImage}
           source={source}
           registry={registry}
           customEffects={customEffects}

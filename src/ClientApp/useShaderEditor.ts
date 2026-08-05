@@ -217,7 +217,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     } catch (err) {
       console.warn('Could not capture editor session:', err)
     }
-  }, [hasImage, selectedShader, varValues, pipeline.effects])
+  }, [source, selectedShader, varValues, pipeline.effects])
 
   // Reconcile parameters when the selected effect changes. Nothing to reconcile
   // when the selection is cleared to "no effect" — the draft params just go

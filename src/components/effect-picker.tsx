@@ -169,8 +169,8 @@ function NetworkSectionNote({
 function rowFor(
   key: EffectKey,
   customByKey: ReadonlyMap<EffectKey, CustomEffectEntry>,
-  networkKeys: ReadonlySet<EffectKey> = new Set(),
-  handles: Record<string, string> = {}
+  networkKeys: ReadonlySet<EffectKey>,
+  handles: Record<string, string>
 ): EffectRow | null {
   if (key in shaderLibrary) {
     const type = key as ShaderType
@@ -258,7 +258,6 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
   // Your own effects are few and lead the search results; on Enter the top
   // match is the first effect of whatever the current query shows.
   const topMatch = (yoursSection[0] ?? families[0])?.effects[0]
-  const hasResults = families.length > 0 || yoursSection.length > 0
 
   // While browsing (no query), lead with a Recent section so a look the user
   // just used is one click away — recognition over recall for the returning
@@ -399,11 +398,11 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
               ))}
             </div>
           )}
-          {!hasResults ? (
-            <p className="px-1 py-6 text-center text-xs text-zinc-500">
-              No effects match “{query}”
-            </p>
-          ) : (
+          {/* Every section says its own emptiness — the network section in
+              particular, which is drawn even when it has no rows because its
+              value is the invitation to go get them. A single "no results"
+              message over the whole list used to swallow that invitation at
+              exactly the moment it was the only thing that could help. */}
           <div className={`relative ${fillColumn}`}>
           <div
             ref={listRef}
@@ -484,7 +483,6 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/80 to-transparent" />
           )}
           </div>
-          )}
         </CardContent>
       </Card>
     </div>
