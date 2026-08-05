@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type DraftListPanelProps = {
-  /** Anything slug-keyed with a display name — GLSL drafts and look drafts alike. */
+  /** The stored drafts, slug-keyed with a display name. */
   drafts: readonly { slug: string; name: string }[]
   selectedSlug: string | null
   onSelect: (slug: string) => void

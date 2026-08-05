@@ -11,7 +11,7 @@ import { useForeignEffects } from './useForeignEffects'
  * The one place the effect registry is assembled: builtins, the signed-in
  * user's published custom effects, the Effect Creator's saved drafts
  * (draft:// keys, any build), other authors' effects resolved on demand
- * (foreign at:// keys, from applied Looks and shared recipes), and — in
+ * (foreign at:// keys, from shared recipes), and — in
  * dev — the effects/ authoring directory (local:// keys). Everything that
  * resolves a key — the editor hook, the sidebar, recipe hydration — receives
  * this registry, and the same custom effects are mirrored into the

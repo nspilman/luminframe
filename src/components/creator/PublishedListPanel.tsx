@@ -14,8 +14,8 @@ type PublishedListPanelProps = {
 }
 
 /**
- * What the user has published — effects in one room, Looks in the other —
- * including the records the pipeline refused: a broken record is exactly what
+ * The user's published effects, including the records the pipeline
+ * refused: a broken record is exactly what
  * its author needs to see, with the named reasons, not a silent absence from
  * the picker.
  */

@@ -326,11 +326,6 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
-   * Whether a chain animates: some pass advances with `time` or feeds back on the
-   * previous frame (`prevFrame`). Both mean the output changes every frame, so it
-   * drives both the live loop and whether an export must capture motion.
-   */
-  /**
    * Whether the current edit animates — a still export would freeze its motion.
    * The predicate itself lives in lib/shaders/animation, one truth consulted
    * here, by the loop below, and (via the exporters) the download and save.

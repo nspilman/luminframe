@@ -32,20 +32,12 @@ import { useImageLoader } from '@/hooks/useImageLoader'
 
 const DRAFT_PREVIEW_KEY = 'draft-preview'
 
-/** One pass of a previewed chain: the loaded effect and its live values. */
-export interface PreviewPass {
-  effect: ShaderEffect
-  values: ShaderInputVars
-}
-
 export interface EffectPreview {
   canvasRef: (el: HTMLCanvasElement | null) => void
   image: Image | null
   loadSample: () => Promise<void>
   loadFile: (file: File) => Promise<void>
   showEffect: (effect: ShaderEffect, values: ShaderInputVars) => void
-  /** Render an ordered chain of passes — the Compose room's whole subject. */
-  showChain: (passes: readonly PreviewPass[]) => void
 }
 
 export function useEffectPreview(): EffectPreview {
@@ -122,20 +114,5 @@ export function useEffectPreview(): EffectPreview {
     )
   }, [engine, image])
 
-  // Each pass registers under a positional key — register() overwrites, so
-  // re-showing a rearranged chain simply re-binds the positions.
-  const showChain = useCallback((passes: readonly PreviewPass[]) => {
-    const renderEdit = engine()
-    if (!renderEdit || !image || !repoRef.current || !adapterRef.current) return
-    const dims = image.getDimensions()
-    adapterRef.current.updateDimensions(new Dimensions(dims.width, dims.height))
-    const pipeline = passes.reduce((p, pass, i) => {
-      const key = `${DRAFT_PREVIEW_KEY}-${i}`
-      repoRef.current!.register(key, pass.effect)
-      return p.append(key, { ...pass.effect.defaultValues, ...pass.values, imageTexture: image })
-    }, EditPipeline.empty().withSource(image))
-    renderEdit.execute(pipeline, [], dims.toArray())
-  }, [engine, image])
-
-  return { canvasRef, image, loadSample, loadFile, showEffect, showChain }
+  return { canvasRef, image, loadSample, loadFile, showEffect }
 }

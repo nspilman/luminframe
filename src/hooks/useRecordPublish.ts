@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react'
 import { Agent } from '@atproto/api'
 
 /**
- * Publishing state for the creator rooms — one status machine for any
- * slug-keyed record (effects, Looks), parameterized by the put function.
+ * Publishing state for the Effect Creator — one status machine for a
+ * slug-keyed record, parameterized by the put function.
  * Unlike usePublish (which collapses failures to one friendly sentence for
  * the save dialog), errors here pass through verbatim: the author is
  * debugging their own record, and the PDS's message — a lexicon rejection,
