@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ImagePlus, Wand2 } from 'lucide-react'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ImagePlus, Maximize2, Minus, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShaderControls } from '@/ClientApp/shader-controls'
 import { DraftListPanel } from '@/components/creator/DraftListPanel'
@@ -23,6 +23,76 @@ import { EffectParamDef } from '@/effects-contract'
 import { ShaderInputVars } from '@/types/shader'
 
 const SAVE_DEBOUNCE_MS = 500
+
+type PanelKey = 'setup' | 'code' | 'preview'
+
+/**
+ * A creator column with window chrome: minimize collapses it to a slim rail
+ * (vertical title on desktop, a strip on phones), and focus solos it —
+ * collapsing the other two so this one gets the whole room, e.g. the preview
+ * at full width while testing a shader's knobs. Hidden content stays mounted
+ * (display: none, not unmount): the preview's canvas is bound to the render
+ * adapter for the room's lifetime, and unmounting it would strand the
+ * renderer on a detached element.
+ */
+function PanelChrome({
+  title,
+  collapsed,
+  expandedClassName,
+  railClassName,
+  onToggle,
+  onFocus,
+  children,
+}: {
+  title: string
+  collapsed: boolean
+  expandedClassName: string
+  railClassName: string
+  onToggle: () => void
+  onFocus: () => void
+  children: ReactNode
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`Expand ${title}`}
+        className={
+          collapsed
+            ? `flex items-center justify-center rounded-lg border border-zinc-800/60 px-2 py-1.5 text-xs text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 md:w-9 md:shrink-0 md:flex-col md:py-3 ${railClassName}`
+            : 'hidden'
+        }
+      >
+        <span className="md:[writing-mode:vertical-rl]">{title}</span>
+      </button>
+      <div className={collapsed ? 'hidden' : expandedClassName}>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-600">{title}</span>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onFocus}
+              aria-label={`Focus ${title}`}
+              className="rounded p-1 text-zinc-600 hover:text-zinc-300"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label={`Minimize ${title}`}
+              className="rounded p-1 text-zinc-600 hover:text-zinc-300"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+        {children}
+      </div>
+    </>
+  )
+}
 
 /** A fresh draft, slugged uniquely against the existing set. */
 function freshDraft(existing: readonly StoredDraft[]): StoredDraft {
@@ -266,10 +336,34 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
   const fileInputRef = useRef<HTMLInputElement>(null)
   const tuned = Object.keys(tuning).length > 0
 
+  // Panel chrome state. Focus on an already-soloed panel brings the room back.
+  const [panelsCollapsed, setPanelsCollapsed] = useState<Record<PanelKey, boolean>>({
+    setup: false,
+    code: false,
+    preview: false,
+  })
+  const togglePanel = (k: PanelKey) => setPanelsCollapsed((c) => ({ ...c, [k]: !c[k] }))
+  const focusPanel = (k: PanelKey) =>
+    setPanelsCollapsed((c) => {
+      const soloed = !c[k] && (Object.keys(c) as PanelKey[]).every((o) => o === k || c[o])
+      return soloed
+        ? { setup: false, code: false, preview: false }
+        : { setup: k !== 'setup', code: k !== 'code', preview: k !== 'preview' }
+    })
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:flex-row md:overflow-hidden">
       {/* Meta column. On a phone the preview leads and this sinks below the body. */}
-      <div className="order-3 space-y-5 md:order-none md:w-[280px] md:shrink-0 md:overflow-y-auto md:pr-1">
+      <PanelChrome
+        title="Setup"
+        collapsed={panelsCollapsed.setup}
+        onToggle={() => togglePanel('setup')}
+        onFocus={() => focusPanel('setup')}
+        railClassName="order-3 md:order-none"
+        expandedClassName={`order-3 space-y-5 md:order-none md:shrink-0 md:overflow-y-auto md:pr-1 ${
+          panelsCollapsed.code && panelsCollapsed.preview ? 'md:flex-1' : 'md:w-[280px]'
+        }`}
+      >
         <DraftListPanel
           drafts={drafts}
           selectedSlug={current?.slug ?? null}
@@ -289,10 +383,17 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
             <ParamBuilder params={current.params} onChange={(params) => updateDraft({ params })} />
           </>
         )}
-      </div>
+      </PanelChrome>
 
       {/* The shader body. */}
-      <div className="order-2 flex min-h-0 flex-col md:order-none md:flex-1">
+      <PanelChrome
+        title="Code"
+        collapsed={panelsCollapsed.code}
+        onToggle={() => togglePanel('code')}
+        onFocus={() => focusPanel('code')}
+        railClassName="order-2 md:order-none"
+        expandedClassName="order-2 flex min-h-0 flex-col gap-2 md:order-none md:flex-1"
+      >
         {current ? (
           <GlslEditor
             body={current.body}
@@ -316,10 +417,19 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
             </div>
           </div>
         )}
-      </div>
+      </PanelChrome>
 
       {/* The proof: the draft on a real image, with its own knobs live. */}
-      <div className="order-1 space-y-3 md:order-none md:w-[340px] md:shrink-0 md:overflow-y-auto md:pl-1">
+      <PanelChrome
+        title="Preview"
+        collapsed={panelsCollapsed.preview}
+        onToggle={() => togglePanel('preview')}
+        onFocus={() => focusPanel('preview')}
+        railClassName="order-1 md:order-none"
+        expandedClassName={`order-1 space-y-3 md:order-none md:overflow-y-auto md:pl-1 ${
+          panelsCollapsed.code ? 'md:flex-1' : 'md:w-[340px] md:shrink-0'
+        }`}
+      >
         <canvas
           ref={preview.canvasRef}
           className="w-full rounded-lg border border-zinc-800/60 bg-black/40"
@@ -396,7 +506,7 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
             )}
           </div>
         )}
-      </div>
+      </PanelChrome>
     </div>
   )
 }
