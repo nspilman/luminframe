@@ -5,10 +5,11 @@ import {
   loadDrafts,
   saveDraft,
   deleteDraft,
+  remixSlug,
   StoredDraft,
   STORAGE_KEY,
 } from './effectDrafts'
-import { buildEffectRecord, parseEffectRecord } from '@/effects-contract'
+import { buildEffectRecord, parseEffectRecord, EFFECT_SLUG_PATTERN } from '@/effects-contract'
 
 const draft = (overrides: Partial<StoredDraft> = {}): StoredDraft => ({
   slug: 'invert',
@@ -74,5 +75,28 @@ describe('defFromDraft', () => {
     // parse the registry pipeline applies, or drafts would silently vanish.
     const record = buildEffectRecord(defFromDraft(draft()), '2026-07-26T00:00:00.000Z')
     expect(parseEffectRecord(record).ok).toBe(true)
+  })
+})
+
+describe('remixSlug', () => {
+  it('bends a display name to the slug grammar', () => {
+    expect(remixSlug('Ring Twist!', [])).toBe('ring-twist')
+  })
+
+  it('steps past a slug the user already has', () => {
+    // The collision that matters is with a *published* slug: reusing one would
+    // make publishing the remix overwrite the remixer's own record.
+    expect(remixSlug('Ring Twist', ['ring-twist'])).toBe('ring-twist-2')
+  })
+
+  it('produces a usable slug from a name with nothing slugworthy in it', () => {
+    // Non-Latin names slug to empty; the fallback keeps the draft storable,
+    // since an empty slug has no identity to persist under.
+    expect(remixSlug('___', [])).toBe('remix')
+  })
+
+  it('emits only slugs the grammar accepts', () => {
+    for (const name of ['Ring Twist!', '  Leading & trailing  ', '9 Lives', '___'])
+      expect(EFFECT_SLUG_PATTERN.test(remixSlug(name, []))).toBe(true)
   })
 })

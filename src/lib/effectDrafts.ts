@@ -44,6 +44,29 @@ export function parseDraftKey(key: EffectKey): string | null {
   return key.startsWith('draft://') ? key.slice('draft://'.length) : null
 }
 
+/**
+ * A slug for a remixed effect: the source's display name bent to the slug
+ * grammar (EFFECT_SLUG_PATTERN) and made unique against everything the user
+ * already has.
+ *
+ * `taken` must include the user's *published* slugs as well as their drafts. A
+ * remix is a new record in the remixer's own repo, so a slug colliding with one
+ * of their existing records would make publishing it overwrite that record —
+ * losing their own effect to someone else's.
+ */
+export function remixSlug(name: string, taken: readonly string[]): string {
+  const base =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'remix'
+  let slug = base
+  let n = 2
+  while (taken.includes(slug)) slug = `${base}-${n++}`
+  return slug
+}
+
 export const STORAGE_KEY = 'luminframe.effectDrafts'
 const VERSION = 1
 

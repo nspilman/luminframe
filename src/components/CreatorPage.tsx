@@ -12,12 +12,15 @@ import { useDraftValidation } from '@/hooks/useDraftValidation'
 import { useEffectPreview } from '@/hooks/useEffectPreview'
 import { useRecordPublish } from '@/hooks/useRecordPublish'
 import { putEffectRecord } from '@/infrastructure/atproto/effectPublish'
-import { CustomEffectEntry } from '@/hooks/useCustomEffects'
+import { CustomEffectEntry, buildCustomEffectEntries } from '@/hooks/useCustomEffects'
+import { useUrlParamAction } from '@/hooks/useUrlParamAction'
+import { fetchRecordByUri } from '@/infrastructure/atproto/repoRecords'
+import { EffectDefinition } from '@/effects-contract'
 import { AtprotoSession } from '@/hooks/useAtprotoSession'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { EFFECT_SLUG_PATTERN } from '@/effects-contract'
-import { defFromDraft, deleteDraft, loadDrafts, saveDraft, StoredDraft } from '@/lib/effectDrafts'
+import { defFromDraft, deleteDraft, loadDrafts, remixSlug, saveDraft, StoredDraft } from '@/lib/effectDrafts'
 import { bodyLinesFromCompileLog } from '@/lib/effectDraftValidation'
 import { Color } from '@/domain/value-objects/Color'
 import { EffectParamDef } from '@/effects-contract'
@@ -286,6 +289,36 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
   const slugPublishable = current ? EFFECT_SLUG_PATTERN.test(current.slug) : false
   const isUpdate = current ? publishedSlugs.includes(current.slug) : false
 
+  // Open a published definition as the working draft. The slug is the caller's
+  // decision and it is the whole difference between the two ways in: editing
+  // your own record reuses its rkey, so publishing updates in place; remixing
+  // someone's takes a fresh slug, so publishing writes a new record into your
+  // repo instead of trying to overwrite theirs.
+  const seedDraft = useCallback(
+    (def: EffectDefinition, slug: string) => {
+      if (pendingSaveRef.current) {
+        persist(pendingSaveRef.current)
+        pendingSaveRef.current = null
+      }
+      const draft: StoredDraft = {
+        slug,
+        name: def.name,
+        ...(def.description ? { description: def.description } : {}),
+        params: def.params,
+        body: def.body,
+        ...(def.animatedBy ? { animatedBy: def.animatedBy } : {}),
+        updatedAt: new Date().toISOString(),
+      }
+      saveDraft(draft)
+      setDrafts(loadDrafts())
+      setCurrent(draft)
+      persistedSlugRef.current = slug
+      setTuning({})
+      resetPublish()
+    },
+    [persist, resetPublish]
+  )
+
   // Managing what's already published: edit seeds a draft under the record's
   // rkey (so publishing the edit updates in place), delete retracts it.
   const deleteRecord = useLuminframeDelete(agent)
@@ -294,28 +327,33 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
       const entry = published.find((e) => e.key === key)
       const rkey = entry && parseAtUri(entry.key)?.rkey
       if (!entry || !rkey) return
-      if (pendingSaveRef.current) {
-        persist(pendingSaveRef.current)
-        pendingSaveRef.current = null
-      }
-      const draft: StoredDraft = {
-        slug: rkey,
-        name: entry.def.name,
-        ...(entry.def.description ? { description: entry.def.description } : {}),
-        params: entry.def.params,
-        body: entry.def.body,
-        ...(entry.def.animatedBy ? { animatedBy: entry.def.animatedBy } : {}),
-        updatedAt: new Date().toISOString(),
-      }
-      saveDraft(draft)
-      setDrafts(loadDrafts())
-      setCurrent(draft)
-      persistedSlugRef.current = rkey
-      setTuning({})
-      resetPublish()
+      seedDraft(entry.def, rkey)
     },
-    [published, persist, resetPublish]
+    [published, seedDraft]
   )
+  // /create?remix=<at-uri> — the shareable door onto anyone's published effect.
+  // The record runs the same parse → hydrate → compile judgment every other
+  // source does (buildCustomEffectEntries), so a stranger's shader can no more
+  // bypass the grammar here than it can in the picker. An unresolvable or
+  // invalid record resolves to null and the instruction is simply spent: the
+  // author keeps whatever draft they had open rather than losing it to a bad link.
+  useUrlParamAction(
+    'remix',
+    async (uri: string) => {
+      const record = await fetchRecordByUri(uri)
+      if (!record) return null
+      const { entries } = buildCustomEffectEntries([record])
+      return entries[0]?.def ?? null
+    },
+    (def: EffectDefinition | null) => {
+      if (!def) {
+        console.warn('Could not remix that effect: its record is missing or failed validation.')
+        return
+      }
+      seedDraft(def, remixSlug(def.name, [...drafts.map((d) => d.slug), ...publishedSlugs]))
+    }
+  )
+
   const deletePublished = useCallback(
     async (uri: string) => {
       await deleteRecord(uri)
