@@ -24,7 +24,7 @@ turns one into a draft you can edit.
 
 ## Slice 1 — Remix — **built**
 
-Shipped as `/create?remix=<at-uri>`. `editPublished` differentiated into
+Shipped as `/create?remixEffect=<at-uri>`. `editPublished` differentiated into
 `seedDraft(def, slug)`; the slug is the whole difference between the two ways
 in — your own record's rkey (update in place) or `remixSlug()` (a new record).
 
@@ -42,8 +42,10 @@ stays yours); your own effects are filtered out of the section so the network
 doesn't look like it is mostly you. Rows lead with `@handle` — attribution goes
 before the description, since the blurb truncates.
 
-Still open here: nothing links a network row to `/create?remix=`. That link is
-what would join slice 1 to slice 2, and it is the obvious next move.
+The two are joined: selecting an effect that isn't yours shows "Remix this
+effect" in the tuning card, linking to the creator. Offered there rather than on
+the library row because the row's gesture is "put this on my image" and this one
+leaves for another room — you ask it after you've seen the effect work.
 
 `listReposByCollection` with `EFFECT_COLLECTION` → the existing
 `mapWithConcurrency` → `fetchCollectionRecords` → `buildCustomEffectEntries`.

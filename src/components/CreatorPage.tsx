@@ -20,6 +20,7 @@ import { AtprotoSession } from '@/hooks/useAtprotoSession'
 import { useLuminframeDelete } from '@/hooks/useLuminframeDelete'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { EFFECT_SLUG_PATTERN } from '@/effects-contract'
+import { REMIX_EFFECT_PARAM } from '@/lib/galleryRoute'
 import { defFromDraft, deleteDraft, loadDrafts, remixSlug, saveDraft, StoredDraft } from '@/lib/effectDrafts'
 import { bodyLinesFromCompileLog } from '@/lib/effectDraftValidation'
 import { Color } from '@/domain/value-objects/Color'
@@ -331,14 +332,15 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
     },
     [published, seedDraft]
   )
-  // /create?remix=<at-uri> — the shareable door onto anyone's published effect.
+  // The shareable door onto anyone's published effect (see REMIX_EFFECT_PARAM
+  // for why it is not simply `remix`).
   // The record runs the same parse → hydrate → compile judgment every other
   // source does (buildCustomEffectEntries), so a stranger's shader can no more
   // bypass the grammar here than it can in the picker. An unresolvable or
   // invalid record resolves to null and the instruction is simply spent: the
   // author keeps whatever draft they had open rather than losing it to a bad link.
   useUrlParamAction(
-    'remix',
+    REMIX_EFFECT_PARAM,
     async (uri: string) => {
       const record = await fetchRecordByUri(uri)
       if (!record) return null

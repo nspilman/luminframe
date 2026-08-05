@@ -1,15 +1,17 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { EffectKey, EffectRegistry, ShaderEffect, ShaderInputVars } from '@/types/shader'
 import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronRight } from 'lucide-react'
 import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { NetworkEffectsState } from '@/hooks/useNetworkEffects'
 import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
+import { creatorRemixEffectPath } from '@/lib/galleryRoute'
 import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
@@ -82,6 +84,16 @@ export function EditorSidebar({
   // (the picker's family idiom) at every width — a rail would be a lie about
   // what it is, and on a phone a long stack is exactly what needs folding.
   const [collapsed, setCollapsed] = useState({ library: false, tuning: false, applied: false })
+
+  // The selected effect, when it is somebody else's: a published record
+  // (at://) that isn't among the user's own. Deliberately not "is it in the
+  // network list" — an effect resolved from a shared image's recipe is just as
+  // much someone else's work, and just as remixable. A builtin has no record to
+  // remix, and your own already opens with the pencil in the creator.
+  const remixableKey =
+    selectedShader?.startsWith('at://') && !customEffects.some((e) => e.key === selectedShader)
+      ? selectedShader
+      : null
 
   // Image-first: the tools have no subject to act on until a source is loaded,
   // so the sidebar doesn't exist yet — the canvas invitation is the whole stage,
@@ -302,6 +314,20 @@ export function EditorSidebar({
                       <Save className="h-3.5 w-3.5" />
                       Use current render as the second image
                     </button>
+                  )}
+                  {/* Someone else's effect can be taken apart. Offered here
+                      rather than on the library row because the row's gesture
+                      is "put this on my image" and this one leaves for another
+                      room — you ask it after you've seen the effect work, which
+                      is exactly when you're standing in front of its knobs. */}
+                  {remixableKey && (
+                    <Link
+                      to={creatorRemixEffectPath(remixableKey)}
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 focus-visible:text-violet-300 focus-visible:outline-none"
+                    >
+                      <GitFork className="h-3.5 w-3.5" />
+                      Remix this effect
+                    </Link>
                   )}
                 </CardContent>
               </Card>

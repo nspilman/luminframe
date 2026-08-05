@@ -9,6 +9,7 @@
  *   …?image=<at-uri>      an image opened as a quick preview over the gallery
  *   /?remix=<at-uri>      the editor, loading that image as its source
  *   /?recipe=<at-uri>     the editor, wearing a saved image's effect stack
+ *   /create?remixEffect=<at-uri>  the creator, forking that published effect
  *
  * The gallery scope is a path segment (a genuine sub-place); the quick-preview
  * image and the remix are query params (transient focuses over a place). An
@@ -78,6 +79,23 @@ export const REMIX_PARAM = 'remix'
 /** The editor address that loads a given image (by AT-URI) as the working source. */
 export function editorRemixPath(uri: string): string {
   return `/?${REMIX_PARAM}=${encodeURIComponent(uri)}`
+}
+
+/**
+ * The search-param key that asks the creator to open someone's published effect
+ * as a new draft — forking a shader rather than an image.
+ *
+ * Deliberately NOT `remix`, even though it is the same verb: the editor is
+ * mounted at every address (it is only hidden off its own route), so its
+ * REMIX_PARAM listener is live on /create too. Two listeners on one key race,
+ * and whichever resolves first deletes the param out from under the other.
+ * Distinct keys are what keep each instruction addressed to one room.
+ */
+export const REMIX_EFFECT_PARAM = 'remixEffect'
+
+/** The creator address that opens a published effect (by AT-URI) as a new draft. */
+export function creatorRemixEffectPath(uri: string): string {
+  return `${CREATE_ROOT}?${REMIX_EFFECT_PARAM}=${encodeURIComponent(uri)}`
 }
 
 /**
