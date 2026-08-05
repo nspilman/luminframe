@@ -94,6 +94,37 @@ function parseParam(value: unknown, index: number, errors: string[]): EffectPara
   }
 }
 
+/**
+ * Judge a params JSON string alone — the same grammar parseEffectRecord
+ * applies to a record's params field, exposed for surfaces that edit params
+ * as raw JSON. Length is the caller's concern (parseEffectRecord enforces it
+ * for records).
+ */
+export function parseParamsJson(json: string): { params: EffectParamDef[]; errors: string[] } {
+  const errors: string[] = []
+  const params: EffectParamDef[] = []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    parsed = undefined
+  }
+  if (!Array.isArray(parsed)) {
+    errors.push('params: not a valid JSON array')
+  } else {
+    parsed.forEach((entry, i) => {
+      const param = parseParam(entry, i, errors)
+      if (param) params.push(param)
+    })
+    const seen = new Set<string>()
+    for (const p of params) {
+      if (seen.has(p.name)) errors.push(`param "${p.name}": duplicate name`)
+      seen.add(p.name)
+    }
+  }
+  return { params, errors }
+}
+
 export function parseEffectRecord(value: unknown): ParseResult {
   const errors: string[] = []
   if (!isRecord(value)) {
@@ -118,25 +149,9 @@ export function parseEffectRecord(value: unknown): ParseResult {
   if (typeof value.params !== 'string' || value.params.length > MAX_PARAMS_JSON_LENGTH) {
     errors.push(`params: must be a JSON string of at most ${MAX_PARAMS_JSON_LENGTH} chars`)
   } else {
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(value.params)
-    } catch {
-      parsed = undefined
-    }
-    if (!Array.isArray(parsed)) {
-      errors.push('params: not a valid JSON array')
-    } else {
-      parsed.forEach((entry, i) => {
-        const param = parseParam(entry, i, errors)
-        if (param) params.push(param)
-      })
-      const seen = new Set<string>()
-      for (const p of params) {
-        if (seen.has(p.name)) errors.push(`param "${p.name}": duplicate name`)
-        seen.add(p.name)
-      }
-    }
+    const judged = parseParamsJson(value.params)
+    errors.push(...judged.errors)
+    params.push(...judged.params)
   }
 
   const body = value.body

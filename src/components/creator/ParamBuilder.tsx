@@ -1,7 +1,9 @@
-import { Plus, X } from 'lucide-react'
+import { useState } from 'react'
+import { Braces, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -9,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { EffectParamDef } from '@/effects-contract'
+import { EffectParamDef, parseParamsJson } from '@/effects-contract'
 
 type ParamBuilderProps = {
   params: readonly EffectParamDef[]
@@ -42,6 +44,30 @@ export function newParam(type: EffectParamDef['type'], existing: readonly Effect
  * errors name the offending param.
  */
 export function ParamBuilder({ params, onChange }: ParamBuilderProps) {
+  // JSON mode: the same param list as editable text, judged by the same
+  // grammar records get (parseParamsJson). The textarea is the source of
+  // truth while open — only a clean parse commits to the draft, so the form
+  // (and the draft) always holds the last valid set.
+  const [jsonText, setJsonText] = useState<string | null>(null)
+  const [jsonErrors, setJsonErrors] = useState<string[]>([])
+  const jsonMode = jsonText !== null
+
+  const toggleJson = () => {
+    if (jsonMode) {
+      setJsonText(null)
+      setJsonErrors([])
+    } else {
+      setJsonText(JSON.stringify(params, null, 2))
+    }
+  }
+
+  const editJson = (text: string) => {
+    setJsonText(text)
+    const { params: parsed, errors } = parseParamsJson(text)
+    setJsonErrors(errors)
+    if (errors.length === 0) onChange(parsed)
+  }
+
   const patch = (index: number, changes: Partial<EffectParamDef>) => {
     onChange(params.map((p, i) => (i === index ? ({ ...p, ...changes } as EffectParamDef) : p)))
   }
@@ -71,23 +97,57 @@ export function ParamBuilder({ params, onChange }: ParamBuilderProps) {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-zinc-400">Params</h3>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange([...params, newParam('range', params)])}
-          className="gap-1 text-zinc-300"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add
-        </Button>
+        <div className="flex items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={toggleJson}
+            aria-pressed={jsonMode}
+            className={`gap-1 ${jsonMode ? 'text-violet-400' : 'text-zinc-300'}`}
+          >
+            <Braces className="h-3.5 w-3.5" />
+            JSON
+          </Button>
+          {!jsonMode && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange([...params, newParam('range', params)])}
+              className="gap-1 text-zinc-300"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </Button>
+          )}
+        </div>
       </div>
-      {params.length === 0 && (
+      {jsonMode && (
+        <div className="space-y-2">
+          <Textarea
+            value={jsonText}
+            onChange={(e) => editJson(e.target.value)}
+            spellCheck={false}
+            rows={Math.min(24, Math.max(8, jsonText.split('\n').length + 1))}
+            className="font-mono text-xs"
+            aria-label="Params as JSON"
+          />
+          {jsonErrors.length > 0 && (
+            <ul className="space-y-0.5 px-1 text-xs text-red-400">
+              {jsonErrors.map((err, i) => (
+                <li key={i}>✗ {err}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {jsonMode ? null : params.length === 0 && (
         <p className="px-1 text-xs text-zinc-500">
           No knobs yet — the effect will still get the free Opacity control.
         </p>
       )}
-      {params.map((param, i) => (
+      {!jsonMode && params.map((param, i) => (
         <div key={i} className="space-y-2 rounded-lg border border-zinc-800/60 p-2">
           <div className="flex items-center gap-2">
             <Select
