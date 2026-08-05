@@ -294,23 +294,13 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
       {/* The shader body. */}
       <div className="order-2 flex min-h-0 flex-col md:order-none md:flex-1">
         {current ? (
-          <>
-            {current.source && (
-              <p className="mb-2 text-xs text-amber-400/90">
-                Built with Blocks — editing the code here detaches the blocks (this becomes a
-                plain GLSL draft).
-              </p>
-            )}
-            <GlslEditor
-              body={current.body}
-              // The first code edit ends the compiled relationship: the body
-              // is now hand-owned, so the blocks source would be a lie.
-              onChange={(body) => updateDraft(current.source ? { body, source: undefined } : { body })}
-              grammarErrors={validation.grammarErrors}
-              compileErrors={compileErrors}
-              pending={validation.pending}
-            />
-          </>
+          <GlslEditor
+            body={current.body}
+            onChange={(body) => updateDraft({ body })}
+            grammarErrors={validation.grammarErrors}
+            compileErrors={compileErrors}
+            pending={validation.pending}
+          />
         ) : (
           <div className="flex flex-1 items-center justify-center text-center">
             <div>

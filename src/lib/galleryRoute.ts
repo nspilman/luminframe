@@ -4,8 +4,7 @@
  *   /                     the editor
  *   /gallery              the gallery, network scope
  *   /gallery/mine         the gallery, the signed-in user's scope
- *   /create               the Blocks room — build a shader from blocks
- *   /create/glsl          the GLSL room — write a shader as code
+ *   /create               the Effect Creator
  *   /image/:did/:rkey     one image's canonical page (its home)
  *   …?image=<at-uri>      an image opened as a quick preview over the gallery
  *   /?remix=<at-uri>      the editor, loading that image as its source
@@ -40,24 +39,13 @@ export function isGalleryPath(pathname: string): boolean {
   return p === GALLERY_ROOT || p.startsWith(GALLERY_ROOT + '/')
 }
 
-/**
- * The creator wing's front door — the Blocks room, where a shader is built
- * from small operations without code.
- */
+/** The Effect Creator's home: where custom shader effects are authored. */
 export const CREATE_ROOT = '/create'
 
-/** The GLSL room: the same shaders, written as code — the expert door. */
-export const CREATE_GLSL_PATH = '/create/glsl'
-
-/** True when a path addresses the creator wing (either room). */
+/** True when a path addresses the Effect Creator. */
 export function isCreatePath(pathname: string): boolean {
   const p = pathname.replace(/\/$/, '')
   return p === CREATE_ROOT || p.startsWith(CREATE_ROOT + '/')
-}
-
-/** True when a path addresses the GLSL room specifically. */
-export function isCreateGlslPath(pathname: string): boolean {
-  return pathname.replace(/\/$/, '') === CREATE_GLSL_PATH
 }
 
 /** The search-param key under which the open image's AT-URI travels. */

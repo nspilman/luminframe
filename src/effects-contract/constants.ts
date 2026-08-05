@@ -43,7 +43,6 @@ export const RESERVED_TOKENS = ['lfFragColor', 'lfEffectMain'] as const
 export const MAX_NAME_LENGTH = 64
 export const MAX_BODY_LENGTH = 20000
 export const MAX_PARAMS_JSON_LENGTH = 10000
-export const MAX_SOURCE_LENGTH = 20000
 
 /** Param names must be plain GLSL identifiers. */
 export const PARAM_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/

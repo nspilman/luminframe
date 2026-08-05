@@ -41,11 +41,6 @@
             "maxLength": 64,
             "description": "Name of the range param that gates the effect's motion: at zero the effect is still even though its body references time."
           },
-          "source": {
-            "type": "string",
-            "maxLength": 20000,
-            "description": "The higher-level source this effect was compiled from (Luminframe's Blocks editor term JSON), so the shader can be reopened at the level it was written. The body remains the executable truth."
-          },
           "createdAt": {
             "type": "string",
             "format": "datetime",
