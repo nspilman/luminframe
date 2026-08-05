@@ -189,12 +189,18 @@ export async function resolveIdentity(did: string): Promise<Identity> {
   return identity
 }
 
-/** One page of DIDs that have a com.luminframe.image record, network-wide. */
+/**
+ * One page of DIDs that hold a record of the given collection, network-wide.
+ * The relay's index is what makes discovery possible at all: without it there
+ * is no way to ask "who has published one of these?" — only "does this person
+ * have any?", repo by repo.
+ */
 export async function listNetworkDids(
+  collection: string = LUMINFRAME_COLLECTION,
   cursor?: string,
   relay: string = DEFAULT_RELAY
 ): Promise<{ dids: string[]; cursor?: string }> {
-  const params = new URLSearchParams({ collection: LUMINFRAME_COLLECTION, limit: '1000' })
+  const params = new URLSearchParams({ collection, limit: '1000' })
   if (cursor) params.set('cursor', cursor)
   const res = await fetch(`${relay}/xrpc/com.atproto.sync.listReposByCollection?${params}`)
   if (!res.ok) throw new Error(`listReposByCollection failed: ${res.status}`)
@@ -206,7 +212,7 @@ export async function listNetworkDids(
 }
 
 /** Run `task` over `items` with at most `limit` in flight; failures resolve to []. */
-async function mapWithConcurrency<T>(
+export async function mapWithConcurrency<T>(
   items: string[],
   limit: number,
   task: (item: string) => Promise<T[]>

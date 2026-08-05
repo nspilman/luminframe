@@ -12,6 +12,8 @@ import { loadCollapsed, saveCollapsed, toggleCollapsed } from '@/lib/shaders/col
 import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
+import { NetworkEffectsState } from '@/hooks/useNetworkEffects'
+import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 
 // The desktop growing-column declaration: at md+ the picker fills the sidebar's
 // middle region, and CSS requires each nesting level to restate flex/min-h-0
@@ -92,8 +94,12 @@ type EffectPickerProps = {
   recentShaders: readonly EffectKey[]
   /** The user's own published effects, shown as a Yours section. */
   customEffects: readonly CustomEffectEntry[]
+  /** Everyone else's, shown as a section that loads only when asked. */
+  networkEffects: NetworkEffectsState
   source: Image | null
 }
+
+const NETWORK_SECTION = 'network'
 
 type PickerSection = { id: string; label: string; effects: readonly EffectKey[] }
 
@@ -103,6 +109,52 @@ type EffectRow = {
   blurb: string
   icon: React.ReactNode
   motion: EffectMotion
+}
+
+/**
+ * What the network section says besides its rows: the invitation to load, the
+ * wait, and the honest endings.
+ *
+ * The load is a button rather than something expanding the section triggers,
+ * because it is not free — a fetch per author, then a GPU compile per stranger's
+ * shader — and a cost the user pays should be a cost the user asked for.
+ */
+function NetworkSectionNote({
+  state,
+  shown,
+  query,
+}: {
+  state: NetworkEffectsState
+  shown: number
+  query: string
+}) {
+  const note = 'px-1 py-1 text-[11px] text-zinc-500'
+  if (state.status === 'idle') {
+    return (
+      <button
+        type="button"
+        onClick={state.load}
+        className="rounded px-1 py-1 text-left text-[11px] text-violet-400 hover:text-violet-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+      >
+        Load effects published by others →
+      </button>
+    )
+  }
+  if (state.status === 'loading') return <p className={note}>Looking across the network…</p>
+  if (shown > 0) {
+    // Say plainly when the fan-out was capped. A short list that looks complete
+    // is worse than a short list that admits what it left out.
+    return state.unreadRepos > 0 ? (
+      <p className={note}>{state.unreadRepos} more authors not read</p>
+    ) : null
+  }
+  return (
+    <p className={note}>
+      {query.trim() !== ''
+        ? `Nothing here matches “${query}”`
+        : 'Nobody else has published an effect yet.'}
+    </p>
+  )
 }
 
 /**
@@ -116,7 +168,9 @@ type EffectRow = {
  */
 function rowFor(
   key: EffectKey,
-  customByKey: ReadonlyMap<EffectKey, CustomEffectEntry>
+  customByKey: ReadonlyMap<EffectKey, CustomEffectEntry>,
+  networkKeys: ReadonlySet<EffectKey> = new Set(),
+  handles: Record<string, string> = {}
 ): EffectRow | null {
   if (key in shaderLibrary) {
     const type = key as ShaderType
@@ -125,9 +179,18 @@ function rowFor(
   }
   const entry = customByKey.get(key)
   if (entry) {
+    // Someone else's effect leads with who made it. The blurb is the row's only
+    // second line and it truncates, so the credit goes first: an effect from a
+    // stranger should never be able to lose its attribution to a long
+    // description. Your own effects need no byline.
+    const handle = networkKeys.has(key) ? handles[parseAtUri(key)?.did ?? ''] : undefined
     return {
       name: entry.effect.name,
-      blurb: entry.description ?? 'Your custom effect',
+      blurb: handle
+        ? entry.description
+          ? `@${handle} · ${entry.description}`
+          : `@${handle}`
+        : entry.description ?? 'Your custom effect',
       icon: <FlaskConical className="h-5 w-5" />,
       motion: motionOf(entry.effect),
     }
@@ -143,14 +206,23 @@ function rowFor(
  * effect. Order and grouping come from the curated catalog, so adding an effect
  * there places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, networkEffects, source }: EffectPickerProps) {
+  // You are on the network too, so your own effects come back in its listing.
+  // They already have a Yours section; showing them twice would make the
+  // network look like it is mostly you.
+  const networkOnly = useMemo(() => {
+    const yours = new Set(customEffects.map((e) => e.key))
+    return networkEffects.entries.filter((e) => !yours.has(e.key))
+  }, [customEffects, networkEffects.entries])
+  const networkKeys = useMemo(() => new Set(networkOnly.map((e) => e.key)), [networkOnly])
+
   const customByKey = useMemo(
-    () => new Map(customEffects.map((e) => [e.key, e])),
-    [customEffects]
+    () => new Map([...customEffects, ...networkOnly].map((e) => [e.key, e])),
+    [customEffects, networkOnly]
   )
   const customShaderMap = useMemo(
-    () => Object.fromEntries(customEffects.map((e) => [e.key, e.effect])),
-    [customEffects]
+    () => Object.fromEntries([...customEffects, ...networkOnly].map((e) => [e.key, e.effect])),
+    [customEffects, networkOnly]
   )
   const thumbnails = useEffectThumbnails(source, customShaderMap)
 
@@ -171,6 +243,18 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
       : []
   }, [customEffects, query])
 
+  // Everyone else's effects, in a section that is always present — it is how
+  // the user learns there is a network at all — but whose contents arrive only
+  // once asked for. Searched by the same rule as Yours; before it has loaded
+  // there is simply nothing here to match, which is honest: a search cannot
+  // promise to cover records nobody has fetched.
+  const networkSection = useMemo<PickerSection[]>(() => {
+    const matches = networkOnly.filter((e) =>
+      textMatchesQuery(query, e.effect.name, e.description ?? '')
+    )
+    return [{ id: NETWORK_SECTION, label: 'From the network', effects: matches.map((e) => e.key) }]
+  }, [networkOnly, query])
+
   // Your own effects are few and lead the search results; on Enter the top
   // match is the first effect of whatever the current query shows.
   const topMatch = (yoursSection[0] ?? families[0])?.effects[0]
@@ -181,10 +265,10 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
   // hand. During a search the results stand alone; recents would only be noise.
   const sections = useMemo<PickerSection[]>(() => {
     if (query.trim() === '' && recentShaders.length > 0) {
-      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...yoursSection, ...families]
+      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...yoursSection, ...families, ...networkSection]
     }
-    return [...yoursSection, ...families]
-  }, [query, recentShaders, yoursSection, families])
+    return [...yoursSection, ...families, ...networkSection]
+  }, [query, recentShaders, yoursSection, families, networkSection])
 
   // Collapsible families: the explorer can fold sections they don't use, keeping
   // the picker short. The collapsed set is remembered across visits. Collapse is a
@@ -343,10 +427,13 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
                   {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   {family.label}
                 </button>
+                {!isCollapsed && family.id === NETWORK_SECTION && (
+                  <NetworkSectionNote state={networkEffects} shown={family.effects.length} query={query} />
+                )}
                 {!isCollapsed && (
                 <div className="space-y-1">
                   {family.effects.map((shader) => {
-                    const row = rowFor(shader, customByKey)
+                    const row = rowFor(shader, customByKey, networkKeys, networkEffects.handles)
                     if (!row) return null
                     const thumb = thumbnails?.[shader]
                     const isSelected = selectedShader === shader

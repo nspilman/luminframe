@@ -22,7 +22,11 @@ The same call with `EFFECT_COLLECTION` finds every DID with a published effect.
 What's absent is only this: nothing lists another person's effects, and nothing
 turns one into a draft you can edit.
 
-## Slice 1 — Remix
+## Slice 1 — Remix — **built**
+
+Shipped as `/create?remix=<at-uri>`. `editPublished` differentiated into
+`seedDraft(def, slug)`; the slug is the whole difference between the two ways
+in — your own record's rkey (update in place) or `remixSlug()` (a new record).
 
 A Remix button on any effect the viewer didn't author: `entry.def` → `saveDraft`
 → route to `/create`. No lexicon change, no network work, no new validation path.
@@ -30,7 +34,16 @@ A Remix button on any effect the viewer didn't author: `entry.def` → `saveDraf
 Smallest of the three, and it should go first: it's the verb that makes discovery
 worth having. Discovery without remix is a list you can only look at.
 
-## Slice 2 — A network effects source
+## Slice 2 — A network effects source — **built**
+
+Shipped as a "From the network" section in the picker, loading only when asked.
+Entries join the registry (so applying one resolves) but not `custom` (which
+stays yours); your own effects are filtered out of the section so the network
+doesn't look like it is mostly you. Rows lead with `@handle` — attribution goes
+before the description, since the blurb truncates.
+
+Still open here: nothing links a network row to `/create?remix=`. That link is
+what would join slice 1 to slice 2, and it is the obvious next move.
 
 `listReposByCollection` with `EFFECT_COLLECTION` → the existing
 `mapWithConcurrency` → `fetchCollectionRecords` → `buildCustomEffectEntries`.

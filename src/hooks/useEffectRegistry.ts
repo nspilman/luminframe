@@ -6,6 +6,7 @@ import { useCustomEffects, CustomEffectEntry } from './useCustomEffects'
 import { useDraftEffects } from './useDraftEffects'
 import { useLocalEffects } from './useLocalEffects'
 import { useForeignEffects } from './useForeignEffects'
+import { useNetworkEffects, NetworkEffectsState } from './useNetworkEffects'
 
 /**
  * The one place the effect registry is assembled: builtins, the signed-in
@@ -36,6 +37,12 @@ import { useForeignEffects } from './useForeignEffects'
 export interface EffectRegistryState {
   registry: EffectRegistry
   custom: CustomEffectEntry[]
+  /**
+   * Everyone else's published effects, and the control to go get them. Loaded
+   * on demand, so this is empty (and `ready` unaffected) until a surface asks —
+   * browsing the network is a choice, not part of starting the editor.
+   */
+  network: NetworkEffectsState
   ready: boolean
   /** Published records that failed the pipeline — the creator's fix list. */
   publishedSkipped: Array<{ uri: string; reasons: string[] }>
@@ -50,10 +57,15 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
 
   const custom = useMemo(() => [...local, ...drafts, ...published], [local, drafts, published])
   const foreign = useForeignEffects()
+  const network = useNetworkEffects()
 
+  // Network effects join the registry — applying one has to resolve its key like
+  // any other — but not `custom`, which stays the user's own. `custom` before
+  // `network` so your version of a key wins over the copy that came back in the
+  // network listing.
   const effectsByKey = useMemo(
-    () => Object.fromEntries([...foreign, ...custom].map((e) => [e.key, e.effect])),
-    [custom, foreign]
+    () => Object.fromEntries([...foreign, ...network.entries, ...custom].map((e) => [e.key, e.effect])),
+    [custom, foreign, network.entries]
   )
 
   useEffect(() => {
@@ -63,7 +75,7 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const registry = useMemo(() => ({ ...shaderLibrary, ...effectsByKey }), [effectsByKey])
 
   return useMemo(
-    () => ({ registry, custom, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),
-    [registry, custom, status, localReady, publishedSkipped, refreshPublished]
+    () => ({ registry, custom, network, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),
+    [registry, custom, network, status, localReady, publishedSkipped, refreshPublished]
   )
 }
