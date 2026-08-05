@@ -380,7 +380,10 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
         {current && (
           <>
             <EffectMetaForm draft={current} onChange={updateDraft} publishedSlugs={publishedSlugs} />
-            <ParamBuilder params={current.params} onChange={(params) => updateDraft({ params })} />
+            {/* Keyed to the draft: the JSON editor's text is its own source of
+                truth while open, so a draft switch must remount it — otherwise
+                the old draft's text commits into the new draft. */}
+            <ParamBuilder key={current.slug} params={current.params} onChange={(params) => updateDraft({ params })} />
           </>
         )}
       </PanelChrome>
