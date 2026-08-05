@@ -9,6 +9,7 @@
 // Deno edge runtime — hence the explicit .ts import and native fetch.
 import {
   imagePageMeta,
+  imageTargetFromUrl,
   staticPageMeta,
   renderMetaTags,
   type ImageMetaInput,
@@ -37,11 +38,20 @@ async function resolveImage(did: string, rkey: string): Promise<ImageMetaInput |
     const value = record?.value
     if (!value) return null
 
-    const cid = value.image?.ref?.$link
-    const imageUrl = cid
-      ? `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`
-      : null
-    return { title: value.title, alt: value.alt, handle, imageUrl }
+    const blobUrl = (ref?: { $link?: string }) =>
+      ref?.$link
+        ? `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(ref.$link)}`
+        : null
+    return {
+      title: value.title,
+      alt: value.alt,
+      handle,
+      imageUrl: blobUrl(value.image?.ref),
+      videoUrl: blobUrl(value.video?.ref),
+      width: value.aspectRatio?.width,
+      height: value.aspectRatio?.height,
+      effects: Array.isArray(value.effects) ? value.effects : undefined,
+    }
   } catch {
     return null
   }
@@ -58,13 +68,12 @@ export default async (
   try {
     const url = new URL(request.url)
     const path = url.pathname.replace(/\/+$/, '') || '/'
-    const match = path.match(/^\/image\/([^/]+)\/([^/]+)$/)
+    // An image addressed either way — its own page, or opened over the gallery
+    // as ?image=<at-uri> — unfurls as that image.
+    const target = imageTargetFromUrl(url.pathname, url.search)
 
-    const meta = match
-      ? imagePageMeta(
-          (await resolveImage(decodeURIComponent(match[1]), decodeURIComponent(match[2]))) ?? {},
-          request.url
-        )
+    const meta = target
+      ? imagePageMeta((await resolveImage(target.did, target.rkey)) ?? {}, request.url)
       : staticPageMeta(path, request.url)
 
     const html = await response.text()

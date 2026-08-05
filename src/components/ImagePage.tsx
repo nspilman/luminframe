@@ -53,6 +53,10 @@ export function ImagePage({ viewerDid, onDeleteImage }: ImagePageProps) {
             alt: state.image.alt,
             handle: state.image.handle,
             imageUrl: state.image.imageUrl,
+            videoUrl: state.image.videoUrl,
+            width: state.image.aspectRatio.width,
+            height: state.image.aspectRatio.height,
+            effects: state.image.effects,
           },
           canonicalUrl
         )

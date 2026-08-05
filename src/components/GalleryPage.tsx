@@ -8,6 +8,8 @@ import { useOpenImage } from '@/hooks/useOpenImage'
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
 import { formatDate, bskyProfileUrl } from '@/lib/luminframeImagePresentation'
 import { tabFromPath, pathForTab, IMAGE_PARAM, FAMILY_PARAM } from '@/lib/galleryRoute'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { imagePageMeta, staticPageMeta } from '@/lib/pageMeta'
 import { familiesOf, isEffectCategory, effectFamilies, EffectCategory } from '@/lib/shaders/catalog'
 import { EffectChip } from './EffectChip'
 
@@ -143,6 +145,29 @@ export function GalleryPage({ did, onDeleteImage }: GalleryPageProps) {
     [feed.images, removed]
   )
   const openImage = useOpenImage(searchParams.get(IMAGE_PARAM), images)
+
+  // An open image is a shareable address, so it carries that image's share card
+  // rather than the gallery's. Closed, the gallery speaks for itself. (Non-JS
+  // crawlers get the same from the edge function, which resolves ?image=
+  // server-side.)
+  const pageUrl = window.location.origin + window.location.pathname + window.location.search
+  useDocumentMeta(
+    openImage
+      ? imagePageMeta(
+          {
+            title: openImage.title,
+            alt: openImage.alt,
+            handle: openImage.handle,
+            imageUrl: openImage.imageUrl,
+            videoUrl: openImage.videoUrl,
+            width: openImage.aspectRatio.width,
+            height: openImage.aspectRatio.height,
+            effects: openImage.effects,
+          },
+          pageUrl
+        )
+      : staticPageMeta(window.location.pathname, pageUrl)
+  )
 
   // Discover by look. The active family is read from the URL (validated, so a junk
   // ?family= just means unfiltered); the rail offers only families present in this

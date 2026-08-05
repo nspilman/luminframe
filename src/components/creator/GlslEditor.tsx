@@ -21,8 +21,9 @@ export function GlslEditor({ body, onChange, grammarErrors, compileErrors, pendi
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <label htmlFor="glsl-body" className="text-xs text-zinc-400">
         Fragment body — reads <code className="text-zinc-300">imageTexture</code>,{' '}
-        <code className="text-zinc-300">vUv</code>, <code className="text-zinc-300">time</code>, your
-        params; writes <code className="text-zinc-300">gl_FragColor</code>
+        <code className="text-zinc-300">vUv</code>, <code className="text-zinc-300">time</code>,{' '}
+        <code className="text-zinc-300">resolution</code> (the image&rsquo;s pixel size, not the
+        canvas&rsquo;s), your params; writes <code className="text-zinc-300">gl_FragColor</code>
       </label>
       <Textarea
         id="glsl-body"

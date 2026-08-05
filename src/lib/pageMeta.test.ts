@@ -1,4 +1,39 @@
-import { escapeHtml, imagePageMeta, staticPageMeta, renderMetaTags, SITE } from './pageMeta'
+import {
+  escapeHtml,
+  imagePageMeta,
+  imageTargetFromUrl,
+  metaTags,
+  staticPageMeta,
+  renderMetaTags,
+  SITE,
+} from './pageMeta'
+
+// The gallery addresses its open image as ?image=<at-uri>, and that URL gets
+// shared as readily as the canonical /image/:did/:rkey one. Both must resolve to
+// the same record or a shared lightbox link unfurls as the site logo.
+describe('imageTargetFromUrl', () => {
+  it('reads the did and rkey from an image path', () => {
+    expect(imageTargetFromUrl('/image/did:plc:abc/3msc', '')).toEqual({
+      did: 'did:plc:abc',
+      rkey: '3msc',
+    })
+  })
+
+  it('reads the did and rkey from an ?image= at-uri', () => {
+    expect(
+      imageTargetFromUrl('/gallery', '?image=at%3A%2F%2Fdid%3Aplc%3Aabc%2Fcom.luminframe.image%2F3msc')
+    ).toEqual({ did: 'did:plc:abc', rkey: '3msc' })
+  })
+
+  it('does not match an ?image= uri from another collection', () => {
+    // Only image records are an image page; an effect uri here is not one.
+    expect(imageTargetFromUrl('/gallery', '?image=at://did:plc:abc/com.luminframe.effect/x')).toBeNull()
+  })
+
+  it('does not match a gallery with no open image', () => {
+    expect(imageTargetFromUrl('/gallery', '?family=texture')).toBeNull()
+  })
+})
 
 // escapeHtml guards the edge function: record titles and alt text are untrusted
 // and get injected straight into the served HTML. A missed case is an injection.
@@ -27,6 +62,58 @@ describe('imagePageMeta', () => {
     expect(meta.image).toBe(SITE.image)
     expect(meta.card).toBe('summary')
     expect(meta.title).toBe('Luminframe image by @nate.example')
+  })
+
+  it('ends the alt before appending the effects to it', () => {
+    // Alt text is written as a phrase; without this the card reads
+    // "A sunset over a field Made with Vibrance."
+    const meta = imagePageMeta(
+      { imageUrl: 'https://pds/blob', alt: 'A sunset over a field', effects: ['vibrance'] },
+      'https://luminframe.com/image/did/rkey'
+    )
+    expect(meta.description).toBe('A sunset over a field. Made with Vibrance.')
+  })
+
+  it('names the effects when the record has no alt text', () => {
+    const meta = imagePageMeta(
+      { imageUrl: 'https://pds/blob', effects: ['filmGrain', 'halftone'] },
+      'https://luminframe.com/image/did/rkey'
+    )
+    expect(meta.description).toBe('A Luminframe edit. Made with Film Grain, Halftone.')
+  })
+
+  it('does not name at:// effects, which have no recoverable display name', () => {
+    const meta = imagePageMeta(
+      { imageUrl: 'https://pds/blob', effects: ['at://did:plc:abc/com.luminframe.effect/x'] },
+      'https://luminframe.com/image/did/rkey'
+    )
+    expect(meta.description).not.toContain('at://')
+  })
+})
+
+describe('metaTags', () => {
+  const animated = {
+    imageUrl: 'https://pds/still',
+    videoUrl: 'https://pds/clip',
+    width: 1600,
+    height: 900,
+  }
+  const keys = (input: Parameters<typeof imagePageMeta>[0]) =>
+    metaTags(imagePageMeta(input, 'https://luminframe.com/image/did/rkey')).map((t) => t.key)
+
+  it('claims the video type for an animated edit', () => {
+    // og:video is ignored by crawlers unless og:type says the page is a video.
+    const tags = metaTags(imagePageMeta(animated, 'https://luminframe.com/image/did/rkey'))
+    expect(tags.find((t) => t.key === 'og:type')?.content).toBe('video.other')
+    expect(keys(animated)).toEqual(expect.arrayContaining(['og:video', 'og:video:type']))
+  })
+
+  it('does not claim a video for a still', () => {
+    expect(keys({ imageUrl: 'https://pds/still', width: 1600, height: 900 })).not.toContain('og:video')
+  })
+
+  it('does not claim an image size the record did not carry', () => {
+    expect(keys({ imageUrl: 'https://pds/still' })).not.toContain('og:image:width')
   })
 })
 

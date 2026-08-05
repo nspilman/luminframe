@@ -12,7 +12,13 @@
  *   - `vUv` (vec2 varying): normalized texture coordinates.
  *   - `time` (float): seconds. Referencing it makes the effect animated,
  *     unless `animatedBy` names a range param that gates the motion (0 ⇒ still).
- *   - `resolution` (vec2): render size in pixels.
+ *   - `resolution` (vec2): the source image's pixel dimensions — NOT the size
+ *     of the buffer being drawn into, which follows the on-screen canvas in the
+ *     editor and the image in export. Sizing off the image is what makes the
+ *     live view predict the export for grain-, dot- and cell-sized effects.
+ *     A body should derive position from `vUv` and use `resolution` only for
+ *     pixel scale or aspect ratio; `gl_FragCoord` is in buffer space and so
+ *     does not agree with `resolution` on any surface but export.
  *   - `prevFrame` (sampler2D): the previous rendered frame. Referencing it
  *     makes the effect a feedback effect — always animated, ungateable.
  *   - `opacity` (float): host-injected layer strength; every effect's output

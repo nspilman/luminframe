@@ -1,0 +1,65 @@
+# Making other people's shaders discoverable and remixable
+
+## Where this stands today
+
+Both halves of this already exist; what's missing is one query and one button.
+
+**Resolution across authors works.** `src/lib/shaders/foreignEffects.ts` fetches any
+`at://` effect record from any repo and runs it through the identical
+parse → hydrate → compile pipeline every other source uses, so a stranger's
+effect can't bypass the grammar. This was built for shared images whose recipe
+referenced an effect the local registry didn't hold, and it generalizes for free.
+
+**A record already carries everything a fork needs.** `CustomEffectEntry.def`
+(`src/hooks/useCustomEffects.ts`) is documented as "what an editor seeds a draft
+from" — the published record holds `body` and `params`.
+
+**Network-wide enumeration already exists, pointed at the wrong collection.**
+`listNetworkDids` (`src/infrastructure/atproto/luminframeFeed.ts`) calls
+`com.atproto.sync.listReposByCollection` to find every DID with an image record.
+The same call with `EFFECT_COLLECTION` finds every DID with a published effect.
+
+What's absent is only this: nothing lists another person's effects, and nothing
+turns one into a draft you can edit.
+
+## Slice 1 — Remix
+
+A Remix button on any effect the viewer didn't author: `entry.def` → `saveDraft`
+→ route to `/create`. No lexicon change, no network work, no new validation path.
+
+Smallest of the three, and it should go first: it's the verb that makes discovery
+worth having. Discovery without remix is a list you can only look at.
+
+## Slice 2 — A network effects source
+
+`listReposByCollection` with `EFFECT_COLLECTION` → the existing
+`mapWithConcurrency` → `fetchCollectionRecords` → `buildCustomEffectEntries`.
+The picker gains a "From the network" section beside "Yours". Everything
+downstream — validation, the compile gate, thumbnails, apply — already handles
+foreign records.
+
+**Fetch when the section is opened, not on load.** Compiling every stranger's
+GLSL at startup is real cost, and the compile gate in `buildCustomEffectEntries`
+is what keeps one broken shader from taking the whole library down. It should run
+when the user asks for the section.
+
+**Same picker, separate section** — not a second browsing surface. The picker is
+already the one door to "what can I put on this image"; a second door would split
+that center. This is the one genuinely contestable call here: it decides how much
+stranger-authored content sits in the primary workflow.
+
+## Slice 3 — `/?effect=<at-uri>`
+
+So a single effect is a link you can post. `useUrlParamAction` and
+`resolveForeignEffects` both exist; this is mostly routing.
+
+## Deliberately deferred
+
+**`remixOf` on the effect lexicon.** The honest way to show "forked from
+@someone", and the image lexicon already has the field as precedent. Held back
+because it's a lexicon change — which means a republish under Nate's own
+credentials — and it's worth nothing until people are actually forking. Add it
+once slice 1 has users.
+
+**Ranking, trending, or curation of network effects.** Recency order is enough
+until there are more effects than one screen.
