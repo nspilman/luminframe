@@ -536,6 +536,14 @@ describe('shader library contract', () => {
       "default": 383,
       "type": "range",
     },
+    "transitionAmount": {
+      "default": 0,
+      "type": "range",
+    },
+    "transitionSize": {
+      "default": 60,
+      "type": "range",
+    },
   },
   "liquify": {
     "amount": {
