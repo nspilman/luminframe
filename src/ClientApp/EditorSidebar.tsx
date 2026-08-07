@@ -5,7 +5,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Check, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
@@ -30,6 +30,12 @@ type EditorSidebarProps = {
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
   appliedEffects: readonly AppliedEffect[]
+  /** Which applied effect the live draft is revising, or null for a new one. */
+  editingIndex: number | null
+  /** Open a committed effect for retuning, in its place in the chain. */
+  onEditEffect: (index: number) => void
+  /** Leave a revision without committing it. */
+  onCancelEdit: () => void
   onApply: () => void
   /** Bake the current render into the effect's second-image slot. */
   onUseRenderAsSecondImage: () => void
@@ -71,6 +77,9 @@ export function EditorSidebar({
   values,
   onChange,
   appliedEffects,
+  editingIndex,
+  onEditEffect,
+  onCancelEdit,
   onApply,
   onUseRenderAsSecondImage,
   onRemoveEffect,
@@ -158,12 +167,25 @@ export function EditorSidebar({
             {appliedEffects.map((applied, index) => (
               <li
                 key={index}
-                className="group flex items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-300 hover:bg-white/5"
+                className={`group flex items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-300 hover:bg-white/5 ${
+                  editingIndex === index ? 'bg-violet-500/10 ring-1 ring-violet-500/40' : ''
+                }`}
               >
                 <span className="w-4 text-right tabular-nums text-zinc-600">
                   {index + 1}
                 </span>
-                <span className="flex-1 truncate">{nameOf(applied.type)}</span>
+                {/* The name is the way back in. A committed effect is not
+                    finished, just resting — clicking it reopens its knobs
+                    where it stands in the chain, with the steps above it
+                    still folded on top so you tune it in its real context. */}
+                <button
+                  type="button"
+                  onClick={() => onEditEffect(index)}
+                  aria-label={`Edit ${nameOf(applied.type)}`}
+                  className="flex-1 truncate text-left transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                >
+                  {nameOf(applied.type)}
+                </button>
                 <button
                   type="button"
                   onClick={() => onMoveEffect(index, index - 1)}
@@ -206,8 +228,17 @@ export function EditorSidebar({
           onClick={onApply}
           className="flex-1 gap-2 bg-violet-600 hover:bg-violet-700 text-white"
         >
-          <Plus className="h-4 w-4" />
-          Apply effect
+          {editingIndex !== null ? (
+            <>
+              <Check className="h-4 w-4" />
+              Update effect
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              Apply effect
+            </>
+          )}
         </Button>
       )}
       {(canUndo || canRedo) && (
@@ -288,19 +319,30 @@ export function EditorSidebar({
         {tuning && (
           <div className={tuningFace}>
             {/* The way back, at every width: on a phone this is the sheet's
-                header, on desktop the page-turn control. One button, because
-                leaving the knobs and returning to the library are the same
-                act — deselecting the effect. */}
+                header, on desktop the page-turn control. Leaving means
+                dropping the draft either way — for a new effect that is
+                deselecting it, for a revision it is abandoning the retune and
+                letting the committed values stand. */}
             <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
               <button
                 type="button"
-                onClick={() => onShaderSelect(tuning.key)}
+                onClick={() => (editingIndex !== null ? onCancelEdit() : onShaderSelect(tuning.key))}
                 className="-ml-1 flex min-w-0 items-center gap-1 rounded py-0.5 pl-1 pr-2 text-sm font-medium text-zinc-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
               >
                 <ChevronLeft className="h-4 w-4 shrink-0 text-zinc-500" />
                 <span className="truncate">{tuning.effect.name}</span>
               </button>
-              {minimizeButton}
+              <div className="flex items-center gap-2">
+                {/* Which of the two things this face is doing. Without it the
+                    knobs look identical whether they will add a step or
+                    revise one, and only the button at the foot says which. */}
+                {editingIndex !== null && (
+                  <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-violet-300">
+                    Step {editingIndex + 1}
+                  </span>
+                )}
+                {minimizeButton}
+              </div>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">

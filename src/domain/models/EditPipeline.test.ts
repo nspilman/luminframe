@@ -56,6 +56,39 @@ describe('EditPipeline', () => {
     });
   });
 
+  describe('replaceAt', () => {
+    const twoEffects = () =>
+      EditPipeline.empty()
+        .append('colorTint' as ShaderType, { amount: 0.2 })
+        .append('vignette' as ShaderType, { amount: 0.5 });
+
+    it('swaps in the new params at the given index', () => {
+      const result = twoEffects().replaceAt(0, { amount: 0.9 });
+      expect(result.effects[0].params).toEqual({ amount: 0.9 });
+    });
+
+    it('keeps the effect in its place in the order', () => {
+      const result = twoEffects().replaceAt(0, { amount: 0.9 });
+      expect(result.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette']);
+    });
+
+    it('leaves the other effects alone', () => {
+      const result = twoEffects().replaceAt(0, { amount: 0.9 });
+      expect(result.effects[1].params).toEqual({ amount: 0.5 });
+    });
+
+    it('leaves the pipeline unchanged for an out-of-range index', () => {
+      const result = twoEffects().replaceAt(5, { amount: 0.9 });
+      expect(result.effects.map((e) => e.params)).toEqual([{ amount: 0.2 }, { amount: 0.5 }]);
+    });
+
+    it('does not mutate the original', () => {
+      const original = twoEffects();
+      original.replaceAt(0, { amount: 0.9 });
+      expect(original.effects[0].params).toEqual({ amount: 0.2 });
+    });
+  });
+
   describe('removeAt', () => {
     const threeEffects = () =>
       EditPipeline.empty()

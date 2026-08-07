@@ -45,6 +45,21 @@ export class EditPipeline {
     return new EditPipeline(this.source, [...this.effects, { type, params }]);
   }
 
+  /**
+   * Retune the effect at `index` — same effect, same place in the order, new
+   * parameter values. The counterpart to `append`: that one adds a step, this
+   * one revises a step already standing. An out-of-range index is a no-op.
+   */
+  replaceAt(index: number, params: ShaderInputVars): EditPipeline {
+    if (index < 0 || index >= this.effects.length) {
+      return this;
+    }
+    return new EditPipeline(
+      this.source,
+      this.effects.map((e, i) => (i === index ? { type: e.type, params } : e))
+    );
+  }
+
   /** Drop the effect at `index`. An out-of-range index is a no-op. */
   removeAt(index: number): EditPipeline {
     if (index < 0 || index >= this.effects.length) {

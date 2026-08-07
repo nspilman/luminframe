@@ -85,6 +85,15 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   const [varValues, setVarValues] = useState<ShaderInputVars>(() => ({}))
   const [canvasDimensions, setCanvasDimensions] = useState<Dimensions | null>(null)
 
+  // Which committed effect the live draft is revising, or null when the draft
+  // is a new effect headed for the top of the stack. This one number is the
+  // whole difference between the two ways of tuning: null renders the draft as
+  // an extra pass after everything committed, a number renders it *in place of*
+  // the effect at that index, so what you see while dragging a slider is the
+  // effect doing its work where it actually sits in the order — with the steps
+  // above it still folded on top.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
   // The photo being edited — the subject of the whole session, so it gets a
   // place of its own rather than riding in varValues (the effect's knobs) or in
   // the pipeline (which lives inside the undo history, where an undo would swap
@@ -240,12 +249,18 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     // Where the source and the pipeline meet: the pipeline is anchored to the
     // current photo for this render only, so undo can move through the stack
     // without ever moving the photo.
-    const committed = pipeline.withSource(source)
+    //
+    // Revising a committed effect substitutes the live values into the stack at
+    // that effect's own index; a new effect rides on top as a draft pass. Both
+    // are previews of an uncommitted change — the difference is only where in
+    // the fold the change belongs.
+    const revising = editingIndex !== null && selectedShader !== null
+    const committed = (revising ? pipeline.replaceAt(editingIndex, varValues) : pipeline).withSource(source)
     // No selected effect → no draft passes; with an empty committed stack the
     // chain is empty and the renderer shows the original.
-    const drafts = selectedShader ? [{ type: selectedShader, params: varValues }] : []
+    const drafts = selectedShader && !revising ? [{ type: selectedShader, params: varValues }] : []
     renderEdit(committed, drafts, sourceSize)
-  }, [isInitialized, selectedShader, varValues, source, renderEdit, sourceSize, canvasDimensions, pipeline])
+  }, [isInitialized, selectedShader, varValues, source, renderEdit, sourceSize, canvasDimensions, pipeline, editingIndex])
 
   // handleCanvasResize updates the renderer to the actual canvas size; the
   // resulting canvasDimensions change drives the render effect above.
@@ -261,38 +276,83 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     []
   )
 
-  // Commit the live draft as a new effect on top of the pipeline (stack-forward:
-  // each Apply adds, never replaces), then open a fresh draft of the same effect
-  // on the new base. The committed values now live in the pipeline, so the
-  // canvas keeps showing them — the fresh draft starts from defaults on top.
+  // Commit the live draft. A new effect goes on top of the pipeline
+  // (stack-forward: each Apply adds); a revision goes back into the slot it
+  // came from, keeping its place in the order. Either way the commit consumes
+  // the draft: the values now live in the pipeline, so the canvas keeps showing
+  // them and nothing stays selected. Without that last part, an applied
+  // animated effect kept riding the chain as a live draft — turning every later
+  // download and save into a video even when the committed edit was a still.
   const handleApply = useCallback(() => {
     if (!selectedShader || !effect) return
-    setHistory(h => pushHistory(h, h.present.append(selectedShader, varValues)))
-    // The tuned values were just committed into the pipeline, so the fresh draft
-    // on top of them is a clean slate.
+    setHistory(h =>
+      pushHistory(
+        h,
+        editingIndex !== null
+          ? h.present.replaceAt(editingIndex, varValues)
+          : h.present.append(selectedShader, varValues)
+      )
+    )
     setVarValues({ ...effect.defaultValues })
     recordRecent(selectedShader)
-    // The commit consumes the draft: the effect now lives in the pipeline, so
-    // nothing stays selected. Without this, an applied animated effect kept
-    // riding the chain as a live draft — turning every later download and save
-    // into a video even when the committed edit was a still.
     setSelectedShader(null)
-  }, [selectedShader, effect, varValues, recordRecent])
+    setEditingIndex(null)
+  }, [selectedShader, effect, varValues, recordRecent, editingIndex])
+
+  // Open a committed effect for retuning, in its own place in the chain. Its
+  // committed values seed the draft, so the sliders open where the effect was
+  // left rather than at the factory defaults.
+  const editAppliedEffect = useCallback((index: number) => {
+    const applied = pipeline.effects[index]
+    if (!applied) return
+    setSelectedShader(applied.type)
+    setVarValues({ ...applied.params })
+    setEditingIndex(index)
+  }, [pipeline])
+
+  // Leave a revision without committing it. The draft is dropped, so the canvas
+  // returns to the committed stack.
+  const cancelEdit = useCallback(() => {
+    setSelectedShader(null)
+    setEditingIndex(null)
+  }, [])
 
   // Selecting from the library toggles: clicking the selected effect again
   // deselects it. Browsing an effect must always be reversible — otherwise a
   // glance at Wave leaves an animated draft stuck on the chain with no way off
-  // short of picking a different effect.
+  // short of picking a different effect. Choosing from the library is always
+  // starting a new effect, so it ends any revision in progress.
   const selectShader = useCallback((shader: EffectKey) => {
     setSelectedShader(prev => (prev === shader ? null : shader))
+    setEditingIndex(null)
   }, [])
 
+  // Restructuring the stack moves the slot a revision is aimed at. The index
+  // follows its effect rather than being cleared, so reordering mid-tune costs
+  // nothing; removing the very effect being revised ends the revision, since
+  // its slot is gone.
   const handleRemoveEffect = useCallback((index: number) => {
     setHistory(h => pushHistory(h, h.present.removeAt(index)))
+    setEditingIndex(prev => {
+      if (prev === null) return null
+      if (prev === index) {
+        setSelectedShader(null)
+        return null
+      }
+      return prev > index ? prev - 1 : prev
+    })
   }, [])
 
   const handleMoveEffect = useCallback((from: number, to: number) => {
     setHistory(h => pushHistory(h, h.present.move(from, to)))
+    setEditingIndex(prev => {
+      if (prev === null) return null
+      if (prev === from) return to
+      // A step passing over the revised one shifts it by exactly one slot.
+      if (from < prev && to >= prev) return prev - 1
+      if (from > prev && to <= prev) return prev + 1
+      return prev
+    })
   }, [])
 
   const handleUndo = useCallback(() => setHistory(undo), [])
@@ -420,6 +480,9 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     sourceUrl,
     isLoadingImage: loadImage.isPending,
     appliedEffects: pipeline.effects,
+    editingIndex,
+    editAppliedEffect,
+    cancelEdit,
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,

@@ -55,6 +55,9 @@ export function ClientApp(): JSX.Element {
     sourceUrl,
     isLoadingImage,
     appliedEffects,
+    editingIndex,
+    editAppliedEffect,
+    cancelEdit,
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,
@@ -135,6 +138,9 @@ export function ClientApp(): JSX.Element {
           values={{ ...varValues, resolution }}
           onChange={updateVarValue}
           appliedEffects={appliedEffects}
+          editingIndex={editingIndex}
+          onEditEffect={editAppliedEffect}
+          onCancelEdit={cancelEdit}
           onApply={handleApply}
           onUseRenderAsSecondImage={handleSaveAsSecondImage}
           onRemoveEffect={handleRemoveEffect}
