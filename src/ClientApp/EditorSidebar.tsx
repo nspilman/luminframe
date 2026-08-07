@@ -5,7 +5,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
@@ -41,16 +41,23 @@ type EditorSidebarProps = {
   canRedo: boolean
 }
 
-// On a phone the canvas comes first (order-2 puts the library beneath it), and
-// tuning is a bottom sheet rather than a block buried below the whole library:
-// selecting an effect must answer on screen, not two scrolls away. On desktop
-// the two are sibling columns; both narrow a notch below lg so the canvas
-// keeps workable width on small laptops.
-const libraryShell =
-  'order-2 md:order-none md:flex md:min-h-0 md:flex-col md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 backdrop-blur-xl'
-const tuningShell =
+// One tool column, narrowing a notch below lg so the canvas keeps workable
+// width on small laptops. On a phone the canvas comes first (order-2 puts the
+// column beneath it).
+// backdrop-blur is md-only on purpose: backdrop-filter makes an element a
+// containing block for its fixed descendants, and the tuning sheet below md is
+// a fixed child of this column that must anchor to the viewport, not to here.
+const toolColumn =
+  'order-2 md:order-none md:flex md:min-h-0 md:flex-col md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-zinc-800/50 bg-black/20 md:backdrop-blur-xl'
+
+// Tuning is the column's second face at desktop — it replaces the library
+// rather than standing beside it, so there is one place to look and the canvas
+// keeps the width a second column would have taken. On a phone it stays a
+// bottom sheet floating over the canvas: selecting an effect must answer on
+// screen, not two scrolls down the page the library sits on.
+const tuningFace =
   'fixed inset-x-0 bottom-0 z-40 flex max-h-[70vh] flex-col rounded-t-2xl border-t border-zinc-800/50 bg-zinc-950/95 ' +
-  'md:static md:z-auto md:order-none md:max-h-none md:min-h-0 md:w-[260px] md:rounded-none md:border-t-0 md:border-r md:bg-black/20 md:backdrop-blur-xl lg:w-72'
+  'md:static md:z-auto md:max-h-none md:min-h-0 md:flex-1 md:rounded-none md:border-t-0 md:bg-transparent'
 
 export function EditorSidebar({
   source,
@@ -73,7 +80,7 @@ export function EditorSidebar({
   canUndo,
   canRedo,
 }: EditorSidebarProps) {
-  // Desktop-only panel chrome: either tool column minimizes to a slim rail,
+  // Desktop-only panel chrome: the tool column minimizes to a slim rail,
   // conceding its width to the canvas — the editor's version of the creator's
   // focus mode. A phone doesn't need it: the canvas already leads there, and
   // the tuning sheet has its own close button. Collapse is CSS (md:!hidden),
@@ -82,7 +89,7 @@ export function EditorSidebar({
   // column, not a column itself, so it collapses in place to its own header
   // (the picker's family idiom) at every width — a rail would be a lie about
   // what it is, and on a phone a long stack is exactly what needs folding.
-  const [collapsed, setCollapsed] = useState({ library: false, tuning: false, applied: false })
+  const [collapsed, setCollapsed] = useState({ column: false, applied: false })
 
   // The selected effect, when it is somebody else's: a published record
   // (at://) that isn't among the user's own. Deliberately not "is it in the
@@ -103,22 +110,23 @@ export function EditorSidebar({
     return null
   }
 
-  // The shared motif, skinned for this surface: rails here are flush strips
-  // against the canvas, and both halves are desktop-only.
-  const rail = (label: string, expand: () => void) => (
-    <PanelRail
-      label={label}
-      onExpand={expand}
-      className="hidden w-9 shrink-0 flex-col border-r border-zinc-800/50 bg-black/20 py-3 backdrop-blur-xl md:flex"
-    />
-  )
+  // The column shows one of two faces: the library, or the knobs of the effect
+  // just chosen from it. One place to look, and the canvas keeps the width a
+  // second column would have taken.
+  const tuning = effect && selectedShader ? { effect, key: selectedShader } : null
 
-  const minimizeButton = (label: string, minimize: () => void) => (
-    <MinimizeButton label={label} onMinimize={minimize} className="hidden md:block" />
+  const expandColumn = () => setCollapsed((c) => ({ ...c, column: false }))
+  const minimizeColumn = () => setCollapsed((c) => ({ ...c, column: true }))
+
+  // The shared motif, skinned for this surface: the rail is a flush strip
+  // against the canvas, and both halves are desktop-only. It is named for the
+  // face it will restore, so folding the column never loses your place.
+  const minimizeButton = (
+    <MinimizeButton label={tuning ? tuning.effect.name : 'Library'} onMinimize={minimizeColumn} className="hidden md:block" />
   )
 
   // The applied stack and the action row live wherever the work-in-progress
-  // is: at the tuning column's foot while an effect is selected, at the
+  // is: at the tuning face's foot while an effect is selected, at the
   // library's foot otherwise. Defined once, mounted in one place at a time.
   // Signing out empties the custom half of the registry while the pipeline may
   // still hold an applied custom effect, so an unresolvable key is a real state
@@ -231,19 +239,24 @@ export function EditorSidebar({
     </div>
   )
 
-  // Two sibling columns, so browsing and tuning never fight over one: the
-  // library keeps its full height always, and the tuning column exists only
-  // while an effect is selected — the canvas concedes the width instead of the
-  // library conceding its rows. Clicking effects while one is open is how a
-  // look is previewed, so the library must stay browsable mid-tune.
+  // One column, two faces. Picking an effect turns the page from the library
+  // to that effect's knobs; Back turns it home. The library keeps its search
+  // and scroll state across the turn (it is hidden, not unmounted), so coming
+  // back lands you where you left rather than at the top of the catalog.
   return (
     <>
-      {collapsed.library && rail('Library', () => setCollapsed((c) => ({ ...c, library: false })))}
-      <div className={`relative ${libraryShell} ${collapsed.library ? 'md:!hidden' : ''}`}>
-        <div className="absolute right-2 top-4 z-10">
-          {minimizeButton('Library', () => setCollapsed((c) => ({ ...c, library: true })))}
-        </div>
-        <div className="flex min-h-0 flex-col p-4 md:flex-1">
+      {collapsed.column && (
+        <PanelRail
+          label={tuning ? tuning.effect.name : 'Library'}
+          onExpand={expandColumn}
+          className="hidden w-9 shrink-0 flex-col border-r border-zinc-800/50 bg-black/20 py-3 backdrop-blur-xl md:flex"
+        />
+      )}
+      <div className={`relative ${toolColumn} ${collapsed.column ? 'md:!hidden' : ''}`}>
+        {/* Face one: the library. At desktop the tuning face replaces it; on a
+            phone it stays put beneath the canvas and the sheet floats over. */}
+        <div className={`flex min-h-0 flex-col p-4 md:flex-1 ${tuning ? 'md:hidden' : ''}`}>
+          <div className="absolute right-2 top-4 z-10">{!tuning && minimizeButton}</div>
           <EffectPicker
             selectedShader={selectedShader}
             onShaderSelect={onShaderSelect}
@@ -254,10 +267,10 @@ export function EditorSidebar({
           />
         </div>
 
-        {/* With no effect selected there is no tuning column, so the workflow
+        {/* With no effect selected there is no tuning face, so the workflow
             state rests at the library's foot (capped so it can't squeeze the
             library out of its own column). */}
-        {!effect && (
+        {!tuning && (
           <>
             <div className="space-y-4 border-t border-zinc-800/50 p-4 md:max-h-[45vh] md:overflow-y-auto">
               <p className="px-1 text-sm text-zinc-500">
@@ -268,45 +281,35 @@ export function EditorSidebar({
             {actionRow}
           </>
         )}
-      </div>
 
-      {/* effect and selectedShader are one fact under two names — the effect is
-          the selected shader's, so the door checks both once and TypeScript
-          knows it, rather than each handler re-guarding an impossible null. */}
-      {effect && selectedShader && collapsed.tuning &&
-        rail('Adjustments', () => setCollapsed((c) => ({ ...c, tuning: false })))}
-      {effect && selectedShader && (
-        <div className={`${tuningShell} ${collapsed.tuning ? 'md:!hidden' : ''}`}>
-          {/* Sheet header, phone only: names what's being tuned and offers the
-              way out (deselect) — on desktop the column's presence and the
-              library beside it already say both. */}
-          <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3 md:hidden">
-            <span className="text-sm font-medium text-zinc-200">{effect.name}</span>
-            <button
-              type="button"
-              onClick={() => onShaderSelect(selectedShader)}
-              aria-label="Close adjustments"
-              className="rounded-full bg-white/5 p-1.5 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-            <div className="space-y-1">
-              {/* The sheet header already names the effect on a phone. */}
-              <div className="hidden items-center justify-between md:flex">
-                <h3 className="text-sm font-medium text-zinc-400">
-                  Adjustments — {effect.name}
-                </h3>
-                {minimizeButton('Adjustments', () => setCollapsed((c) => ({ ...c, tuning: true })))}
-              </div>
+        {/* Face two: the chosen effect's knobs. `tuning` pairs the effect with
+            its key, so the way back is one fact rather than two nullable ones
+            each handler would have to re-guard. */}
+        {tuning && (
+          <div className={tuningFace}>
+            {/* The way back, at every width: on a phone this is the sheet's
+                header, on desktop the page-turn control. One button, because
+                leaving the knobs and returning to the library are the same
+                act — deselecting the effect. */}
+            <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => onShaderSelect(tuning.key)}
+                className="-ml-1 flex min-w-0 items-center gap-1 rounded py-0.5 pl-1 pr-2 text-sm font-medium text-zinc-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+              >
+                <ChevronLeft className="h-4 w-4 shrink-0 text-zinc-500" />
+                <span className="truncate">{tuning.effect.name}</span>
+              </button>
+              {minimizeButton}
+            </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
                 <CardContent className="p-4">
-                  <ShaderControls effect={effect} values={values} onChange={onChange} />
+                  <ShaderControls effect={tuning.effect} values={values} onChange={onChange} />
                   {/* Only the composite effects have a second-image slot; the
                       shortcut that bakes the current render into it lives right
                       beside that slot, not in the global action bar. */}
-                  {SECOND_IMAGE_INPUT in effect.inputs && (
+                  {SECOND_IMAGE_INPUT in tuning.effect.inputs && (
                     <button
                       type="button"
                       onClick={onUseRenderAsSecondImage}
@@ -332,12 +335,12 @@ export function EditorSidebar({
                   )}
                 </CardContent>
               </Card>
+              {appliedList}
             </div>
-            {appliedList}
+            {actionRow}
           </div>
-          {actionRow}
-        </div>
-      )}
+        )}
+      </div>
     </>
   )
 }
