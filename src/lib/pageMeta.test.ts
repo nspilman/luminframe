@@ -140,9 +140,9 @@ describe('staticPageMeta', () => {
     )
   })
 
-  it('describes the effect creator for /create', () => {
+  it('describes the shader editor for /create', () => {
     expect(staticPageMeta('/create', 'https://luminframe.com/create').title).toBe(
-      'Create an effect — Luminframe'
+      'Shader Editor — Luminframe'
     )
   })
 

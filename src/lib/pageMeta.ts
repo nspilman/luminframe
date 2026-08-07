@@ -199,7 +199,7 @@ export function staticPageMeta(pathname: string, url: string): PageMeta {
   if (p === '/create' || p.startsWith('/create/')) {
     return {
       ...base,
-      title: `Create an effect — ${SITE.name}`,
+      title: `Shader Editor — ${SITE.name}`,
       description: `Write a shader effect and see it live on a test image — then publish it to your own repo on the AT Protocol.`,
     }
   }

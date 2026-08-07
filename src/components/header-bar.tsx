@@ -7,7 +7,7 @@ import { CREATE_ROOT, GALLERY_ROOT } from '@/lib/galleryRoute'
 
 const NAV: { to: string; label: string; end: boolean }[] = [
   { to: '/', label: 'Editor', end: true },
-  { to: CREATE_ROOT, label: 'Create', end: false },
+  { to: CREATE_ROOT, label: 'Shader Editor', end: false },
   { to: GALLERY_ROOT, label: 'Gallery', end: false },
 ]
 
@@ -37,7 +37,9 @@ export function HeaderBar({ session }: HeaderBarProps) {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `rounded px-2 py-1 text-sm transition-colors sm:px-3 ${
+                  // whitespace-nowrap: a two-word label must stay one line, or
+                  // its pill grows taller than its neighbours and the row breaks.
+                  `whitespace-nowrap rounded px-2 py-1 text-sm transition-colors sm:px-3 ${
                     isActive ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:bg-white/5'
                   }`
                 }

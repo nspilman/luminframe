@@ -111,7 +111,7 @@ void main() {
 }
 
 /**
- * The Effect Creator: author a shader effect with a live preview beside it.
+ * The Shader Editor: author a shader effect with a live preview beside it.
  * One draft is open at a time; every change persists to localStorage a beat
  * after it happens (and is flushed on unmount), so a reload — or the OAuth
  * redirect — loses nothing. The open draft flows through the same
@@ -440,7 +440,7 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
           <div className="flex flex-1 items-center justify-center text-center">
             <div>
               <Wand2 className="mx-auto h-8 w-8 text-zinc-600" />
-              <h2 className="mt-3 text-lg font-semibold text-zinc-200">Effect Creator</h2>
+              <h2 className="mt-3 text-lg font-semibold text-zinc-200">Shader Editor</h2>
               <p className="mt-1 max-w-sm text-sm text-zinc-500">
                 Write a shader, watch it live on a test image, and it's yours to use in the
                 editor — publish it when it's ready.
