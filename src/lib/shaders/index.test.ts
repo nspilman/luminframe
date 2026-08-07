@@ -537,11 +537,11 @@ describe('shader library contract', () => {
       "type": "range",
     },
     "transitionAmount": {
-      "default": 0,
+      "default": 1,
       "type": "range",
     },
     "transitionSize": {
-      "default": 60,
+      "default": 0,
       "type": "range",
     },
   },
