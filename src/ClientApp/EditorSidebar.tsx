@@ -61,8 +61,12 @@ const toolColumn =
 // keeps the width a second column would have taken. On a phone it stays a
 // bottom sheet floating over the canvas: selecting an effect must answer on
 // screen, not two scrolls down the page the library sits on.
+// dvh, not vh: on a phone `vh` measures the viewport as if the browser's
+// toolbars were retracted, so a sheet capped in vh can extend under them and
+// take its foot — the Apply button — out of sight. dvh tracks what is actually
+// visible right now.
 const tuningFace =
-  'fixed inset-x-0 bottom-0 z-40 flex max-h-[70vh] flex-col rounded-t-2xl border-t border-zinc-800/50 bg-zinc-950/95 ' +
+  'fixed inset-x-0 bottom-0 z-40 flex max-h-[70dvh] flex-col rounded-t-2xl border-t border-zinc-800/50 bg-zinc-950/95 ' +
   'md:static md:z-auto md:max-h-none md:min-h-0 md:flex-1 md:rounded-none md:border-t-0 md:bg-transparent'
 
 export function EditorSidebar({
@@ -220,8 +224,14 @@ export function EditorSidebar({
     </div>
   )
 
+  // shrink-0: this row is the one thing in the panel that must never give up
+  // height. Everything above it scrolls; a flex child without this shrinks
+  // under vertical pressure, and on a short window the commit button is what
+  // gets squeezed away — the one control the whole panel exists to reach.
+  // The extra bottom padding clears the phone's home indicator, which sits
+  // over the sheet's last few pixels.
   const actionRow = (effect || canUndo || canRedo) && (
-    <div className="flex items-center gap-2 border-t border-zinc-800/50 p-4">
+    <div className="flex shrink-0 items-center gap-2 border-t border-zinc-800/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {effect && (
         <Button
           type="button"
@@ -303,7 +313,7 @@ export function EditorSidebar({
             library out of its own column). */}
         {!tuning && (
           <>
-            <div className="space-y-4 border-t border-zinc-800/50 p-4 md:max-h-[45vh] md:overflow-y-auto">
+            <div className="min-h-0 shrink space-y-4 overflow-y-auto border-t border-zinc-800/50 p-4 md:max-h-[45vh]">
               <p className="px-1 text-sm text-zinc-500">
                 Pick an effect to start — your image stays untouched until you do.
               </p>
@@ -323,7 +333,7 @@ export function EditorSidebar({
                 dropping the draft either way — for a new effect that is
                 deselecting it, for a revision it is abandoning the retune and
                 letting the committed values stand. */}
-            <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/50 px-4 py-3">
               <button
                 type="button"
                 onClick={() => (editingIndex !== null ? onCancelEdit() : onShaderSelect(tuning.key))}
