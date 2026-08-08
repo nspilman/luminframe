@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { familyOf, effectFamilies } from '@/lib/shaders/catalog'
 import { galleryPathForFamily } from '@/lib/galleryRoute'
 import { effectLabel } from '@/lib/luminframeImagePresentation'
+import { useOfficialEffectNames } from '@/hooks/useOfficialEffects'
 
 /**
  * An effect's name as a chip. When the effect belongs to a family this build
@@ -15,7 +16,7 @@ import { effectLabel } from '@/lib/luminframeImagePresentation'
 export function EffectChip({ effectKey, className = '' }: { effectKey: string; className?: string }) {
   const family = familyOf(effectKey)
   const base = `rounded-full bg-violet-500/15 font-medium text-violet-300 ${className}`
-  const label = effectLabel(effectKey)
+  const label = effectLabel(effectKey, useOfficialEffectNames())
 
   if (!family) return <span className={base}>{label}</span>
 

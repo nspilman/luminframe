@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LUMINFRAME_DID } from '@/effects-contract'
 import { fetchRepoEffectRecords, RawEffectRecord } from '@/infrastructure/atproto/effectRecords'
 import { slugForEffectKey } from '@/lib/shaders/toEffectDefinition'
@@ -8,8 +8,12 @@ import { buildCustomEffectEntries, CustomEffectEntry } from './useCustomEffects'
 /**
  * The official effect library, loaded from canon — the com.luminframe.effect
  * records in luminframe.com's repo. The records are the source of truth (data
- * lives in repos; the app is a view); this hook is the app-side of that
+ * lives in repos; the app is a view); this store is the app-side of that
  * inversion.
+ *
+ * A module-level store rather than per-hook state because more than one
+ * surface needs the library (the editor's registry, the gallery's effect
+ * names) and the fetch must happen once per page load, not once per mount.
  *
  * Entries are re-keyed from their at:// URIs to the short builtin keys
  * (pixelate, blackAndWhite, …) because those keys are the recipe wire format
@@ -64,31 +68,57 @@ function writeSnapshot(records: RawEffectRecord[]): void {
   }
 }
 
-export function useOfficialEffects(): OfficialEffectsState {
-  const [state, setState] = useState<OfficialEffectsState>(() => {
+let state: OfficialEffectsState | null = null
+let fetchStarted = false
+const listeners = new Set<() => void>()
+
+function setState(next: OfficialEffectsState): void {
+  state = next
+  for (const listener of listeners) listener()
+}
+
+function getState(): OfficialEffectsState {
+  if (state === null) {
     const snapshot = readSnapshot()
-    if (!snapshot) return { status: 'idle', entries: [] }
-    return { status: 'snapshot', entries: rekeyOfficialEntries(buildCustomEffectEntries(snapshot).entries) }
-  })
-
-  useEffect(() => {
-    let active = true
-    fetchRepoEffectRecords(LUMINFRAME_DID)
-      .then((records) => {
-        if (!active) return
-        writeSnapshot(records)
-        setState({ status: 'loaded', entries: rekeyOfficialEntries(buildCustomEffectEntries(records).entries) })
-      })
-      .catch(() => {
-        if (!active) return
-        // Offline or canon unreachable: the snapshot (already showing) is the
-        // working library. 'failed' is only the no-snapshot first visit.
-        setState((prev) => (prev.status === 'snapshot' ? prev : { status: 'failed', entries: [] }))
-      })
-    return () => {
-      active = false
-    }
-  }, [])
-
+    state = snapshot
+      ? { status: 'snapshot', entries: rekeyOfficialEntries(buildCustomEffectEntries(snapshot).entries) }
+      : { status: 'idle', entries: [] }
+  }
   return state
+}
+
+function ensureFetched(): void {
+  if (fetchStarted) return
+  fetchStarted = true
+  fetchRepoEffectRecords(LUMINFRAME_DID)
+    .then((records) => {
+      writeSnapshot(records)
+      setState({ status: 'loaded', entries: rekeyOfficialEntries(buildCustomEffectEntries(records).entries) })
+    })
+    .catch(() => {
+      // Offline or canon unreachable: the snapshot (already showing) is the
+      // working library. 'failed' is only the no-snapshot first visit.
+      const current = getState()
+      if (current.status !== 'snapshot') setState({ status: 'failed', entries: [] })
+    })
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+export function useOfficialEffects(): OfficialEffectsState {
+  const snapshot = useSyncExternalStore(subscribe, getState)
+  useEffect(ensureFetched, [])
+  return snapshot
+}
+
+/** Display names by effect key — the gallery's projection of the library. */
+export function useOfficialEffectNames(): Record<string, string> {
+  const { entries } = useOfficialEffects()
+  return useMemo(
+    () => Object.fromEntries(entries.map((e) => [e.key, e.effect.name])),
+    [entries]
+  )
 }

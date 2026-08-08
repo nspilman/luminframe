@@ -26,6 +26,8 @@ type EditorSidebarProps = {
   customEffects: readonly CustomEffectEntry[]
   /** Everyone else's, for the picker's network section. */
   networkEffects: NetworkEffectsState
+  /** How the canon effect library arrived; 'failed' shows the picker's unreachable banner. */
+  officialStatus: 'idle' | 'snapshot' | 'loaded' | 'failed'
   effect: ShaderEffect | null
   values: ShaderInputVars
   onChange: (key: keyof ShaderInputVars, value: ShaderInputVars[string]) => void
@@ -74,6 +76,7 @@ export function EditorSidebar({
   registry,
   customEffects,
   networkEffects,
+  officialStatus,
   selectedShader,
   onShaderSelect,
   recentShaders,
@@ -312,6 +315,8 @@ export function EditorSidebar({
             recentShaders={recentShaders}
             customEffects={customEffects}
             networkEffects={networkEffects}
+            registry={registry}
+            officialStatus={officialStatus}
             source={source}
           />
         </div>

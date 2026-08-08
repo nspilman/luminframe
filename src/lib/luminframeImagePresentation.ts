@@ -6,17 +6,16 @@
  */
 
 import { LuminframeImageView } from '@/infrastructure/atproto/luminframeFeed'
-import { shaderLibrary } from '@/lib/shaders'
-import { ShaderType } from '@/types/shader'
 
 /**
- * Display name for an effect key, falling back to the raw key. The fallback is
- * load-bearing here (unlike effect-picker's direct `shaderLibrary[type].name`):
- * gallery keys come from untrusted network records and may name an effect this
- * build doesn't know.
+ * Display name for an effect key, from the canon-loaded library's name map
+ * (useOfficialEffectNames), falling back to the raw key. The fallback is
+ * load-bearing: gallery keys come from untrusted network records and may name
+ * an effect this build doesn't know — or the library may not have arrived yet
+ * on a first visit, where the raw key is an honest placeholder.
  */
-export function effectLabel(key: string): string {
-  return shaderLibrary[key as ShaderType]?.name ?? key
+export function effectLabel(key: string, names: Record<string, string>): string {
+  return names[key] ?? key
 }
 
 /** An ISO timestamp as a locale date, or '' if absent/unparseable. */

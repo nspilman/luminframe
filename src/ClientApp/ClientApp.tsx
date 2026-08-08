@@ -38,7 +38,7 @@ export function ClientApp(): JSX.Element {
   // The effect registry: everything resolvable right now — builtins plus the
   // signed-in user's custom effects, loaded from their PDS. Signed out, it's
   // the builtins alone, immediately ready.
-  const { registry, custom: customEffects, network: networkEffects, ready: registryReady, publishedSkipped, refreshPublished } = useEffectRegistry(session.did)
+  const { registry, custom: customEffects, network: networkEffects, officialStatus, ready: registryReady, publishedSkipped, refreshPublished } = useEffectRegistry(session.did)
 
   const {
     canvasRef,
@@ -131,6 +131,7 @@ export function ClientApp(): JSX.Element {
           registry={registry}
           customEffects={customEffects}
           networkEffects={networkEffects}
+          officialStatus={officialStatus}
           selectedShader={selectedShader}
           onShaderSelect={selectShader}
           recentShaders={recentShaders}

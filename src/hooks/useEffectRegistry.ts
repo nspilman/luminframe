@@ -44,6 +44,12 @@ export interface EffectRegistryState {
    * browsing the network is a choice, not part of starting the editor.
    */
   network: NetworkEffectsState
+  /**
+   * How the canon-loaded library arrived: 'snapshot' and 'loaded' are both
+   * working states; 'failed' means a first visit with no snapshot and no
+   * network — the one state the picker must explain rather than sit empty.
+   */
+  officialStatus: 'idle' | 'snapshot' | 'loaded' | 'failed'
   ready: boolean
   /** Published records that failed the pipeline — the creator's fix list. */
   publishedSkipped: Array<{ uri: string; reasons: string[] }>
@@ -83,7 +89,7 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const registry = useMemo(() => ({ ...shaderLibrary, ...effectsByKey }), [effectsByKey])
 
   return useMemo(
-    () => ({ registry, custom, network, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),
-    [registry, custom, network, status, localReady, publishedSkipped, refreshPublished]
+    () => ({ registry, custom, network, officialStatus: official.status, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),
+    [registry, custom, network, official.status, status, localReady, publishedSkipped, refreshPublished]
   )
 }

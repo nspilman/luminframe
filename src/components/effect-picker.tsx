@@ -1,10 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { EffectKey, ShaderType } from '@/types/shader'
+import { EffectKey, EffectRegistry, registeredShaders, ShaderType } from '@/types/shader'
 import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Type, Search, X, ChevronDown, ChevronRight, Play, FlaskConical } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
-import { shaderLibrary } from '@/lib/shaders'
 import { motionOf, EffectMotion } from '@/lib/shaders/animation'
 import { blurbOf } from '@/lib/shaders/catalog'
 import { filterEffectFamilies, textMatchesQuery } from '@/lib/shaders/effectSearch'
@@ -97,6 +96,10 @@ type EffectPickerProps = {
   customEffects: readonly CustomEffectEntry[]
   /** Everyone else's, shown as a section that loads only when asked. */
   networkEffects: NetworkEffectsState
+  /** Every effect resolvable right now — canon-loaded builtins plus every other source. */
+  registry: EffectRegistry
+  /** How the canon library arrived — 'failed' is the state the picker must explain. */
+  officialStatus: 'idle' | 'snapshot' | 'loaded' | 'failed'
   source: Image | null
 }
 
@@ -169,13 +172,18 @@ function NetworkSectionNote({
  */
 function rowFor(
   key: EffectKey,
+  registry: EffectRegistry,
   customByKey: ReadonlyMap<EffectKey, CustomEffectEntry>,
   networkKeys: ReadonlySet<EffectKey>,
   handles: Record<string, string>
 ): EffectRow | null {
-  if (key in shaderLibrary) {
+  if ((registeredShaders as readonly string[]).includes(key)) {
     const type = key as ShaderType
-    const effect = shaderLibrary[type]
+    // The effect itself comes from the registry — canon-loaded, with the
+    // bundle as fallback. Missing means the library hasn't arrived yet on a
+    // first visit; the tile appears when it lands.
+    const effect = registry[type]
+    if (!effect) return null
     return { name: effect.name, blurb: blurbOf(type), icon: shaderIcons[type], motion: motionOf(effect) }
   }
   const entry = customByKey.get(key)
@@ -207,7 +215,7 @@ function rowFor(
  * effect. Order and grouping come from the curated catalog, so adding an effect
  * there places it here automatically.
  */
-export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, networkEffects, source }: EffectPickerProps) {
+export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, customEffects, networkEffects, registry, officialStatus, source }: EffectPickerProps) {
   // You are on the network too, so your own effects come back in its listing.
   // They already have a Yours section; showing them twice would make the
   // network look like it is mostly you.
@@ -230,7 +238,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
   // Type-to-filter: narrows the families as the query is typed. Empty query
   // shows the full catalog, so search overlays browsing rather than replacing it.
   const [query, setQuery] = useState('')
-  const families = useMemo(() => filterEffectFamilies(query), [query])
+  const families = useMemo(() => filterEffectFamilies(query, registry), [query, registry])
 
   // The user's own effects, as a Yours section beside the builtin families —
   // searched by the same rule (name or blurb), with name and blurb coming from
@@ -349,6 +357,16 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
       <h3 className="text-sm font-medium text-zinc-400">Effects</h3>
       <Card className={`border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm ${fillColumn}`}>
         <CardContent className={`space-y-3 p-3 ${fillColumn}`}>
+          {/* The one state that needs explaining: a first visit with no cached
+              library and no network. Every catalog tile is missing, and an
+              unexplained empty picker reads as a broken app. Gated on the
+              registry actually lacking the catalog so it can never appear
+              while another source is still filling the shelves. */}
+          {officialStatus === 'failed' && !(registeredShaders[0] in registry) && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
+              Couldn't reach the effect library — check your connection and reload.
+            </p>
+          )}
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <input
@@ -433,7 +451,7 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
                 {!isCollapsed && (
                 <div className="space-y-1">
                   {family.effects.map((shader) => {
-                    const row = rowFor(shader, customByKey, networkKeys, networkEffects.handles)
+                    const row = rowFor(shader, registry, customByKey, networkKeys, networkEffects.handles)
                     if (!row) return null
                     const thumb = thumbnails?.[shader]
                     const isSelected = selectedShader === shader

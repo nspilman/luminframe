@@ -1,6 +1,5 @@
-import { ShaderType } from '@/types/shader'
+import { EffectRegistry, ShaderType } from '@/types/shader'
 import { EffectFamily, effectFamilies, blurbOf } from './catalog'
-import { shaderLibrary } from './index'
 
 /**
  * Type-to-filter for the effect picker. With 38 effects across 10 families,
@@ -39,9 +38,9 @@ export function textMatchesQuery(query: string, name: string, blurb: string): bo
   return subsequenceMatch(q, name) || subsequenceMatch(q, blurb)
 }
 
-/** A builtin matches by its library name or catalog blurb. */
-export function effectMatchesQuery(shader: ShaderType, query: string): boolean {
-  return textMatchesQuery(query, shaderLibrary[shader].name, blurbOf(shader))
+/** A builtin matches by its registry name or catalog blurb. */
+export function effectMatchesQuery(shader: ShaderType, query: string, registry: EffectRegistry): boolean {
+  return textMatchesQuery(query, registry[shader]?.name ?? '', blurbOf(shader))
 }
 
 /**
@@ -50,9 +49,9 @@ export function effectMatchesQuery(shader: ShaderType, query: string): boolean {
  * query returns the full catalog unchanged — search overlays browse, never
  * replaces it.
  */
-export function filterEffectFamilies(query: string): EffectFamily[] {
+export function filterEffectFamilies(query: string, registry: EffectRegistry): EffectFamily[] {
   if (query.trim() === '') return effectFamilies
   return effectFamilies
-    .map((family) => ({ ...family, effects: family.effects.filter((s) => effectMatchesQuery(s, query)) }))
+    .map((family) => ({ ...family, effects: family.effects.filter((s) => effectMatchesQuery(s, query, registry)) }))
     .filter((family) => family.effects.length > 0)
 }
