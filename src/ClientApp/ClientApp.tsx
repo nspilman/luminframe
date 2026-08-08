@@ -65,7 +65,7 @@ export function ClientApp(): JSX.Element {
     handleRedo,
     canUndo,
     canRedo,
-    handleSaveAsSecondImage,
+    handleUseRenderAsImageParam,
     handleDownload,
     handleImageDrop,
     handleRemixLoad,
@@ -142,7 +142,7 @@ export function ClientApp(): JSX.Element {
           onEditEffect={editAppliedEffect}
           onCancelEdit={cancelEdit}
           onApply={handleApply}
-          onUseRenderAsSecondImage={handleSaveAsSecondImage}
+          onUseRenderAsImageParam={handleUseRenderAsImageParam}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
           onUndo={handleUndo}

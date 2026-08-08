@@ -10,7 +10,6 @@ import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { NetworkEffectsState } from '@/hooks/useNetworkEffects'
-import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import { creatorRemixEffectPath } from '@/lib/galleryRoute'
 import { Image } from '@/domain/models/Image'
 
@@ -38,7 +37,7 @@ type EditorSidebarProps = {
   onCancelEdit: () => void
   onApply: () => void
   /** Bake the current render into the effect's second-image slot. */
-  onUseRenderAsSecondImage: () => void
+  onUseRenderAsImageParam: (name: string) => void
   onRemoveEffect: (index: number) => void
   onMoveEffect: (from: number, to: number) => void
   onUndo: () => void
@@ -85,7 +84,7 @@ export function EditorSidebar({
   onEditEffect,
   onCancelEdit,
   onApply,
-  onUseRenderAsSecondImage,
+  onUseRenderAsImageParam,
   onRemoveEffect,
   onMoveEffect,
   onUndo,
@@ -358,19 +357,24 @@ export function EditorSidebar({
               <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-sm">
                 <CardContent className="p-4">
                   <ShaderControls effect={tuning.effect} values={values} onChange={onChange} />
-                  {/* Only the composite effects have a second-image slot; the
-                      shortcut that bakes the current render into it lives right
-                      beside that slot, not in the global action bar. */}
-                  {SECOND_IMAGE_INPUT in tuning.effect.inputs && (
-                    <button
-                      type="button"
-                      onClick={onUseRenderAsSecondImage}
-                      className="mt-3 inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 focus-visible:text-violet-300 focus-visible:outline-none"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      Use current render as the second image
-                    </button>
-                  )}
+                  {/* Every image slot the effect declares gets the shortcut
+                      that bakes the current render into it — driven by the
+                      declarations, so an effect with three slots gets three
+                      buttons and one with none gets nothing. imageTexture is
+                      excluded because it is the pass input, not a slot. */}
+                  {Object.entries(tuning.effect.inputs)
+                    .filter(([name, input]) => input.type === 'image' && name !== 'imageTexture')
+                    .map(([name, input]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => onUseRenderAsImageParam(name)}
+                        className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300 focus-visible:text-violet-300 focus-visible:outline-none"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        Use current render as {input.label.toLowerCase()}
+                      </button>
+                    ))}
                   {/* Someone else's effect can be taken apart. Offered here
                       rather than on the library row because the row's gesture
                       is "put this on my image" and this one leaves for another

@@ -10,7 +10,6 @@ import { EditPipeline } from '@/domain/models/EditPipeline'
 import { HydratedStep } from '@/lib/shaders/hydrateRecipe'
 import { StrongRef } from '@/types/atproto'
 import { pushRecent, loadRecents, saveRecents } from '@/lib/shaders/recentEffects'
-import { SECOND_IMAGE_INPUT } from '@/lib/shaders/constants'
 import {
   History,
   initHistory,
@@ -380,15 +379,16 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handleSaveAsSecondImage = useCallback(
-    async () => {
+  const handleUseRenderAsImageParam = useCallback(
+    async (name: string) => {
       try {
-        // The blend/threshold second input is a per-effect parameter, not a
-        // new source — the committed pipeline stays intact.
+        // An image slot is a per-effect parameter, not a new source — the
+        // committed pipeline stays intact. Which slot is the caller's fact:
+        // the sidebar offers one shortcut per declared image input.
         const image = await saveCanvasAsInput()
-        updateVarValue(SECOND_IMAGE_INPUT, image)
+        updateVarValue(name, image)
       } catch (error) {
-        console.error('Failed to save canvas as second image:', error)
+        console.error(`Failed to save canvas as ${name}:`, error)
       }
     },
     [saveCanvasAsInput, updateVarValue]
@@ -493,7 +493,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     handleRedo,
     canUndo: canUndo(history),
     canRedo: canRedo(history),
-    handleSaveAsSecondImage,
+    handleUseRenderAsImageParam,
     handleDownload,
     encodeAnimatedEdit,
     handleImageDrop,
