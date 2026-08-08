@@ -1,6 +1,6 @@
-import { EFFECT_COLLECTION } from '@/effects-contract'
-import { fetchCollectionRecords, RawRecord } from './repoRecords'
-import { listNetworkDids, mapWithConcurrency } from './luminframeFeed'
+import { EFFECT_COLLECTION, FEATURED_COLLECTION_URI, LUMINFRAME_DID, parseCollectionRecord } from '@/effects-contract'
+import { fetchCollectionRecords, fetchRecordByUri, RawRecord } from './repoRecords'
+import { listNetworkDids, mapWithConcurrency, parseAtUri } from './luminframeFeed'
 
 /**
  * Fetching com.luminframe.effect records — published custom shader effects,
@@ -13,6 +13,30 @@ export type RawEffectRecord = RawRecord
 /** Every com.luminframe.effect record in one repo. */
 export async function fetchRepoEffectRecords(did: string): Promise<RawEffectRecord[]> {
   return fetchCollectionRecords(did, EFFECT_COLLECTION)
+}
+
+/**
+ * The default library: the effects the featured collection points at, in the
+ * curator's order. Membership is data — a listed effect may live in any
+ * author's repo, so this resolves by grouping the URIs by repo (one
+ * listRecords round trip per distinct author) rather than fetching each URI
+ * alone. A listed URI whose record is gone simply doesn't appear.
+ *
+ * No collection record yet (or an invalid one) falls back to the repo dump —
+ * luminframe.com's own effects — so the library survives the cutover in
+ * either order.
+ */
+export async function fetchFeaturedEffectRecords(): Promise<RawEffectRecord[]> {
+  const collection = await fetchRecordByUri(FEATURED_COLLECTION_URI)
+  const parsed = collection ? parseCollectionRecord(collection.value) : null
+  if (!parsed?.ok) return fetchRepoEffectRecords(LUMINFRAME_DID)
+
+  const dids = [...new Set(parsed.def.effectUris.map((uri) => parseAtUri(uri)?.did).filter((d): d is string => !!d))]
+  // ponytail: listRecords reads one page (100) per repo — a listed effect past
+  // an author's first page won't resolve; paginate when a repo outgrows it.
+  const records = await mapWithConcurrency(dids, 8, fetchRepoEffectRecords)
+  const byUri = new Map(records.map((r) => [r.uri, r]))
+  return parsed.def.effectUris.flatMap((uri) => byUri.get(uri) ?? [])
 }
 
 /**

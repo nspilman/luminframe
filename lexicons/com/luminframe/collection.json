@@ -1,0 +1,39 @@
+{
+  "lexicon": 1,
+  "id": "com.luminframe.collection",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A curated, ordered list of shader effects, referenced by AT-URI. Curation is separate from authorship: a listed effect may live in any author's repo — listing it vouches for it without copying it, so attribution stays with the author's DID in the URI. Luminframe loads its default library from the record keyed 'featured' in luminframe.com's repo.",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": ["name", "effects", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Display name of the collection."
+          },
+          "description": {
+            "type": "string",
+            "maxGraphemes": 300,
+            "maxLength": 3000,
+            "description": "One-line blurb about what this collection curates."
+          },
+          "effects": {
+            "type": "array",
+            "maxLength": 100,
+            "items": { "type": "string", "format": "at-uri" },
+            "description": "Ordered com.luminframe.effect record URIs. The order is the curator's — clients preserve it."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "When the record was created."
+          }
+        }
+      }
+    }
+  }
+}

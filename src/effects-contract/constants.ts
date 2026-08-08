@@ -43,12 +43,29 @@
 
 export const EFFECT_COLLECTION = 'com.luminframe.effect'
 
+/** A curated, ordered list of effect URIs — curation as a record, separate from authorship. */
+export const COLLECTION_NSID = 'com.luminframe.collection'
+
 /**
  * The lexicon authority for com.luminframe.* — the DID behind
- * `_lexicon.luminframe.com TXT did=…`, and the repo the builtin library
- * publishes to. An effect URI in this repo names a bundled builtin.
+ * `_lexicon.luminframe.com TXT did=…`, and the curator of the default
+ * library. An effect URI in this repo names an official builtin; effects by
+ * other authors join the library by being listed in the featured collection.
  */
 export const LUMINFRAME_DID = 'did:plc:5mo4amsmatgfmzpeqqsuetot'
+
+/**
+ * The default library's address: the featured collection in luminframe.com's
+ * repo. The one bootstrap pointer the app hardcodes — the library's CONTENTS
+ * live behind it, editable by putRecord, not by deploy.
+ */
+export const FEATURED_COLLECTION_URI = `at://${LUMINFRAME_DID}/${COLLECTION_NSID}/featured`
+
+/**
+ * Ceiling on a collection's effect list. Matches one listRecords page, so
+ * resolving a collection costs one round trip per distinct author repo.
+ */
+export const MAX_COLLECTION_EFFECTS = 100
 
 export const ENV_VERSION = 2
 

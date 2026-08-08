@@ -1,25 +1,28 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LUMINFRAME_DID } from '@/effects-contract'
-import { fetchRepoEffectRecords, RawEffectRecord } from '@/infrastructure/atproto/effectRecords'
+import { fetchFeaturedEffectRecords, RawEffectRecord } from '@/infrastructure/atproto/effectRecords'
 import { slugForEffectKey } from '@/lib/shaders/toEffectDefinition'
 import { registeredShaders, ShaderType } from '@/types/shader'
 import { buildCustomEffectEntries, CustomEffectEntry } from './useCustomEffects'
 
 /**
- * The official effect library, loaded from canon — the com.luminframe.effect
- * records in luminframe.com's repo. The records are the source of truth (data
- * lives in repos; the app is a view); this store is the app-side of that
- * inversion.
+ * The official effect library, loaded from canon — the effects the featured
+ * collection (luminframe.com's com.luminframe.collection/featured record)
+ * points at. The records are the source of truth (data lives in repos; the
+ * app is a view), and membership is curation, not authorship: the collection
+ * may list any author's effect. Until that record exists, the fetch falls
+ * back to luminframe.com's own repo.
  *
  * A module-level store rather than per-hook state because more than one
  * surface needs the library (the editor's registry, the gallery's effect
  * names) and the fetch must happen once per page load, not once per mount.
  *
- * Entries are re-keyed from their at:// URIs to the short builtin keys
- * (pixelate, blackAndWhite, …) because those keys are the recipe wire format
- * — every published image names its steps with them, and they must resolve
- * forever. A canon record whose slug matches no known key joins under its
- * at:// URI: an effect that postdates this build, present but uncurated.
+ * Entries authored by luminframe.com are re-keyed from their at:// URIs to
+ * the short builtin keys (pixelate, blackAndWhite, …) because those keys are
+ * the recipe wire format — every published image names its steps with them,
+ * and they must resolve forever. Everything else — a community effect the
+ * collection features, or a canon record whose slug postdates this build —
+ * joins under its at:// URI, which is already how recipes name it.
  *
  * Snapshot cache: the last good fetch is kept in localStorage and served
  * immediately on the next visit (stale-while-revalidate), so reloads are
@@ -40,9 +43,15 @@ const keyBySlug = new Map<string, ShaderType>(
   registeredShaders.map((key) => [slugForEffectKey(key), key])
 )
 
-/** Re-key canon entries to the recipe wire format where the slug is known. */
+/**
+ * Re-key canon entries to the recipe wire format where the slug is known.
+ * Only luminframe.com's own records qualify — a featured community effect
+ * whose rkey happens to match a builtin slug is a different effect and keeps
+ * its at:// key.
+ */
 export function rekeyOfficialEntries(entries: CustomEffectEntry[]): CustomEffectEntry[] {
   return entries.map((entry) => {
+    if (!entry.key.startsWith(`at://${LUMINFRAME_DID}/`)) return entry
     const slug = entry.key.split('/').pop() ?? ''
     const short = keyBySlug.get(slug)
     return short ? { ...entry, key: short } : entry
@@ -90,7 +99,7 @@ function getState(): OfficialEffectsState {
 function ensureFetched(): void {
   if (fetchStarted) return
   fetchStarted = true
-  fetchRepoEffectRecords(LUMINFRAME_DID)
+  fetchFeaturedEffectRecords()
     .then((records) => {
       writeSnapshot(records)
       setState({ status: 'loaded', entries: rekeyOfficialEntries(buildCustomEffectEntries(records).entries) })
