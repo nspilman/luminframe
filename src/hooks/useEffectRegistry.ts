@@ -7,6 +7,7 @@ import { useDraftEffects } from './useDraftEffects'
 import { useLocalEffects } from './useLocalEffects'
 import { useForeignEffects } from './useForeignEffects'
 import { useNetworkEffects, NetworkEffectsState } from './useNetworkEffects'
+import { useOfficialEffects } from './useOfficialEffects'
 
 /**
  * The one place the effect registry is assembled: builtins, the signed-in
@@ -58,14 +59,21 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const custom = useMemo(() => [...local, ...drafts, ...published], [local, drafts, published])
   const foreign = useForeignEffects()
   const network = useNetworkEffects()
+  const official = useOfficialEffects()
 
   // Network effects join the registry — applying one has to resolve its key like
-  // any other — but not `custom`, which stays the user's own. `custom` before
-  // `network` so your version of a key wins over the copy that came back in the
-  // network listing.
+  // any other — but not `custom`, which stays the user's own. Official (canon)
+  // comes first so every later source wins over it, then foreign/network, then
+  // `custom` last so your version of a key beats every copy that came in from
+  // the network. Official entries carry short keys, so in the final merge they
+  // override the bundled builtins: canon is the source of truth and the bundle
+  // is its fallback.
   const effectsByKey = useMemo(
-    () => Object.fromEntries([...foreign, ...network.entries, ...custom].map((e) => [e.key, e.effect])),
-    [custom, foreign, network.entries]
+    () =>
+      Object.fromEntries(
+        [...official.entries, ...foreign, ...network.entries, ...custom].map((e) => [e.key, e.effect])
+      ),
+    [custom, foreign, network.entries, official.entries]
   )
 
   useEffect(() => {
