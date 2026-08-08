@@ -331,29 +331,32 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
   // follows its effect rather than being cleared, so reordering mid-tune costs
   // nothing; removing the very effect being revised ends the revision, since
   // its slot is gone.
+  // Both of these decide where the revision lands *before* touching state.
+  // Removing one also clears the selection, and two pieces of state moving
+  // together is exactly what an updater function cannot express: React is free
+  // to call an updater more than once, so it is no place to put a second
+  // setter (see useNetworkEffects, where that shape fired a network fan-out
+  // twice). Reading editingIndex from the closure is safe here because both
+  // handlers are user gestures — one click, one render between them.
   const handleRemoveEffect = useCallback((index: number) => {
     setHistory(h => pushHistory(h, h.present.removeAt(index)))
-    setEditingIndex(prev => {
-      if (prev === null) return null
-      if (prev === index) {
-        setSelectedShader(null)
-        return null
-      }
-      return prev > index ? prev - 1 : prev
-    })
-  }, [])
+    if (editingIndex === null) return
+    if (editingIndex === index) {
+      setSelectedShader(null)
+      setEditingIndex(null)
+    } else if (editingIndex > index) {
+      setEditingIndex(editingIndex - 1)
+    }
+  }, [editingIndex])
 
   const handleMoveEffect = useCallback((from: number, to: number) => {
     setHistory(h => pushHistory(h, h.present.move(from, to)))
-    setEditingIndex(prev => {
-      if (prev === null) return null
-      if (prev === from) return to
-      // A step passing over the revised one shifts it by exactly one slot.
-      if (from < prev && to >= prev) return prev - 1
-      if (from > prev && to <= prev) return prev + 1
-      return prev
-    })
-  }, [])
+    if (editingIndex === null) return
+    if (editingIndex === from) setEditingIndex(to)
+    // A step passing over the revised one shifts it by exactly one slot.
+    else if (from < editingIndex && to >= editingIndex) setEditingIndex(editingIndex - 1)
+    else if (from > editingIndex && to <= editingIndex) setEditingIndex(editingIndex + 1)
+  }, [editingIndex])
 
   const handleUndo = useCallback(() => setHistory(undo), [])
   const handleRedo = useCallback(() => setHistory(redo), [])

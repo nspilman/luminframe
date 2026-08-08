@@ -5,7 +5,10 @@ export const pixelate = createShaderRecord({
   variables: [
     createShaderVariable('imageTexture').asImage('Source Image'),
     createShaderVariable('pixelSize').asRange('Pixel Size', 4.0, 1.0, 32.0, 1.0),
-    createShaderVariable('resolution').asVec2('Resolution', 1920, 1080)
+    // `resolution` is not declared here even though the body reads it: the
+    // chain owns it and binds the source image's own pixel size, which is what
+    // makes the block size the user sees match the block size they export.
+    // Declaring it would put a slider on screen that the chain overrules.
   ],
   body: `
     void main() {

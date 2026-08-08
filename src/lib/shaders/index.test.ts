@@ -642,13 +642,6 @@ describe('shader library contract', () => {
       "default": 4,
       "type": "range",
     },
-    "resolution": {
-      "default": [
-        1920,
-        1080,
-      ],
-      "type": "vec2",
-    },
   },
   "rgbSplit": {
     "angle": {

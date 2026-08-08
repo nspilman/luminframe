@@ -163,15 +163,25 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * scaling, recolouring or spinning the text are all shader-side, so dragging
    * any of those dials reuses one texture instead of redrawing a canvas per frame.
    *
-   * ponytail: unbounded, and text is typed by hand — a few dozen entries at
-   * worst. If a caption is ever animated character by character, give this an
-   * LRU bound and dispose on eviction.
+   * Bounded, and that bound is not a formality. The preview redraws on every
+   * input event, and typing manufactures a distinct string per keystroke — a
+   * nineteen-character caption asks for nineteen textures, each a megapixel of
+   * RGBA. Nearly all of them are the half-typed words on the way to the one the
+   * user meant, so the oldest is the right one to drop. Eviction disposes: a
+   * Map entry is cheap, the GPU allocation behind it is not.
    */
+  private static readonly MAX_TEXT_TEXTURES = 8;
   private textTextures = new Map<string, THREE.CanvasTexture>();
 
   private textTexture(text: string): THREE.CanvasTexture {
     const cached = this.textTextures.get(text);
-    if (cached) return cached;
+    if (cached) {
+      // Re-insert so insertion order stays recency order — that is the only
+      // thing making the eviction below pick the least recently used.
+      this.textTextures.delete(text);
+      this.textTextures.set(text, cached);
+      return cached;
+    }
     const texture = new THREE.CanvasTexture(renderTextCanvas(text));
     // Clamp so the shader's out-of-tile samples read empty rather than
     // repeating the caption across the picture, and linear so the glyph edges
@@ -181,6 +191,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     this.textTextures.set(text, texture);
+
+    while (this.textTextures.size > ThreeJSRenderingAdapter.MAX_TEXT_TEXTURES) {
+      const oldest = this.textTextures.keys().next().value as string;
+      this.textTextures.get(oldest)?.dispose();
+      this.textTextures.delete(oldest);
+    }
+
     return texture;
   }
 

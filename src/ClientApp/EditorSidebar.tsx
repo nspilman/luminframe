@@ -287,7 +287,7 @@ export function EditorSidebar({
         {/* Face one: the library. At desktop the tuning face replaces it; on a
             phone it stays put beneath the canvas and the sheet floats over. */}
         <div className={`flex min-h-0 flex-col p-4 md:flex-1 ${tuning ? 'md:hidden' : ''}`}>
-          <div className="absolute right-2 top-4 z-10">{!tuning && minimizeButton}</div>
+          <div className="absolute right-2 top-4 z-10">{minimizeButton}</div>
           <EffectPicker
             selectedShader={selectedShader}
             onShaderSelect={onShaderSelect}
