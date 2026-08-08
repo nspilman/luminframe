@@ -95,9 +95,12 @@ export const effectFamilies: EffectFamily[] = [
     effects: ['filmGrain', 'halftone', 'crossHatch', 'dither', 'crt'],
   },
   {
+    // Effects that bring a second source into the picture. Text belongs here
+    // because that is what it does — the difference is only that it makes its
+    // own source out of a string instead of asking for a file.
     id: 'composite',
     label: 'Composite',
-    effects: ['blend', 'displacement'],
+    effects: ['blend', 'displacement', 'textOverlay'],
   },
   {
     // The temporal dimension — effects that read the previous frame and feed
@@ -148,6 +151,7 @@ export const effectBlurbs: Record<ShaderType, string> = {
   neonGlow: 'Light up the bright areas',
   glitch: 'Tear with digital noise',
   outline: 'Trace the edges',
+  textOverlay: 'Lay typed words on the picture',
   filmGrain: 'Add analog film grain',
   sharpen: 'Bring out fine detail',
   blend: 'Mix in a second image',

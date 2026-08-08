@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EffectKey, ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Search, X, ChevronDown, ChevronRight, Play, FlaskConical } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Type, Search, X, ChevronDown, ChevronRight, Play, FlaskConical } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { shaderLibrary } from '@/lib/shaders'
 import { motionOf, EffectMotion } from '@/lib/shaders/animation'
@@ -65,6 +65,7 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   sharpen: <Aperture className="h-5 w-5" />,
   filmGrain: <Film className="h-5 w-5" />,
   outline: <PenTool className="h-5 w-5" />,
+  textOverlay: <Type className="h-5 w-5" />,
   vibrance: <Droplets className="h-5 w-5" />,
   sepia: <Coffee className="h-5 w-5" />,
   duotone: <Blend className="h-5 w-5" />,

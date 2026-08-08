@@ -50,12 +50,26 @@ export interface BooleanInputDefinition {
   label: string
 }
 
+/**
+ * Typed text. The value is a plain string in ShaderInputVars, but a shader
+ * cannot read a string — the rendering adapter rasterizes it to a texture on
+ * the way to the GPU, so the uniform this input feeds is declared sampler2D.
+ * It is the only input kind whose value is a string, which is what lets the
+ * adapter recognise one without being told.
+ */
+export interface TextInputDefinition {
+  type: 'text'
+  label: string
+  placeholder?: string
+}
+
 export type ShaderInputDefinition =
   | RangeInputDefinition
   | Vec2InputDefinition
   | ColorInputDefinition
   | ImageInputDefinition
   | BooleanInputDefinition
+  | TextInputDefinition
 
 export interface ShaderEffect {
   name: string;
@@ -92,6 +106,7 @@ export const registeredShaders = [
      'sharpen',
      'filmGrain',
      'outline',
+     'textOverlay',
      'vibrance',
      'sepia',
      'duotone',

@@ -144,8 +144,18 @@ export const createShaderVariable = (name: string) => ({
     createVariable(name, 'sampler2D', null, createImageInput(label)),
   asRange: (label: string, defaultValue: number, min: number, max: number, step: number) =>
     createVariable(name, 'float', defaultValue, createRangeInput(label, min, max, step)),
-  asVec2: (label: string, defaultX = 0, defaultY = 0) =>
-    createVariable(name, 'vec2', [defaultX, defaultY], { type: 'vec2', label }),
+  // Bounds are optional because a vec2 means two unrelated things in practice:
+  // a pixel count (Pixelate's resolution) and a normalized point on the picture
+  // (a position). The renderer's fallback suits the first, so the second has to
+  // be able to say so — without bounds a 0–1 position gets a 0–100 track and
+  // the effect lands off-screen at the first nudge.
+  asVec2: (
+    label: string,
+    defaultX = 0,
+    defaultY = 0,
+    bounds?: { min: [number, number]; max: [number, number]; step: [number, number]; labels?: [string, string] }
+  ) =>
+    createVariable(name, 'vec2', [defaultX, defaultY], { type: 'vec2', label, ...bounds }),
   // A vec3 uniform is edited in the UI as a color, so the input type is 'color'
   // while the GLSL declaration type stays 'vec3'.
   asVec3: (label: string, defaultX = 0, defaultY = 0, defaultZ = 0) =>
@@ -157,5 +167,16 @@ export const createShaderVariable = (name: string) => ({
     ),
   asBoolean: (label: string, defaultValue = false) =>
     createVariable(name, 'bool', defaultValue, { type: 'boolean', label }),
+  // Declared sampler2D though the value the user edits is a string: the
+  // adapter rasterizes the text to a texture on its way to the GPU, since a
+  // shader has no way to read a string. Same split as asVec3, where the UI
+  // type (color) and the GLSL type (vec3) differ — the declaration describes
+  // what the shader receives, not what the control edits.
+  asText: (label: string, defaultValue = '', placeholder?: string) =>
+    createVariable(name, 'sampler2D', defaultValue, {
+      type: 'text',
+      label,
+      ...(placeholder ? { placeholder } : {}),
+    }),
 });
 

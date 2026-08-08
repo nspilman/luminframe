@@ -18,6 +18,7 @@ import { luminanceQuantize } from './effects/luminance-quantize';
 import { sharpen } from './effects/sharpen';
 import { filmGrain } from './effects/film-grain';
 import { outline } from './effects/outline';
+import { textOverlay } from './effects/text-overlay';
 import { vibrance } from './effects/vibrance';
 import { sepia } from './effects/sepia';
 import { duotone } from './effects/duotone';
@@ -58,6 +59,7 @@ export const shaderLibrary: Record<ShaderType, ShaderEffect> = {
   sharpen,
   filmGrain,
   outline,
+  textOverlay,
   vibrance,
   sepia,
   duotone,

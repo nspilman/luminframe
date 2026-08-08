@@ -5,6 +5,7 @@ import {
   ColorRenderer,
   BooleanRenderer,
   Vec2Renderer,
+  TextRenderer,
 } from './renderers';
 
 /**
@@ -21,6 +22,7 @@ export function createDefaultParameterRegistry(): ParameterRegistry {
   registry.registerRenderer('color', new ColorRenderer());
   registry.registerRenderer('boolean', new BooleanRenderer());
   registry.registerRenderer('vec2', new Vec2Renderer());
+  registry.registerRenderer('text', new TextRenderer());
 
   return registry;
 }

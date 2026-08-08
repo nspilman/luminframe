@@ -8,6 +8,7 @@ import { ShaderInputVars } from '@/types/shader';
 import { chainIsAnimated } from '@/lib/shaders/animation';
 import { Color } from '@/domain/value-objects/Color';
 import { TextureAdapter } from './TextureAdapter';
+import { renderTextCanvas } from '@/lib/text/textTexture';
 import { shaderBuilder } from '@/shaders/shaderBuilder';
 import { planPasses } from './renderChainPlan';
 import { scaleToLongestSide } from '@/lib/exportCanvasForUpload';
@@ -157,6 +158,33 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   }
 
   /**
+   * Rasterized text, keyed by the string itself. Cached because the texture is
+   * the expensive part and the string is the only thing that changes it: moving,
+   * scaling, recolouring or spinning the text are all shader-side, so dragging
+   * any of those dials reuses one texture instead of redrawing a canvas per frame.
+   *
+   * ponytail: unbounded, and text is typed by hand — a few dozen entries at
+   * worst. If a caption is ever animated character by character, give this an
+   * LRU bound and dispose on eviction.
+   */
+  private textTextures = new Map<string, THREE.CanvasTexture>();
+
+  private textTexture(text: string): THREE.CanvasTexture {
+    const cached = this.textTextures.get(text);
+    if (cached) return cached;
+    const texture = new THREE.CanvasTexture(renderTextCanvas(text));
+    // Clamp so the shader's out-of-tile samples read empty rather than
+    // repeating the caption across the picture, and linear so the glyph edges
+    // stay smooth when the text is scaled up.
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    this.textTextures.set(text, texture);
+    return texture;
+  }
+
+  /**
    * Convert domain types to Three.js uniforms
    */
   private convertToUniforms(inputVars: ShaderInputVars): Record<string, { value: any }> {
@@ -187,9 +215,16 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
       } else if (value instanceof Float32Array && value.length === 3) {
         // Legacy Float32Array color support
         uniforms[key] = { value: new THREE.Vector3(value[0], value[1], value[2]) };
+      } else if (typeof value === 'string') {
+        // Typed text. A string is the one input value a shader cannot take, so
+        // it is rasterized to a texture here — the single point every render
+        // passes through, which is why the conversion lives at this door rather
+        // than being repeated by the editor, the thumbnails and the exporter.
+        // Text is the only string-valued input kind (see TextInputDefinition),
+        // so a string arriving here can only be glyphs.
+        uniforms[key] = { value: this.textTexture(value) };
       } else if (
         typeof value === 'number' ||
-        typeof value === 'string' ||
         typeof value === 'boolean' ||
         value === null
       ) {
@@ -637,6 +672,10 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   dispose(): void {
     // Stop the animation loop before tearing down the renderer it draws into.
     this.stopAnimation();
+
+    // The rasterized captions hold GPU textures of their own.
+    this.textTextures.forEach((texture) => texture.dispose());
+    this.textTextures.clear();
 
     // Dispose mesh
     if (this.mesh) {

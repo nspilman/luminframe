@@ -740,6 +740,39 @@ describe('shader library contract', () => {
       "type": "range",
     },
   },
+  "textOverlay": {
+    "imageTexture": {
+      "default": null,
+      "type": "image",
+    },
+    "opacity": {
+      "default": 1,
+      "type": "range",
+    },
+    "textAngle": {
+      "default": 0,
+      "type": "range",
+    },
+    "textColor": {
+      "default": "#ffffff",
+      "type": "color",
+    },
+    "textPosition": {
+      "default": [
+        0.5,
+        0.5,
+      ],
+      "type": "vec2",
+    },
+    "textSize": {
+      "default": 0.6,
+      "type": "range",
+    },
+    "textTexture": {
+      "default": "HELLO",
+      "type": "text",
+    },
+  },
   "tiltShift": {
     "bandWidth": {
       "default": 0.15,
