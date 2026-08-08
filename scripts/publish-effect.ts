@@ -27,8 +27,8 @@ import { resolve } from 'node:path'
 import { AtpAgent } from '@atproto/api'
 import {
   EFFECT_COLLECTION,
-  ENV_VERSION,
   buildEffectRecord,
+  minimalEnvFor,
   parseEffectRecord,
 } from '../src/effects-contract'
 
@@ -52,7 +52,7 @@ const record = buildEffectRecord(
   {
     name: meta.name,
     description: meta.description,
-    env: ENV_VERSION,
+    env: minimalEnvFor(meta.params ?? []),
     params: meta.params ?? [],
     body,
     animatedBy: meta.animatedBy,
@@ -66,7 +66,7 @@ if (!parsed.ok) {
   for (const error of parsed.errors) console.error(`  ✗ ${error}`)
   process.exit(1)
 }
-console.log(`Validated effect "${parsed.def.name}" (${parsed.def.params.length} params, env ${ENV_VERSION}).`)
+console.log(`Validated effect "${parsed.def.name}" (${parsed.def.params.length} params, env ${parsed.def.env}).`)
 
 const service = process.env.PDS_SERVICE || 'https://bsky.social'
 const identifier = process.env.ATP_IDENTIFIER

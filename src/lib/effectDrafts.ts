@@ -1,4 +1,4 @@
-import { EffectDefinition, EffectParamDef, ENV_VERSION } from '@/effects-contract'
+import { EffectDefinition, EffectParamDef, minimalEnvFor } from '@/effects-contract'
 import { EffectKey } from '@/types/shader'
 
 /**
@@ -24,12 +24,12 @@ export interface StoredDraft {
   updatedAt: string
 }
 
-/** The definition this draft authors, stamped with the current env version. */
+/** The definition this draft authors, stamped with the smallest env its params require. */
 export function defFromDraft(draft: StoredDraft): EffectDefinition {
   return {
     name: draft.name,
     ...(draft.description ? { description: draft.description } : {}),
-    env: ENV_VERSION,
+    env: minimalEnvFor(draft.params),
     params: draft.params,
     body: draft.body,
     ...(draft.animatedBy ? { animatedBy: draft.animatedBy } : {}),

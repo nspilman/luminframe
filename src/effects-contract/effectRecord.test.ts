@@ -1,4 +1,4 @@
-import { buildEffectRecord, parseEffectRecord } from './effectRecord'
+import { buildEffectRecord, minimalEnvFor, parseEffectRecord } from './effectRecord'
 import { EffectDefinition } from './types'
 
 /**
@@ -50,8 +50,18 @@ describe('parseEffectRecord', () => {
     expect(errorsOf({ name: 'x'.repeat(65) })).toContain('name: required, 1–64 chars')
   })
 
-  it('wrong env → env error', () => {
-    expect(errorsOf({ env: 2 })).toContain('env: unsupported version (this client speaks env 1)')
+  it('env above this client → env error', () => {
+    expect(errorsOf({ env: 3 })).toContain('env: unsupported version (this client speaks env 1 through 2)')
+  })
+
+  it('env below 1 → env error', () => {
+    expect(errorsOf({ env: 0 })).toContain('env: unsupported version (this client speaks env 1 through 2)')
+  })
+
+  it('accepts an env-1 record and keeps its claim', () => {
+    const result = parseEffectRecord(wire({ env: 1 }))
+    if (!result.ok) throw new Error(result.errors.join('; '))
+    expect(result.def.env).toBe(1)
   })
 
   it('params not JSON → params error', () => {
@@ -119,9 +129,9 @@ describe('parseEffectRecord', () => {
   })
 
   it('unknown param type → type error', () => {
-    const params = JSON.stringify([{ type: 'image', name: 'mask', label: 'Mask', default: null }])
+    const params = JSON.stringify([{ type: 'matrix', name: 'mask', label: 'Mask', default: null }])
     expect(errorsOf({ params })).toContain(
-      'param "mask": unknown type (must be range, color, boolean, or vec2)'
+      'param "mask": unknown type (must be range, color, boolean, vec2, image, or text)'
     )
   })
 
@@ -159,7 +169,7 @@ describe('parseEffectRecord', () => {
     const errors = errorsOf({ name: '', env: 9, body: 'void main() { }' })
     expect(errors).toEqual([
       'name: required, 1–64 chars',
-      'env: unsupported version (this client speaks env 1)',
+      'env: unsupported version (this client speaks env 1 through 2)',
       'body: must write gl_FragColor',
     ])
   })
@@ -184,5 +194,96 @@ describe('buildEffectRecord', () => {
     const record = buildEffectRecord({ name: 'Bare', env: 1, params: [], body: validDef.body }, '2026-07-26T00:00:00.000Z')
     expect('description' in record).toBe(false)
     expect('animatedBy' in record).toBe(false)
+  })
+})
+
+describe('env 2 params', () => {
+  const env2 = (params: unknown[]) => wire({ env: 2, params: JSON.stringify(params) })
+
+  const defOf = (params: unknown[]) => {
+    const result = parseEffectRecord(env2(params))
+    if (!result.ok) throw new Error(result.errors.join('; '))
+    return result.def
+  }
+
+  it('parses an image param', () => {
+    expect(defOf([{ type: 'image', name: 'mask', label: 'Mask' }]).params).toEqual([
+      { type: 'image', name: 'mask', label: 'Mask' },
+    ])
+  })
+
+  it('parses a text param with placeholder', () => {
+    expect(
+      defOf([{ type: 'text', name: 'caption', label: 'Caption', default: 'HI', placeholder: 'Type' }]).params
+    ).toEqual([{ type: 'text', name: 'caption', label: 'Caption', default: 'HI', placeholder: 'Type' }])
+  })
+
+  it('text without a string default → default error', () => {
+    const result = parseEffectRecord(env2([{ type: 'text', name: 'caption', label: 'Caption' }]))
+    if (result.ok) throw new Error('expected parse to fail')
+    expect(result.errors).toContain('param "caption": default must be a string')
+  })
+
+  it('parses vec2 bounds', () => {
+    expect(
+      defOf([{ type: 'vec2', name: 'p', label: 'P', default: [0.5, 0.5], min: [0, 0], max: [1, 1], step: [0.01, 0.01] }])
+        .params[0]
+    ).toEqual({ type: 'vec2', name: 'p', label: 'P', default: [0.5, 0.5], min: [0, 0], max: [1, 1], step: [0.01, 0.01] })
+  })
+
+  it('partial vec2 bounds → bounds error', () => {
+    const result = parseEffectRecord(env2([{ type: 'vec2', name: 'p', label: 'P', default: [0, 0], min: [0, 0] }]))
+    if (result.ok) throw new Error('expected parse to fail')
+    expect(result.errors).toContain('param "p": min, max, step must all be [x, y] pairs when bounds are declared')
+  })
+
+  it('rejects a fifth texture param', () => {
+    const slots = ['a', 'b', 'c', 'd'].map((n) => ({ type: 'image', name: n, label: n.toUpperCase() }))
+    const result = parseEffectRecord(
+      env2([...slots, { type: 'text', name: 'caption', label: 'Caption', default: '' }])
+    )
+    if (result.ok) throw new Error('expected parse to fail')
+    expect(result.errors).toContain(
+      'params: at most 4 image/text params (WebGL1 guarantees only 8 texture units and the host uses 2)'
+    )
+  })
+
+  it('accepts exactly four texture params', () => {
+    const slots = ['a', 'b', 'c', 'd'].map((n) => ({ type: 'image', name: n, label: n.toUpperCase() }))
+    expect(defOf(slots).params).toHaveLength(4)
+  })
+
+  it('env-1 claim over env-2 params → lying-env error', () => {
+    const result = parseEffectRecord(
+      wire({ env: 1, params: JSON.stringify([{ type: 'image', name: 'mask', label: 'Mask' }]) })
+    )
+    if (result.ok) throw new Error('expected parse to fail')
+    expect(result.errors).toContain('env: params require env 2 but the record claims env 1')
+  })
+})
+
+describe('minimalEnvFor', () => {
+  it('plain knobs → 1', () => {
+    expect(minimalEnvFor(validDef.params)).toBe(1)
+  })
+
+  it('image param → 2', () => {
+    expect(minimalEnvFor([{ type: 'image', name: 'mask', label: 'Mask' }])).toBe(2)
+  })
+
+  it('text param → 2', () => {
+    expect(minimalEnvFor([{ type: 'text', name: 'caption', label: 'Caption', default: '' }])).toBe(2)
+  })
+
+  it('bounded vec2 → 2', () => {
+    expect(
+      minimalEnvFor([
+        { type: 'vec2', name: 'p', label: 'P', default: [0, 0], min: [0, 0], max: [1, 1], step: [0.01, 0.01] },
+      ])
+    ).toBe(2)
+  })
+
+  it('unbounded vec2 → 1', () => {
+    expect(minimalEnvFor([{ type: 'vec2', name: 'p', label: 'P', default: [0, 0] }])).toBe(1)
   })
 })

@@ -1,4 +1,4 @@
-import { ENV_VERSION, buildEffectRecord, EffectDefinition } from '@/effects-contract'
+import { buildEffectRecord, EffectDefinition, minimalEnvFor } from '@/effects-contract'
 import { RawEffectRecord } from '@/infrastructure/atproto/effectRecords'
 
 /**
@@ -45,7 +45,7 @@ export const localEffectRecords: RawEffectRecord[] = Object.entries(metas).map((
       {
         name: meta.name,
         description: meta.description,
-        env: ENV_VERSION,
+        env: minimalEnvFor((meta.params ?? []) as EffectDefinition['params']),
         params: meta.params ?? [],
         body,
         animatedBy: meta.animatedBy,

@@ -273,6 +273,11 @@ export function CreatorPage({ session, published, publishedSkipped, refreshPubli
             ? { ...p, default: [pair[0], pair[1]] }
             : p
         }
+        case 'text':
+          return typeof v === 'string' ? { ...p, default: v } : p
+        // An image slot's tuned value is pixels, not an authorable default.
+        case 'image':
+          return p
       }
     })
     updateDraft({ params })

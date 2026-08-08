@@ -29,7 +29,7 @@
           "params": {
             "type": "string",
             "maxLength": 10000,
-            "description": "The effect's editable parameters, a JSON-encoded array of typed definitions (range, color, boolean, vec2). A string rather than an array of objects because the atproto data model has no float type and parameter defaults and bounds are fractional — the same encoding as com.luminframe.image's effectStep.params."
+            "description": "The effect's editable parameters, a JSON-encoded array of typed definitions (env 1: range, color, boolean, vec2; env 2 adds image, text, and vec2 track bounds). A string rather than an array of objects because the atproto data model has no float type and parameter defaults and bounds are fractional — the same encoding as com.luminframe.image's effectStep.params."
           },
           "body": {
             "type": "string",

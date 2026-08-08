@@ -33,6 +33,10 @@ export function newParam(type: EffectParamDef['type'], existing: readonly Effect
       return { type, ...base, label: 'Toggle', default: false }
     case 'vec2':
       return { type, ...base, label: 'Point', default: [0.5, 0.5] }
+    case 'image':
+      return { type, ...base, label: 'Image' }
+    case 'text':
+      return { type, ...base, label: 'Text', default: '' }
   }
 }
 
@@ -164,6 +168,8 @@ export function ParamBuilder({ params, onChange }: ParamBuilderProps) {
                 <SelectItem value="color">color</SelectItem>
                 <SelectItem value="boolean">boolean</SelectItem>
                 <SelectItem value="vec2">vec2</SelectItem>
+                <SelectItem value="image">image</SelectItem>
+                <SelectItem value="text">text</SelectItem>
               </SelectContent>
             </Select>
             <button
@@ -237,6 +243,29 @@ export function ParamBuilder({ params, onChange }: ParamBuilderProps) {
                   })}
                 </div>
               ))}
+            </div>
+          )}
+          {/* image needs no fields beyond name/label — an unfilled slot is a
+              black texture by contract, so there is no default to author.
+              vec2 track bounds are authored in JSON mode. */}
+          {param.type === 'text' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-zinc-500">default</span>
+                <Input
+                  value={param.default}
+                  onChange={(e) => patch(i, { default: e.target.value })}
+                  className="h-8 px-2 text-xs"
+                />
+              </div>
+              <div>
+                <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-zinc-500">placeholder</span>
+                <Input
+                  value={param.placeholder ?? ''}
+                  onChange={(e) => patch(i, { placeholder: e.target.value || undefined })}
+                  className="h-8 px-2 text-xs"
+                />
+              </div>
             </div>
           )}
         </div>

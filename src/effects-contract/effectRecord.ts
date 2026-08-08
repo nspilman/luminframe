@@ -3,6 +3,7 @@ import {
   MAX_BODY_LENGTH,
   MAX_NAME_LENGTH,
   MAX_PARAMS_JSON_LENGTH,
+  MAX_TEXTURE_PARAMS,
   PARAM_NAME_PATTERN,
   RESERVED_TOKENS,
   RESERVED_UNIFORMS,
@@ -82,16 +83,64 @@ function parseParam(value: unknown, index: number, errors: string[]): EffectPara
         return null
       }
       return { type: 'boolean', ...base, default: value.default }
-    case 'vec2':
+    case 'vec2': {
       if (!isNumberPair(value.default)) {
         errors.push(`${subject}: default must be [x, y] finite numbers`)
         return null
       }
-      return { type: 'vec2', ...base, default: value.default }
+      const { min, max, step, labels } = value
+      const bounds = [min, max, step]
+      if (bounds.every((b) => b === undefined)) {
+        return { type: 'vec2', ...base, default: value.default }
+      }
+      // Bounds travel together: a track needs all three to mean anything.
+      if (!bounds.every(isNumberPair)) {
+        errors.push(`${subject}: min, max, step must all be [x, y] pairs when bounds are declared`)
+        return null
+      }
+      const axisLabels =
+        Array.isArray(labels) && labels.length === 2 && labels.every((l) => typeof l === 'string')
+          ? { labels: labels as [string, string] }
+          : {}
+      return {
+        type: 'vec2',
+        ...base,
+        default: value.default,
+        min: min as [number, number],
+        max: max as [number, number],
+        step: step as [number, number],
+        ...axisLabels,
+      }
+    }
+    case 'image':
+      return { type: 'image', ...base }
+    case 'text': {
+      if (typeof value.default !== 'string') {
+        errors.push(`${subject}: default must be a string`)
+        return null
+      }
+      const placeholder =
+        typeof value.placeholder === 'string' ? { placeholder: value.placeholder } : {}
+      return { type: 'text', ...base, default: value.default, ...placeholder }
+    }
     default:
-      errors.push(`${subject}: unknown type (must be range, color, boolean, or vec2)`)
+      errors.push(`${subject}: unknown type (must be range, color, boolean, vec2, image, or text)`)
       return null
   }
+}
+
+/**
+ * The smallest env a param set can honestly declare. Image and text params,
+ * and vec2 bounds, are env-2 vocabulary; everything else parses under env 1.
+ * The publish paths stamp records with this rather than ENV_VERSION so a
+ * plain-knob effect stays readable by every env-1 client already deployed,
+ * and parseEffectRecord enforces it so a record's env claim can't lie.
+ */
+export function minimalEnvFor(params: readonly EffectParamDef[]): 1 | 2 {
+  const needsEnv2 = params.some(
+    (p) => p.type === 'image' || p.type === 'text' || (p.type === 'vec2' && p.min !== undefined)
+  )
+  return needsEnv2 ? 2 : 1
 }
 
 /**
@@ -121,6 +170,12 @@ export function parseParamsJson(json: string): { params: EffectParamDef[]; error
       if (seen.has(p.name)) errors.push(`param "${p.name}": duplicate name`)
       seen.add(p.name)
     }
+    const textureParams = params.filter((p) => p.type === 'image' || p.type === 'text').length
+    if (textureParams > MAX_TEXTURE_PARAMS) {
+      errors.push(
+        `params: at most ${MAX_TEXTURE_PARAMS} image/text params (WebGL1 guarantees only 8 texture units and the host uses 2)`
+      )
+    }
   }
   return { params, errors }
 }
@@ -141,8 +196,10 @@ export function parseEffectRecord(value: unknown): ParseResult {
     errors.push('description: must be a string when present')
   }
 
-  if (value.env !== ENV_VERSION) {
-    errors.push(`env: unsupported version (this client speaks env ${ENV_VERSION})`)
+  const env = value.env
+  const envValid = typeof env === 'number' && Number.isInteger(env) && env >= 1 && env <= ENV_VERSION
+  if (!envValid) {
+    errors.push(`env: unsupported version (this client speaks env 1 through ${ENV_VERSION})`)
   }
 
   const params: EffectParamDef[] = []
@@ -152,6 +209,13 @@ export function parseEffectRecord(value: unknown): ParseResult {
     const judged = parseParamsJson(value.params)
     errors.push(...judged.errors)
     params.push(...judged.params)
+  }
+
+  // A record must declare at least the env its params require — an env-1
+  // claim over env-2 params would read as valid here while every env-1
+  // client rejects it on the param type. The claim must not lie.
+  if (envValid && (env as number) < minimalEnvFor(params)) {
+    errors.push(`env: params require env ${minimalEnvFor(params)} but the record claims env ${env}`)
   }
 
   const body = value.body
@@ -182,7 +246,9 @@ export function parseEffectRecord(value: unknown): ParseResult {
     def: {
       name: name as string,
       ...(typeof description === 'string' && description.length > 0 ? { description } : {}),
-      env: ENV_VERSION,
+      // The record's own claim, not this client's ceiling — a valid env-1
+      // record stays env 1 through a parse → build round trip.
+      env: env as number,
       params,
       body: body as string,
       ...(typeof animatedBy === 'string' ? { animatedBy } : {}),

@@ -23,7 +23,18 @@ function variableFor(param: EffectParamDef) {
     case 'boolean':
       return v.asBoolean(param.label, param.default)
     case 'vec2':
-      return v.asVec2(param.label, param.default[0], param.default[1])
+      return v.asVec2(
+        param.label,
+        param.default[0],
+        param.default[1],
+        param.min && param.max && param.step
+          ? { min: param.min, max: param.max, step: param.step, ...(param.labels ? { labels: param.labels } : {}) }
+          : undefined
+      )
+    case 'image':
+      return v.asImage(param.label)
+    case 'text':
+      return v.asText(param.label, param.default, param.placeholder)
   }
 }
 
