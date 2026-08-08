@@ -7,6 +7,7 @@ import { LuminframePublishAdapter } from '@/infrastructure/adapters/LuminframePu
 import { exportCanvasForUpload } from '@/lib/exportCanvasForUpload'
 import { isSessionExpiredError } from '@/infrastructure/atproto/authErrors'
 import { PublishTarget, ShareTarget, toLuminframeUrl, publicUrlFor } from '@/lib/publishUrls'
+import { browserOnlyEffectKey, browserOnlySlug } from '@/lib/shaders/publishability'
 import { StrongRef } from '@/types/atproto'
 import { RecipeStep } from '@/types/recipe'
 import { AnimationEncoding } from '@/lib/encodeAnimation'
@@ -108,6 +109,18 @@ export function usePublish(
       }
       if (!session.agent) {
         setState({ phase: 'error', outcomes: [], error: 'Sign in first.' })
+        return
+      }
+      // A draft:// or local:// key points into this browser's storage — in a
+      // permanent public record it dangles for everyone else on earth. Refuse
+      // before anything is written rather than serialize a lie.
+      const browserOnly = browserOnlyEffectKey(edit.effects)
+      if (browserOnly) {
+        setState({
+          phase: 'error',
+          outcomes: [],
+          error: `"${browserOnlySlug(browserOnly)}" is an unpublished effect — publish it from the Shader Editor first, or remove it from the stack.`,
+        })
         return
       }
       const agent = session.agent

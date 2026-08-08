@@ -11,6 +11,7 @@ import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { NetworkEffectsState } from '@/hooks/useNetworkEffects'
 import { creatorRemixEffectPath } from '@/lib/galleryRoute'
+import { missingImageSlots } from '@/lib/shaders/publishability'
 import { Image } from '@/domain/models/Image'
 
 type EditorSidebarProps = {
@@ -189,6 +190,14 @@ export function EditorSidebar({
                 >
                   {nameOf(applied.type)}
                 </button>
+                {/* An empty image slot renders as black by the env contract —
+                    say so instead of leaving the step to look broken. */}
+                {registry[applied.type] &&
+                  missingImageSlots(registry[applied.type], applied.params).length > 0 && (
+                    <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                      needs an image
+                    </span>
+                  )}
                 <button
                   type="button"
                   onClick={() => onMoveEffect(index, index - 1)}
