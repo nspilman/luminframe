@@ -57,3 +57,23 @@ describe('resolveForeignEffects', () => {
     expect(foreignEffectEntries().every((e) => e.key.startsWith('at://'))).toBe(true)
   })
 })
+
+describe('luminframe.com alias resolution', () => {
+  const PIXELATE_URI = 'at://did:plc:5mo4amsmatgfmzpeqqsuetot/com.luminframe.effect/pixelate'
+  const UNKNOWN_URI = 'at://did:plc:5mo4amsmatgfmzpeqqsuetot/com.luminframe.effect/from-the-future'
+
+  it('resolves a published-builtin URI to the bundled effect without fetching', async () => {
+    const fetchRecord = jest.fn()
+    const { unresolved } = await resolveForeignEffects([PIXELATE_URI], shaderLibrary, fetchRecord)
+    expect(unresolved).toEqual([])
+    expect(fetchRecord).not.toHaveBeenCalled()
+    const entry = foreignEffectEntries().find((e) => e.key === PIXELATE_URI)
+    expect(entry?.effect).toBe(shaderLibrary.pixelate)
+  })
+
+  it('an unknown luminframe.com slug still fetches — newer effects may postdate this build', async () => {
+    const fetchRecord = jest.fn().mockResolvedValue(null)
+    await resolveForeignEffects([UNKNOWN_URI], shaderLibrary, fetchRecord)
+    expect(fetchRecord).toHaveBeenCalledWith(UNKNOWN_URI)
+  })
+})
