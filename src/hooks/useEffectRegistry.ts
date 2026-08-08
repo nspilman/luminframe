@@ -4,6 +4,7 @@ import { EffectRegistry } from '@/types/shader'
 import { useCustomEffects, CustomEffectEntry } from './useCustomEffects'
 import { useDraftEffects } from './useDraftEffects'
 import { useLocalEffects } from './useLocalEffects'
+import { useFollowedCollections } from './useFollowedCollections'
 import { useForeignEffects } from './useForeignEffects'
 import { useNetworkEffects, NetworkEffectsState } from './useNetworkEffects'
 import { useOfficialEffects } from './useOfficialEffects'
@@ -65,19 +66,25 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   const foreign = useForeignEffects()
   const network = useNetworkEffects()
   const official = useOfficialEffects()
+  const followed = useFollowedCollections()
 
   // Network effects join the registry — applying one has to resolve its key like
   // any other — but not `custom`, which stays the user's own. Official (canon)
-  // comes first so every later source wins over it, then foreign/network, then
-  // `custom` last so your version of a key beats every copy that came in from
-  // the network. Official entries carry short keys — the
-  // recipe wire format — so canon is the library, not a layer over one.
+  // comes first so every later source wins over it, then followed collections
+  // (other curators' lenses), then foreign/network, then `custom` last so your
+  // version of a key beats every copy that came in from the network. Official
+  // entries carry short keys — the recipe wire format — so canon is the
+  // library, not a layer over one.
+  const followedEntries = useMemo(
+    () => followed.collections.flatMap((c) => c.entries),
+    [followed.collections]
+  )
   const effectsByKey = useMemo(
     () =>
       Object.fromEntries(
-        [...official.entries, ...foreign, ...network.entries, ...custom].map((e) => [e.key, e.effect])
+        [...official.entries, ...followedEntries, ...foreign, ...network.entries, ...custom].map((e) => [e.key, e.effect])
       ),
-    [custom, foreign, network.entries, official.entries]
+    [custom, foreign, network.entries, official.entries, followedEntries]
   )
 
   useEffect(() => {

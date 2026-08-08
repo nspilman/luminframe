@@ -37,7 +37,7 @@ const IDLE: Loaded = { status: 'idle', entries: [], handles: {}, unreadRepos: 0 
  * memoized and already ran for each of these DIDs during the record fetch, so
  * this is cache hits rather than a second round of network calls.
  */
-async function handlesFor(entries: readonly CustomEffectEntry[]): Promise<Record<string, string>> {
+export async function handlesFor(entries: readonly CustomEffectEntry[]): Promise<Record<string, string>> {
   const dids = [...new Set(entries.map((e) => parseAtUri(e.key)?.did).filter(Boolean) as string[])]
   const resolved = await Promise.all(dids.map(async (did) => [did, (await resolveIdentity(did)).handle] as const))
   return Object.fromEntries(resolved.filter(([, handle]) => handle)) as Record<string, string>

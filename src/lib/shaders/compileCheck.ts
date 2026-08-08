@@ -20,13 +20,23 @@ export type CompileCheck =
 
 export function checkEffectCompiles(effect: ShaderEffect): CompileCheck {
   const canvas = document.createElement('canvas')
-  const gl = canvas.getContext('webgl')
+  // webgl2, because that is the context the app renders on (three r163+
+  // dropped WebGL1). A WebGL1 gate is stricter than the runtime — it rejects
+  // uniform-bounded loops the renderer compiles fine — so it lied both ways.
+  const gl = canvas.getContext('webgl2')
   if (!gl) return { status: 'unavailable' }
 
-  // Three injects a precision qualifier when it assembles a material; a raw
-  // context needs it stated explicitly for the source to be equivalent.
+  // The same GLSL1 → GLSL3 shim three's WebGLProgram applies when it
+  // assembles a material on WebGL2 (plus the precision qualifier it injects).
+  // Without it the driver compiles under ES 1.00 rules — a stricter grammar
+  // than anything the renderer will ever feed it.
   const source =
+    '#version 300 es\n' +
     'precision mediump float;\n' +
+    '#define varying in\n' +
+    '#define texture2D texture\n' +
+    'layout(location = 0) out highp vec4 pc_fragColor;\n' +
+    '#define gl_FragColor pc_fragColor\n' +
     shaderBuilder({ vars: effect.declarationVars, getBody: effect.getBody })
 
   const shader = gl.createShader(gl.FRAGMENT_SHADER)

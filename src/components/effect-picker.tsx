@@ -12,6 +12,8 @@ import { Image } from '@/domain/models/Image'
 import { useEffectThumbnails } from '@/hooks/useEffectThumbnails'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
 import { NetworkEffectsState } from '@/hooks/useNetworkEffects'
+import { FollowedCollection, followCollection, unfollowCollection, useFollowedCollections } from '@/hooks/useFollowedCollections'
+import { NetworkCollectionsState, useNetworkCollections } from '@/hooks/useNetworkCollections'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 
 // The desktop growing-column declaration: at md+ the picker fills the sidebar's
@@ -104,6 +106,7 @@ type EffectPickerProps = {
 }
 
 const NETWORK_SECTION = 'network'
+const COLLECTIONS_SECTION = 'collections'
 
 type PickerSection = { id: string; label: string; effects: readonly EffectKey[] }
 
@@ -158,6 +161,104 @@ function NetworkSectionNote({
         ? `Nothing here matches “${query}”`
         : 'Nobody else has published an effect yet.'}
     </p>
+  )
+}
+
+/** One collection line: name, credit, count, and the follow/unfollow act. */
+function CollectionRow({
+  name,
+  curatorHandle,
+  count,
+  action,
+  onAction,
+}: {
+  name: string
+  curatorHandle?: string
+  count: number
+  action: 'Follow' | 'Unfollow'
+  onAction: () => void
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-zinc-800/60 p-1.5">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-medium leading-tight text-zinc-200">{name}</span>
+        <span className="block truncate text-[10px] leading-tight text-zinc-500">
+          {curatorHandle ? `@${curatorHandle} · ` : ''}
+          {count} {count === 1 ? 'effect' : 'effects'}
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={onAction}
+        className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 ${
+          action === 'Follow'
+            ? 'text-violet-400 hover:text-violet-300'
+            : 'text-zinc-500 hover:text-zinc-200'
+        }`}
+      >
+        {action}
+      </button>
+    </div>
+  )
+}
+
+/**
+ * The Collections section: the lenses the user follows, and the door to find
+ * more. Each followed collection's effects appear as their own section above;
+ * this section is where following is managed. The browse is a relay fan-out,
+ * so — like the network section — it loads only when asked, though it is
+ * cheaper: collections are metadata, and no stranger's shader compiles until
+ * one is actually followed.
+ */
+function CollectionsSectionNote({
+  followed,
+  browse,
+}: {
+  followed: FollowedCollection[]
+  browse: NetworkCollectionsState
+}) {
+  const note = 'px-1 py-1 text-[11px] text-zinc-500'
+  const followedUris = new Set(followed.map((c) => c.uri))
+  const discovered = browse.collections.filter((c) => !followedUris.has(c.uri))
+  return (
+    <div className="space-y-1">
+      {followed.map((c) => (
+        <CollectionRow
+          key={c.uri}
+          name={c.name}
+          curatorHandle={c.curatorHandle}
+          count={c.entries.length}
+          action="Unfollow"
+          onAction={() => unfollowCollection(c.uri)}
+        />
+      ))}
+      {browse.status === 'idle' && (
+        <button
+          type="button"
+          onClick={browse.load}
+          className="rounded px-1 py-1 text-left text-[11px] text-violet-400 hover:text-violet-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+        >
+          Find collections curated by others →
+        </button>
+      )}
+      {browse.status === 'loading' && <p className={note}>Looking across the network…</p>}
+      {browse.status === 'loaded' && discovered.length === 0 && (
+        <p className={note}>No other collections on the network yet.</p>
+      )}
+      {discovered.map((c) => (
+        <CollectionRow
+          key={c.uri}
+          name={c.def.name}
+          curatorHandle={c.curatorHandle}
+          count={c.def.effectUris.length}
+          action="Follow"
+          onAction={() => followCollection(c.uri)}
+        />
+      ))}
+      {browse.status === 'loaded' && browse.unreadRepos > 0 && (
+        <p className={note}>{browse.unreadRepos} more curators not read</p>
+      )}
+    </div>
   )
 }
 
@@ -223,11 +324,35 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
     const yours = new Set(customEffects.map((e) => e.key))
     return networkEffects.entries.filter((e) => !yours.has(e.key))
   }, [customEffects, networkEffects.entries])
-  const networkKeys = useMemo(() => new Set(networkOnly.map((e) => e.key)), [networkOnly])
+
+  // Collections the user follows — each renders as its own section, and the
+  // Collections section at the foot manages the following itself.
+  const followed = useFollowedCollections()
+  const browseCollections = useNetworkCollections()
+  const followedEntries = useMemo(
+    () => followed.collections.flatMap((c) => c.entries),
+    [followed.collections]
+  )
+
+  // Keys whose rows lead with their author's handle: strangers' effects, from
+  // the network listing or a followed collection. Followed entries that
+  // re-keyed to builtin short keys are luminframe.com's and need no byline.
+  const attributedKeys = useMemo(
+    () =>
+      new Set([
+        ...networkOnly.map((e) => e.key),
+        ...followedEntries.map((e) => e.key).filter((k) => k.startsWith('at://')),
+      ]),
+    [networkOnly, followedEntries]
+  )
+  const bylineHandles = useMemo(
+    () => ({ ...networkEffects.handles, ...followed.handles }),
+    [networkEffects.handles, followed.handles]
+  )
 
   const customByKey = useMemo(
-    () => new Map([...customEffects, ...networkOnly].map((e) => [e.key, e])),
-    [customEffects, networkOnly]
+    () => new Map([...customEffects, ...networkOnly, ...followedEntries].map((e) => [e.key, e])),
+    [customEffects, networkOnly, followedEntries]
   )
   // Every effect the picker can show, from the registry: the canon-loaded
   // catalog plus custom/network entries. Passing the full map (rather than a
@@ -240,9 +365,9 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
       ...Object.fromEntries(
         registeredShaders.filter((k) => k in registry).map((k) => [k, registry[k]])
       ),
-      ...Object.fromEntries([...customEffects, ...networkOnly].map((e) => [e.key, e.effect])),
+      ...Object.fromEntries([...customEffects, ...networkOnly, ...followedEntries].map((e) => [e.key, e.effect])),
     }),
-    [registry, customEffects, networkOnly]
+    [registry, customEffects, networkOnly, followedEntries]
   )
   const thumbnails = useEffectThumbnails(source, thumbShaderMap)
 
@@ -275,6 +400,37 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
     return [{ id: NETWORK_SECTION, label: 'From the network', effects: matches.map((e) => e.key) }]
   }, [networkOnly, query])
 
+  // One section per followed collection, labeled with the curator's credit —
+  // the point of following is seeing whose lens you're looking through.
+  // Searched by the same rule as every other section; a collection with no
+  // matches (or none resolved yet) simply isn't drawn.
+  const followedSections = useMemo<PickerSection[]>(
+    () =>
+      followed.collections.flatMap((c) => {
+        const matches = c.entries.filter((e) =>
+          textMatchesQuery(query, e.effect.name, e.description ?? '')
+        )
+        return matches.length > 0
+          ? [{
+              id: c.uri,
+              label: c.curatorHandle ? `${c.name} · @${c.curatorHandle}` : c.name,
+              effects: matches.map((e) => e.key),
+            }]
+          : []
+      }),
+    [followed.collections, query]
+  )
+
+  // The management section is browse-mode furniture, not a search domain —
+  // a search filters effects, and these rows aren't effects.
+  const collectionsSection = useMemo<PickerSection[]>(
+    () =>
+      query.trim() === ''
+        ? [{ id: COLLECTIONS_SECTION, label: 'Collections', effects: [] }]
+        : [],
+    [query]
+  )
+
   // Your own effects are few and lead the search results; on Enter the top
   // match is the first effect of whatever the current query shows.
   const topMatch = (yoursSection[0] ?? families[0])?.effects[0]
@@ -284,10 +440,10 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
   // hand. During a search the results stand alone; recents would only be noise.
   const sections = useMemo<PickerSection[]>(() => {
     if (query.trim() === '' && recentShaders.length > 0) {
-      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...yoursSection, ...families, ...networkSection]
+      return [{ id: 'recent', label: 'Recent', effects: recentShaders }, ...yoursSection, ...families, ...followedSections, ...networkSection, ...collectionsSection]
     }
-    return [...yoursSection, ...families, ...networkSection]
-  }, [query, recentShaders, yoursSection, families, networkSection])
+    return [...yoursSection, ...families, ...followedSections, ...networkSection, ...collectionsSection]
+  }, [query, recentShaders, yoursSection, families, followedSections, networkSection, collectionsSection])
 
   // Collapsible families: the explorer can fold sections they don't use, keeping
   // the picker short. The collapsed set is remembered across visits. Collapse is a
@@ -459,10 +615,13 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
                 {!isCollapsed && family.id === NETWORK_SECTION && (
                   <NetworkSectionNote state={networkEffects} shown={family.effects.length} query={query} />
                 )}
+                {!isCollapsed && family.id === COLLECTIONS_SECTION && (
+                  <CollectionsSectionNote followed={followed.collections} browse={browseCollections} />
+                )}
                 {!isCollapsed && (
                 <div className="space-y-1">
                   {family.effects.map((shader) => {
-                    const row = rowFor(shader, registry, customByKey, networkKeys, networkEffects.handles)
+                    const row = rowFor(shader, registry, customByKey, attributedKeys, bylineHandles)
                     if (!row) return null
                     const thumb = thumbnails?.[shader]
                     const isSelected = selectedShader === shader

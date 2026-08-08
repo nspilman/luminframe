@@ -21,4 +21,9 @@ describe('rekeyOfficialEntries', () => {
     const uri = 'at://did:plc:5mo4amsmatgfmzpeqqsuetot/com.luminframe.effect/from-the-future'
     expect(rekeyOfficialEntries([entry(uri)])[0].key).toBe(uri)
   })
+
+  it("another author's builtin-named slug keeps its at:// key — a different effect, not the builtin", () => {
+    const uri = 'at://did:plc:someoneelse/com.luminframe.effect/black-and-white'
+    expect(rekeyOfficialEntries([entry(uri)])[0].key).toBe(uri)
+  })
 })
