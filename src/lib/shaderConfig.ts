@@ -103,6 +103,10 @@ export const createShaderRecord = (config: ShaderConfig) => {
     defaultValues,
     inputs,
     getBody: () => wrapBodyWithOpacity(config.body),
+    // The body as the author wrote it, before opacity wrapping — what a
+    // com.luminframe.effect record carries (the host re-wraps on hydration).
+    // getBody hides this, and the publish direction needs it back.
+    rawBody: config.body,
     ...(config.animatedBy ? { animatedBy: config.animatedBy } : {}),
   };
 };

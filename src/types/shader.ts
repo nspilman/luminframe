@@ -78,6 +78,12 @@ export interface ShaderEffect {
   inputs: { [k: string]: ShaderInputDefinition };
   getBody: () => string;
   /**
+   * The body as authored, before opacity wrapping — what a published record
+   * carries. Optional because hand-built test effects don't always have one;
+   * every createShaderRecord product does.
+   */
+  rawBody?: string;
+  /**
    * Name of the parameter that gates this effect's motion, for effects whose
    * body references `time` but that are still when the parameter is zero
    * (e.g. Light Leak's `drift`). Absent means the body tells the whole truth:

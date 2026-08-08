@@ -25,7 +25,7 @@ export const textOverlay = createShaderRecord({
       // Into the caption's own space: shift so its centre sits at Position,
       // undo the picture's aspect so the letters stay the shape they were
       // drawn, spin, then scale. The texture is a square tile (see
-      // renderTextCanvas), so it needs no uniform describing its width.
+      // renderTextCanvas), so nothing extra need describe its width.
       vec2 d = vUv - textPosition;
       d.x *= resolution.x / resolution.y;
 

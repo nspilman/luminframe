@@ -38,7 +38,8 @@ describe('shaderRecordBuilder', () => {
           },
           opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
-        getBody: expect.any(Function)
+        getBody: expect.any(Function),
+        rawBody: 'void main() {}'
       });
     });
 
@@ -70,7 +71,8 @@ describe('shaderRecordBuilder', () => {
           },
           opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
-        getBody: expect.any(Function)
+        getBody: expect.any(Function),
+        rawBody: 'void main() {}'
       });
     });
 
@@ -296,7 +298,8 @@ describe('shaderRecordBuilder', () => {
           },
           opacity: { type: 'range', label: 'Opacity', min: 0, max: 1, step: 0.01 }
         },
-        getBody: expect.any(Function)
+        getBody: expect.any(Function),
+        rawBody: 'void main() {}'
       });
     });
   });
