@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react'
-import { shaderLibrary } from '@/lib/shaders'
 import { ApplicationContext } from '@/application/ApplicationContext'
 import { EffectRegistry } from '@/types/shader'
 import { useCustomEffects, CustomEffectEntry } from './useCustomEffects'
@@ -71,9 +70,8 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
   // any other — but not `custom`, which stays the user's own. Official (canon)
   // comes first so every later source wins over it, then foreign/network, then
   // `custom` last so your version of a key beats every copy that came in from
-  // the network. Official entries carry short keys, so in the final merge they
-  // override the bundled builtins: canon is the source of truth and the bundle
-  // is its fallback.
+  // the network. Official entries carry short keys — the
+  // recipe wire format — so canon is the library, not a layer over one.
   const effectsByKey = useMemo(
     () =>
       Object.fromEntries(
@@ -86,7 +84,9 @@ export function useEffectRegistry(did: string | null): EffectRegistryState {
     ApplicationContext.getInstance().registerCustomEffects(effectsByKey)
   }, [effectsByKey])
 
-  const registry = useMemo(() => ({ ...shaderLibrary, ...effectsByKey }), [effectsByKey])
+  // No bundled base to spread under: the library IS the canon-loaded official
+  // entries, merged in effectsByKey with everything else.
+  const registry = effectsByKey
 
   return useMemo(
     () => ({ registry, custom, network, officialStatus: official.status, ready: status !== 'loading' && localReady, publishedSkipped, refreshPublished }),

@@ -1,11 +1,8 @@
-import { EFFECT_COLLECTION, LUMINFRAME_DID } from '@/effects-contract'
-import { EffectRegistry, ShaderType } from '@/types/shader'
+import { EFFECT_COLLECTION } from '@/effects-contract'
+import { EffectRegistry } from '@/types/shader'
 import { fetchRecordByUri, RawRecord } from '@/infrastructure/atproto/repoRecords'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { CustomEffectEntry, buildCustomEffectEntries } from '@/hooks/useCustomEffects'
-import { shaderLibrary } from '@/lib/shaders'
-import { blurbOf } from './catalog'
-import { slugForEffectKey, toEffectDefinition } from './toEffectDefinition'
 
 /**
  * Other authors' effects, resolved on demand. A Look (or a shared image's
@@ -20,29 +17,6 @@ import { slugForEffectKey, toEffectDefinition } from './toEffectDefinition'
  */
 
 const cache = new Map<string, CustomEffectEntry | { reasons: string[] }>()
-
-/** slug → builtin key, the inverse of slugForEffectKey over the library. */
-const builtinBySlug = new Map(
-  (Object.keys(shaderLibrary) as ShaderType[]).map((key) => [slugForEffectKey(key), key])
-)
-
-/**
- * A luminframe.com effect URI is the published name of a bundled builtin —
- * the records are generated from the shipped code (scripts/publish-builtins),
- * so the bundled effect IS the record's content. Resolving it locally keeps
- * the same center written once: no fetch, no compile-gate, works offline,
- * and a recipe naming the at:// form renders identically to one naming the
- * short key. Unknown slugs fall through to a real fetch — luminframe.com may
- * publish effects that postdate this build.
- */
-function builtinAliasEntry(key: string): CustomEffectEntry | null {
-  const parsed = parseAtUri(key)
-  if (parsed?.did !== LUMINFRAME_DID || parsed.collection !== EFFECT_COLLECTION) return null
-  const builtinKey = builtinBySlug.get(parsed.rkey)
-  if (!builtinKey) return null
-  const effect = shaderLibrary[builtinKey]
-  return { key, effect, description: blurbOf(builtinKey), def: toEffectDefinition(builtinKey, effect) }
-}
 
 export const FOREIGN_EFFECTS_CHANGED_EVENT = 'luminframe.foreignEffects.changed'
 
@@ -74,11 +48,6 @@ export async function resolveForeignEffects(
   if (wanted.length > 0) {
     await Promise.all(
       wanted.map(async (key) => {
-        const alias = builtinAliasEntry(key)
-        if (alias) {
-          cache.set(key, alias)
-          return
-        }
         const record = await fetchRecord(key)
         if (!record) {
           cache.set(key, { reasons: ['record not found (deleted, or its PDS is unreachable)'] })

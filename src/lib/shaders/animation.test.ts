@@ -1,31 +1,31 @@
 import { passIsAnimated, chainIsAnimated, motionOf } from './animation'
-import { shaderLibrary } from '@/lib/shaders'
+import { animatedEffect, gatedEffect, stillEffect } from './testEffects'
 
-// The real library is used throughout so these double as contract pins — e.g.
-// lightLeak's animatedBy must name a parameter that actually exists.
+// Fixtures built through the production factory, one per motion character —
+// the library itself lives in canon now, so the pins are behavioral.
 describe('passIsAnimated', () => {
   it('time-driven effect with no gate → animated', () => {
-    expect(passIsAnimated(shaderLibrary.wave, {})).toBe(true)
+    expect(passIsAnimated(animatedEffect, {})).toBe(true)
   })
 
   it('static effect → still', () => {
-    expect(passIsAnimated(shaderLibrary.blackAndWhite, {})).toBe(false)
+    expect(passIsAnimated(stillEffect, {})).toBe(false)
   })
 
   it('gated effect at zero → still', () => {
     // The bug class: Light Leak's body mentions `time`, but at drift 0 every
     // frame is identical — exporting an MP4 of frozen frames surprised users.
-    expect(passIsAnimated(shaderLibrary.lightLeak, { drift: 0 })).toBe(false)
+    expect(passIsAnimated(gatedEffect, { drift: 0 })).toBe(false)
   })
 
   it('gated effect above zero → animated', () => {
-    expect(passIsAnimated(shaderLibrary.lightLeak, { drift: 0.5 })).toBe(true)
+    expect(passIsAnimated(gatedEffect, { drift: 0.5 })).toBe(true)
   })
 
   it('gated effect with the param omitted falls back to its default (still)', () => {
     // Old recipes and drafts predate `drift`; they hydrate without it and must
     // stay still, matching the new default rather than silently animating.
-    expect(passIsAnimated(shaderLibrary.lightLeak, {})).toBe(false)
+    expect(passIsAnimated(gatedEffect, {})).toBe(false)
   })
 
   it('gate declared but param missing everywhere → still', () => {
@@ -54,15 +54,15 @@ describe('passIsAnimated', () => {
 // characters against real effects so the badge can't drift from the export.
 describe('motionOf', () => {
   it('time-driven effect → animated', () => {
-    expect(motionOf(shaderLibrary.wave)).toBe('animated')
+    expect(motionOf(animatedEffect)).toBe('animated')
   })
 
   it('gated effect that defaults still → gated', () => {
-    expect(motionOf(shaderLibrary.lightLeak)).toBe('gated')
+    expect(motionOf(gatedEffect)).toBe('gated')
   })
 
   it('static effect → still', () => {
-    expect(motionOf(shaderLibrary.blackAndWhite)).toBe('still')
+    expect(motionOf(stillEffect)).toBe('still')
   })
 })
 
@@ -70,8 +70,8 @@ describe('chainIsAnimated', () => {
   it('chain with one animated pass → animated', () => {
     expect(
       chainIsAnimated([
-        { effect: shaderLibrary.blackAndWhite, params: {} },
-        { effect: shaderLibrary.wave, params: {} },
+        { effect: stillEffect, params: {} },
+        { effect: animatedEffect, params: {} },
       ])
     ).toBe(true)
   })
@@ -79,8 +79,8 @@ describe('chainIsAnimated', () => {
   it('chain of stills (including a gated effect at zero) → still', () => {
     expect(
       chainIsAnimated([
-        { effect: shaderLibrary.blackAndWhite, params: {} },
-        { effect: shaderLibrary.lightLeak, params: { drift: 0 } },
+        { effect: stillEffect, params: {} },
+        { effect: gatedEffect, params: { drift: 0 } },
       ])
     ).toBe(false)
   })

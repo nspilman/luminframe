@@ -1,7 +1,9 @@
 import { hydrateRecipe, coerceToDefault } from './hydrateRecipe'
 import { serializeRecipe } from './serializeRecipe'
-import { shaderLibrary } from '@/lib/shaders'
 import { Color } from '@/domain/value-objects/Color'
+import { tintEffect } from './testEffects'
+
+const registry = { tint: tintEffect }
 
 describe('coerceToDefault', () => {
   it('turns a hex string into a Color when the default is a Color', () => {
@@ -22,37 +24,37 @@ describe('coerceToDefault', () => {
 })
 
 describe('hydrateRecipe', () => {
-  it('rebuilds a colorTint step: hex → Color, number preserved, defaults filled', () => {
+  it('rebuilds a tint step: hex → Color, number preserved, defaults filled', () => {
     const [step] = hydrateRecipe(
-      [{ type: 'colorTint', params: { tintColor: '#3366ff', tintStrength: 0.8 } }],
-      shaderLibrary
+      [{ type: 'tint', params: { tintColor: '#3366ff', opacity: 0.8 } }],
+      registry
     )
-    expect(step.type).toBe('colorTint')
+    expect(step.type).toBe('tint')
     expect(step.params.tintColor).toBeInstanceOf(Color)
     expect((step.params.tintColor as Color).toHex()).toBe('#3366ff')
-    expect(step.params.tintStrength).toBe(0.8)
+    expect(step.params.opacity).toBe(0.8)
     // A param the caller didn't store still comes back from the effect's defaults.
     expect('imageTexture' in step.params).toBe(true)
   })
 
   it('drops an effect the registry cannot resolve', () => {
-    expect(hydrateRecipe([{ type: 'notARealEffect', params: {} }], shaderLibrary)).toEqual([])
+    expect(hydrateRecipe([{ type: 'notARealEffect', params: {} }], registry)).toEqual([])
   })
 
   it('hydrates a custom effect when the registry resolves its AT-URI', () => {
     const uri = 'at://did:plc:example/com.luminframe.effect/invert'
-    const registry = { ...shaderLibrary, [uri]: shaderLibrary.colorTint }
-    const [step] = hydrateRecipe([{ type: uri, params: { tintStrength: 0.4 } }], registry)
+    const withUri = { ...registry, [uri]: tintEffect }
+    const [step] = hydrateRecipe([{ type: uri, params: { opacity: 0.4 } }], withUri)
     expect(step.type).toBe(uri)
     // Params coerce against the custom effect's own defaults, same as builtins.
-    expect(step.params.tintStrength).toBe(0.4)
+    expect(step.params.opacity).toBe(0.4)
   })
 
   it('round-trips through serializeRecipe: a stored recipe hydrates and re-serializes identically', () => {
-    const stored = [{ type: 'colorTint', params: { tintColor: '#3366ff', tintStrength: 0.7 } }]
-    const reSerialized = serializeRecipe(hydrateRecipe(stored, shaderLibrary))
-    const step = reSerialized.find((s) => s.type === 'colorTint')!
+    const stored = [{ type: 'tint', params: { tintColor: '#3366ff', opacity: 0.7 } }]
+    const reSerialized = serializeRecipe(hydrateRecipe(stored, registry))
+    const step = reSerialized.find((s) => s.type === 'tint')!
     expect(step.params?.tintColor).toBe('#3366ff')
-    expect(step.params?.tintStrength).toBe(0.7)
+    expect(step.params?.opacity).toBe(0.7)
   })
 })

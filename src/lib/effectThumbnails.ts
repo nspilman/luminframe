@@ -4,7 +4,7 @@ import { EditPipeline } from '@/domain/models/EditPipeline'
 import { ThreeJSRenderingAdapter } from '@/infrastructure/adapters/ThreeJSRenderingAdapter'
 import { InMemoryShaderRepositoryAdapter } from '@/infrastructure/adapters/InMemoryShaderRepositoryAdapter'
 import { RenderEditUseCase } from '@/application/usecases/RenderEditUseCase'
-import { EffectKey, ShaderEffect, registeredShaders } from '@/types/shader'
+import { EffectKey, ShaderEffect } from '@/types/shader'
 
 // The longest edge of a generated thumbnail, in device pixels. Small enough
 // that rendering the whole library — one GPU pass per effect — is cheap and
@@ -30,8 +30,10 @@ export function thumbnailDimensions(source: Dimensions, maxEdge: number): Dimens
 }
 
 /**
- * Render every effect — builtins plus any loaded custom effects — against the
- * source at its default parameters, returning a data-URL thumbnail per key.
+ * Render every effect in the given map against the source at its default
+ * parameters, returning a data-URL thumbnail per key. The caller decides the
+ * keys — with the library living in canon, there is no ambient builtin list
+ * to assume; the map IS the set of effects that exist right now.
  *
  * Runs on a short-lived, offscreen renderer so the live canvas never flickers.
  * The renderer is torn down before returning. Effects that read a second image
@@ -40,7 +42,7 @@ export function thumbnailDimensions(source: Dimensions, maxEdge: number): Dimens
  */
 export async function renderEffectThumbnails(
   source: Image,
-  custom: Record<EffectKey, ShaderEffect> = {}
+  effects: Record<EffectKey, ShaderEffect>
 ): Promise<Record<EffectKey, string>> {
   const dims = thumbnailDimensions(source.getDimensions(), MAX_EDGE)
   const canvas = document.createElement('canvas')
@@ -49,7 +51,7 @@ export async function renderEffectThumbnails(
 
   const adapter = new ThreeJSRenderingAdapter(canvas, dims)
   const repository = new InMemoryShaderRepositoryAdapter()
-  for (const [key, effect] of Object.entries(custom)) repository.register(key, effect)
+  for (const [key, effect] of Object.entries(effects)) repository.register(key, effect)
   const renderEdit = new RenderEditUseCase(repository, adapter)
 
   // Tearing down the offscreen adapter clears its texture cache, which disposes
@@ -62,9 +64,9 @@ export async function renderEffectThumbnails(
   // door the live editor uses, with an empty committed pipeline and the effect
   // as the lone draft pass.
   const pipeline = EditPipeline.empty().withSource(safeSource)
-  const keys: EffectKey[] = [...registeredShaders, ...Object.keys(custom)]
-  // The repository already resolves every key here — builtins from its
-  // constructor, customs registered above — so it is the one resolver.
+  const keys: EffectKey[] = Object.keys(effects)
+  // The repository resolves every key here because every key was registered
+  // above — it is the one resolver.
   const renderPass = (type: EffectKey) =>
     renderEdit.execute(
       pipeline,
@@ -81,8 +83,12 @@ export async function renderEffectThumbnails(
       resolution
     )
 
+  if (keys.length === 0) {
+    adapter.dispose()
+    return {}
+  }
   try {
-    await primeTexture(adapter, () => renderPass(registeredShaders[0]))
+    await primeTexture(adapter, () => renderPass(keys[0]))
 
     const thumbnails: Record<EffectKey, string> = {}
     for (const type of keys) {

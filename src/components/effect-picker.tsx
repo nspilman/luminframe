@@ -229,11 +229,22 @@ export function EffectPicker({ selectedShader, onShaderSelect, recentShaders, cu
     () => new Map([...customEffects, ...networkOnly].map((e) => [e.key, e])),
     [customEffects, networkOnly]
   )
-  const customShaderMap = useMemo(
-    () => Object.fromEntries([...customEffects, ...networkOnly].map((e) => [e.key, e.effect])),
-    [customEffects, networkOnly]
+  // Every effect the picker can show, from the registry: the canon-loaded
+  // catalog plus custom/network entries. Passing the full map (rather than a
+  // customs-only map beside an assumed builtin list) is what re-runs the
+  // thumbnail batch when the library lands — on a cold start the catalog
+  // arrives after the source, and a batch keyed only on customs would never
+  // hear about it.
+  const thumbShaderMap = useMemo(
+    () => ({
+      ...Object.fromEntries(
+        registeredShaders.filter((k) => k in registry).map((k) => [k, registry[k]])
+      ),
+      ...Object.fromEntries([...customEffects, ...networkOnly].map((e) => [e.key, e.effect])),
+    }),
+    [registry, customEffects, networkOnly]
   )
-  const thumbnails = useEffectThumbnails(source, customShaderMap)
+  const thumbnails = useEffectThumbnails(source, thumbShaderMap)
 
   // Type-to-filter: narrows the families as the query is typed. Empty query
   // shows the full catalog, so search overlays browsing rather than replacing it.

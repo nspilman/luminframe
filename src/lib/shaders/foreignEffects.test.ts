@@ -1,5 +1,4 @@
 import { buildEffectRecord } from '@/effects-contract'
-import { shaderLibrary } from '@/lib/shaders'
 import { foreignEffectEntries, registryWithForeign, resolveForeignEffects } from './foreignEffects'
 
 const validValue = buildEffectRecord(
@@ -19,16 +18,16 @@ const URI_GONE = 'at://did:plc:other/com.luminframe.effect/gone'
 describe('resolveForeignEffects', () => {
   it('resolves a valid record into the foreign registry, fetching it once', async () => {
     const fetchRecord = jest.fn(async (uri: string) => ({ uri, value: validValue }))
-    await resolveForeignEffects([URI_OK], shaderLibrary, fetchRecord)
-    await resolveForeignEffects([URI_OK], shaderLibrary, fetchRecord)
+    await resolveForeignEffects([URI_OK], {}, fetchRecord)
+    await resolveForeignEffects([URI_OK], {}, fetchRecord)
 
     expect(fetchRecord).toHaveBeenCalledTimes(1)
-    expect(registryWithForeign(shaderLibrary)[URI_OK]?.name).toBe('Warm Grain')
+    expect(registryWithForeign({})[URI_OK]?.name).toBe('Warm Grain')
   })
 
   it('names the reasons for a record that fails the grammar', async () => {
     const fetchRecord = jest.fn(async (uri: string) => ({ uri, value: { name: 'Nope' } }))
-    const { unresolved } = await resolveForeignEffects([URI_BAD], shaderLibrary, fetchRecord)
+    const { unresolved } = await resolveForeignEffects([URI_BAD], {}, fetchRecord)
 
     expect(unresolved).toHaveLength(1)
     expect(unresolved[0].key).toBe(URI_BAD)
@@ -37,7 +36,7 @@ describe('resolveForeignEffects', () => {
 
   it('a missing record → unresolved with the not-found reason', async () => {
     const fetchRecord = jest.fn(async () => null)
-    const { unresolved } = await resolveForeignEffects([URI_GONE], shaderLibrary, fetchRecord)
+    const { unresolved } = await resolveForeignEffects([URI_GONE], {}, fetchRecord)
 
     expect(unresolved).toEqual([
       { key: URI_GONE, reasons: ['record not found (deleted, or its PDS is unreachable)'] },
@@ -46,7 +45,7 @@ describe('resolveForeignEffects', () => {
 
   it('does not fetch builtin keys or keys the registry already holds', async () => {
     const fetchRecord = jest.fn(async (uri: string) => ({ uri, value: validValue }))
-    await resolveForeignEffects(['sepia', 'blur'], shaderLibrary, fetchRecord)
+    await resolveForeignEffects(['sepia', 'blur'], {}, fetchRecord)
 
     expect(fetchRecord).not.toHaveBeenCalled()
   })
@@ -58,22 +57,3 @@ describe('resolveForeignEffects', () => {
   })
 })
 
-describe('luminframe.com alias resolution', () => {
-  const PIXELATE_URI = 'at://did:plc:5mo4amsmatgfmzpeqqsuetot/com.luminframe.effect/pixelate'
-  const UNKNOWN_URI = 'at://did:plc:5mo4amsmatgfmzpeqqsuetot/com.luminframe.effect/from-the-future'
-
-  it('resolves a published-builtin URI to the bundled effect without fetching', async () => {
-    const fetchRecord = jest.fn()
-    const { unresolved } = await resolveForeignEffects([PIXELATE_URI], shaderLibrary, fetchRecord)
-    expect(unresolved).toEqual([])
-    expect(fetchRecord).not.toHaveBeenCalled()
-    const entry = foreignEffectEntries().find((e) => e.key === PIXELATE_URI)
-    expect(entry?.effect).toBe(shaderLibrary.pixelate)
-  })
-
-  it('an unknown luminframe.com slug still fetches — newer effects may postdate this build', async () => {
-    const fetchRecord = jest.fn().mockResolvedValue(null)
-    await resolveForeignEffects([UNKNOWN_URI], shaderLibrary, fetchRecord)
-    expect(fetchRecord).toHaveBeenCalledWith(UNKNOWN_URI)
-  })
-})

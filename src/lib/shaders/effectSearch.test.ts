@@ -1,6 +1,13 @@
 import { subsequenceMatch, effectMatchesQuery, filterEffectFamilies } from './effectSearch'
 import { effectFamilies } from './catalog'
-import { shaderLibrary } from './index'
+import { EffectRegistry } from '@/types/shader'
+
+// Names normally arrive from canon; the search rule only needs a name per key.
+const registry = {
+  blackAndWhite: { name: 'Black & White' },
+  echo: { name: 'Echo' },
+  kaleidoscope: { name: 'Kaleidoscope' },
+} as unknown as EffectRegistry
 
 // subsequenceMatch is the whole matching rule: query chars in order, any gaps.
 describe('subsequenceMatch', () => {
@@ -27,11 +34,11 @@ describe('subsequenceMatch', () => {
 describe('effectMatchesQuery', () => {
   it('matches on the blurb, not only the name', () => {
     // Black & White's blurb is "Drain to grayscale"; the name has no "grayscale".
-    expect(effectMatchesQuery('blackAndWhite', 'grayscale', shaderLibrary)).toBe(true)
+    expect(effectMatchesQuery('blackAndWhite', 'grayscale', registry)).toBe(true)
   })
 
   it('matches everything on an empty query', () => {
-    expect(effectMatchesQuery('echo', '   ', shaderLibrary)).toBe(true)
+    expect(effectMatchesQuery('echo', '   ', registry)).toBe(true)
   })
 })
 
@@ -39,17 +46,17 @@ describe('effectMatchesQuery', () => {
 describe('filterEffectFamilies', () => {
   it('returns the full catalog unchanged for an empty query', () => {
     // Search overlays browse — with no query the picker shows every family.
-    expect(filterEffectFamilies('', shaderLibrary)).toBe(effectFamilies)
+    expect(filterEffectFamilies('', registry)).toBe(effectFamilies)
   })
 
   it('drops families with no matching effect', () => {
     // "kaleidoscope" lives only in Distort, so only Distort survives.
-    const result = filterEffectFamilies('kaleidoscope', shaderLibrary)
+    const result = filterEffectFamilies('kaleidoscope', registry)
     expect(result.map((f) => f.id)).toEqual(['distort'])
   })
 
   it('keeps only the matching effects within a surviving family', () => {
-    const distort = filterEffectFamilies('kaleidoscope', shaderLibrary).find((f) => f.id === 'distort')
+    const distort = filterEffectFamilies('kaleidoscope', registry).find((f) => f.id === 'distort')
     expect(distort?.effects).toEqual(['kaleidoscope'])
   })
 })

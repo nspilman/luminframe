@@ -1,6 +1,5 @@
 import { browserOnlyEffectKey, browserOnlySlug, missingImageSlots } from './publishability'
-import { blend } from './effects/blend'
-import { vignette } from './effects/vignette'
+import { stillEffect, twoImageEffect } from './testEffects'
 import { Image } from '@/domain/models/Image'
 import { Dimensions } from '@/domain/value-objects/Dimensions'
 
@@ -30,16 +29,16 @@ describe('missingImageSlots', () => {
   const image = new Image('img-1', new Dimensions(4, 2), { url: 'blob:test' })
 
   it('empty declared slot → its label', () => {
-    expect(missingImageSlots(blend, {})).toEqual(['Second Image'])
+    expect(missingImageSlots(twoImageEffect, {})).toEqual(['Second Image'])
   })
 
   it('filled slot → nothing', () => {
-    expect(missingImageSlots(blend, { imageTextureTwo: image })).toEqual([])
+    expect(missingImageSlots(twoImageEffect, { imageTextureTwo: image })).toEqual([])
   })
 
   it('does not report the host-provided imageTexture', () => {
-    // vignette declares only imageTexture; with no params at all it must
+    // stillEffect declares only imageTexture; with no params at all it must
     // still report nothing — the pass input is the pipeline's to supply.
-    expect(missingImageSlots(vignette, {})).toEqual([])
+    expect(missingImageSlots(stillEffect, {})).toEqual([])
   })
 })

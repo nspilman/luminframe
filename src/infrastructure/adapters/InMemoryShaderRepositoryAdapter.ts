@@ -1,6 +1,5 @@
 import { ShaderRepositoryPort } from '@/application/ports/ShaderRepositoryPort';
 import { EffectKey, ShaderEffect } from '@/types/shader';
-import { shaderLibrary } from '@/lib/shaders';
 
 /**
  * In-memory implementation of ShaderRepositoryPort: the builtin library plus
@@ -13,7 +12,9 @@ export class InMemoryShaderRepositoryAdapter implements ShaderRepositoryPort {
   private readonly shaders: Record<EffectKey, ShaderEffect>;
 
   constructor() {
-    this.shaders = { ...shaderLibrary };
+    // Starts empty: the library lives in canon and arrives by registration
+    // (the registry mirror), the same door every custom effect uses.
+    this.shaders = {};
   }
 
   /**
