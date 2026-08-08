@@ -1,11 +1,11 @@
-import { EFFECT_COLLECTION } from '@/effects-contract'
+import { EFFECT_COLLECTION, LUMINFRAME_DID } from '@/effects-contract'
 import { EffectRegistry, ShaderType } from '@/types/shader'
 import { fetchRecordByUri, RawRecord } from '@/infrastructure/atproto/repoRecords'
 import { parseAtUri } from '@/infrastructure/atproto/luminframeFeed'
 import { CustomEffectEntry, buildCustomEffectEntries } from '@/hooks/useCustomEffects'
 import { shaderLibrary } from '@/lib/shaders'
 import { blurbOf } from './catalog'
-import { LUMINFRAME_DID, slugForEffectKey, toEffectDefinition } from './toEffectDefinition'
+import { slugForEffectKey, toEffectDefinition } from './toEffectDefinition'
 
 /**
  * Other authors' effects, resolved on demand. A Look (or a shared image's

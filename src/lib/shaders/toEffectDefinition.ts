@@ -94,12 +94,3 @@ export function toEffectDefinition(key: ShaderType, effect: ShaderEffect): Effec
 export function slugForEffectKey(key: string): string {
   return key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 }
-
-/**
- * The app's own atproto account (handle: luminframe.com) — the repo the
- * builtin library publishes to, so every effect has a stable, citable
- * at:// name. Resolution treats a URI in this repo as an alias for the
- * bundled effect: same DID + a slug slugForEffectKey produces → the builtin,
- * no fetch, no compile-gate, works offline.
- */
-export const LUMINFRAME_DID = 'did:plc:5mo4amsmatgfmzpeqqsuetot'

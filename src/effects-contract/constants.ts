@@ -43,6 +43,13 @@
 
 export const EFFECT_COLLECTION = 'com.luminframe.effect'
 
+/**
+ * The lexicon authority for com.luminframe.* — the DID behind
+ * `_lexicon.luminframe.com TXT did=…`, and the repo the builtin library
+ * publishes to. An effect URI in this repo names a bundled builtin.
+ */
+export const LUMINFRAME_DID = 'did:plc:5mo4amsmatgfmzpeqqsuetot'
+
 export const ENV_VERSION = 2
 
 /**

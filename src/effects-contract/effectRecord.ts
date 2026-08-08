@@ -256,6 +256,26 @@ export function parseEffectRecord(value: unknown): ParseResult {
   }
 }
 
+/**
+ * Whether two definitions describe the same effect — the comparison behind
+ * cache coherence: check-canon asks it of bundle vs records, the publisher
+ * asks it to skip unchanged records. Key order never counts as a difference
+ * (JSON round trips don't preserve it); every value does.
+ */
+export function sameDefinition(a: EffectDefinition, b: EffectDefinition): boolean {
+  const sort = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(sort)
+      : v && typeof v === 'object'
+        ? Object.fromEntries(
+            Object.keys(v as object)
+              .sort()
+              .map((k) => [k, sort((v as Record<string, unknown>)[k])])
+          )
+        : v
+  return JSON.stringify(sort(a)) === JSON.stringify(sort(b))
+}
+
 export function buildEffectRecord(def: EffectDefinition, createdAt: string): EffectRecordWire {
   return {
     $type: 'com.luminframe.effect',

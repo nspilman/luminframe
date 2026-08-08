@@ -17,103 +17,51 @@
  * may carry effects that postdate this build, and the app already resolves
  * those by fetch.
  */
-import { parseEffectRecord, EffectDefinition } from '../src/effects-contract'
+import { sameDefinition } from '../src/effects-contract'
 import { shaderLibrary } from '../src/lib/shaders'
-import {
-  LUMINFRAME_DID,
-  slugForEffectKey,
-  toEffectDefinition,
-} from '../src/lib/shaders/toEffectDefinition'
+import { slugForEffectKey, toEffectDefinition } from '../src/lib/shaders/toEffectDefinition'
 import { ShaderType } from '../src/types/shader'
+import { fetchCanonEffects } from './atp'
 
-const PLC_DIRECTORY = 'https://plc.directory'
-const EFFECT_COLLECTION = 'com.luminframe.effect'
-
-/** Stable form for comparison — key order must not count as a difference. */
-function canonical(def: EffectDefinition): string {
-  const sort = (v: unknown): unknown =>
-    Array.isArray(v)
-      ? v.map(sort)
-      : v && typeof v === 'object'
-        ? Object.fromEntries(
-            Object.keys(v as object)
-              .sort()
-              .map((k) => [k, sort((v as Record<string, unknown>)[k])])
-          )
-        : v
-  return JSON.stringify(sort(def))
+const canon = await fetchCanonEffects()
+for (const { slug, errors } of canon.invalid) {
+  // Canon holding an invalid record is its own kind of drift.
+  console.error(`✗ ${slug}: canon record fails the grammar:`)
+  for (const error of errors) console.error(`    ${error}`)
+  process.exitCode = 1
 }
-
-const didDoc = (await (await fetch(`${PLC_DIRECTORY}/${LUMINFRAME_DID}`)).json()) as {
-  service?: { id: string; serviceEndpoint?: string }[]
-}
-const pds = didDoc.service?.find((s) => s.id.endsWith('atproto_pds'))?.serviceEndpoint
-if (!pds) {
-  console.error(`Could not resolve a PDS for ${LUMINFRAME_DID}`)
-  process.exit(1)
-}
-
-const canonBySlug = new Map<string, EffectDefinition>()
-let cursor: string | undefined
-do {
-  const url = new URL(`${pds}/xrpc/com.atproto.repo.listRecords`)
-  url.searchParams.set('repo', LUMINFRAME_DID)
-  url.searchParams.set('collection', EFFECT_COLLECTION)
-  url.searchParams.set('limit', '100')
-  if (cursor) url.searchParams.set('cursor', cursor)
-  const page = (await (await fetch(url)).json()) as {
-    records?: { uri: string; value: unknown }[]
-    cursor?: string
-  }
-  for (const record of page.records ?? []) {
-    const slug = record.uri.split('/').pop()!
-    const parsed = parseEffectRecord(record.value)
-    if (!parsed.ok) {
-      // Canon holding an invalid record is its own kind of drift — report it
-      // as a divergence rather than skipping past it.
-      console.error(`✗ ${slug}: canon record fails the grammar:`)
-      for (const error of parsed.errors) console.error(`    ${error}`)
-      process.exitCode = 1
-      continue
-    }
-    canonBySlug.set(slug, parsed.def)
-  }
-  cursor = page.cursor
-} while (cursor)
 
 const keys = Object.keys(shaderLibrary) as ShaderType[]
-let drifted = 0
+let drifted = canon.invalid.length
 for (const key of keys) {
   const slug = slugForEffectKey(key)
-  const local = toEffectDefinition(key, shaderLibrary[key])
-  const canon = canonBySlug.get(slug)
-  canonBySlug.delete(slug)
-  if (!canon) {
+  const localDef = toEffectDefinition(key, shaderLibrary[key])
+  const published = canon.bySlug.get(slug)
+  canon.bySlug.delete(slug)
+  if (!published) {
     drifted++
     console.error(`✗ ${slug}: unpublished — no record in canon (run publish-builtins)`)
     continue
   }
-  if (canonical(local) !== canonical(canon)) {
+  if (!sameDefinition(localDef, published.def)) {
     drifted++
     console.error(`✗ ${slug}: bundle and canon disagree`)
-    // Name the fields, so the direction of the drift is readable.
-    for (const field of ['name', 'description', 'env', 'body', 'animatedBy'] as const) {
-      if (JSON.stringify(local[field]) !== JSON.stringify(canon[field])) {
-        console.error(`    ${field}: repo has ${JSON.stringify(local[field])?.slice(0, 60)}, canon has ${JSON.stringify(canon[field])?.slice(0, 60)}`)
+    for (const field of ['name', 'description', 'env', 'body', 'animatedBy', 'params'] as const) {
+      if (JSON.stringify(localDef[field]) !== JSON.stringify(published.def[field])) {
+        console.error(
+          `    ${field}: repo has ${JSON.stringify(localDef[field])?.slice(0, 60)}, canon has ${JSON.stringify(published.def[field])?.slice(0, 60)}`
+        )
       }
-    }
-    if (canonical({ ...local, params: [] } as EffectDefinition) === canonical({ ...canon, params: [] } as EffectDefinition)) {
-      console.error('    params differ')
     }
   }
 }
 
-for (const slug of canonBySlug.keys()) {
+for (const slug of canon.bySlug.keys()) {
   console.log(`· ${slug}: in canon but not bundled (postdates this build — resolved by fetch)`)
 }
 
 if (drifted > 0) {
-  console.error(`\n${drifted} of ${keys.length} builtins drifted from canon.`)
+  console.error(`\n${drifted} divergence(s) between bundle and canon.`)
   process.exit(1)
 }
-console.log(`All ${keys.length} builtins match canon (${LUMINFRAME_DID} on ${pds}).`)
+console.log(`All ${keys.length} builtins match canon.`)

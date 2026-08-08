@@ -24,13 +24,13 @@
  */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { AtpAgent } from '@atproto/api'
 import {
   EFFECT_COLLECTION,
   buildEffectRecord,
   minimalEnvFor,
   parseEffectRecord,
 } from '../src/effects-contract'
+import { loginFromEnv } from './atp'
 
 const dirArg = process.argv[2]
 if (!dirArg) {
@@ -68,20 +68,8 @@ if (!parsed.ok) {
 }
 console.log(`Validated effect "${parsed.def.name}" (${parsed.def.params.length} params, env ${parsed.def.env}).`)
 
-const service = process.env.PDS_SERVICE || 'https://bsky.social'
-const identifier = process.env.ATP_IDENTIFIER
-const password = process.env.ATP_APP_PASSWORD
-if (!identifier || !password) {
-  console.error(
-    '\nSet ATP_IDENTIFIER and ATP_APP_PASSWORD to publish. See this file’s header for details.'
-  )
-  process.exit(1)
-}
-
-const agent = new AtpAgent({ service })
-await agent.login({ identifier, password })
+const agent = await loginFromEnv()
 const did = agent.assertDid
-console.log(`Signed in as ${did} on ${service}.`)
 
 const res = await agent.com.atproto.repo.putRecord({
   repo: did,

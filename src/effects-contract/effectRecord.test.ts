@@ -1,4 +1,4 @@
-import { buildEffectRecord, minimalEnvFor, parseEffectRecord } from './effectRecord'
+import { buildEffectRecord, minimalEnvFor, parseEffectRecord, sameDefinition } from './effectRecord'
 import { EffectDefinition } from './types'
 
 /**
@@ -285,5 +285,19 @@ describe('minimalEnvFor', () => {
 
   it('unbounded vec2 → 1', () => {
     expect(minimalEnvFor([{ type: 'vec2', name: 'p', label: 'P', default: [0, 0] }])).toBe(1)
+  })
+})
+
+describe('sameDefinition', () => {
+  it('key order does not count as a difference', () => {
+    const reordered = JSON.parse(JSON.stringify(validDef)) as typeof validDef
+    reordered.params = validDef.params.map(
+      (p) => Object.fromEntries(Object.entries(p).reverse()) as (typeof validDef.params)[0]
+    )
+    expect(sameDefinition(validDef, reordered)).toBe(true)
+  })
+
+  it('a changed body → different', () => {
+    expect(sameDefinition(validDef, { ...validDef, body: 'void main() { gl_FragColor = vec4(0.0); }' })).toBe(false)
   })
 })
