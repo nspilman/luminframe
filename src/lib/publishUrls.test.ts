@@ -1,8 +1,17 @@
-import { toBlueskyUrl, toGrainUrl, toLuminframeUrl, publicUrlFor } from './publishUrls'
+import { blueskyComposeUrl, toBlueskyUrl, toGrainUrl, toLuminframeUrl, publicUrlFor } from './publishUrls'
 
 const BSKY = 'at://did:plc:abc/app.bsky.feed.post/3kpostkey'
 const GRAIN = 'at://did:plc:abc/social.grain.gallery/3kgallerykey'
 const LUM = 'at://did:plc:abc/com.luminframe.image/3kimagekey'
+
+describe('blueskyComposeUrl', () => {
+  it('URL-encodes the prefilled text', () => {
+    // Spaces, slashes, and # all survive a paste-into-address-bar round trip.
+    expect(blueskyComposeUrl('My edit — https://luminframe.com/i/x#1')).toBe(
+      'https://bsky.app/intent/compose?text=My%20edit%20%E2%80%94%20https%3A%2F%2Fluminframe.com%2Fi%2Fx%231'
+    )
+  })
+})
 
 describe('toBlueskyUrl', () => {
   it('builds a profile/post URL from the handle and the URI rkey', () => {

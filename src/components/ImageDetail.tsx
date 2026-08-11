@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch, Sparkles } from 'lucide-react'
+import { ExternalLink, Calendar, Wand2, Trash2, Maximize2, GitBranch, Sparkles, Share2, Link2, Download, Check } from 'lucide-react'
 import { LuminframeImageView, parseAtUri, LUMINFRAME_COLLECTION } from '@/infrastructure/atproto/luminframeFeed'
 import { formatDate, bskyProfileUrl, pdslsUrl } from '@/lib/luminframeImagePresentation'
 import { editorRemixPath, editorApplyRecipePath, imagePagePath } from '@/lib/galleryRoute'
+import { blueskyComposeUrl } from '@/lib/publishUrls'
 import { EffectChip } from './EffectChip'
 import { Spinner } from './ui/spinner'
 
@@ -28,10 +29,47 @@ interface ImageDetailProps {
 // renderings below must lay out identically, so the class list is named once.
 const MEDIA_CLASS = 'max-h-[50vh] w-auto max-w-full object-contain md:max-h-[80vh]'
 
+/**
+ * Download the record's media. Not an <a download> — that attribute is
+ * silently ignored cross-origin, and blobs live on the author's PDS, so a
+ * plain link would navigate away instead of saving. Fetching to an object
+ * URL keeps the download on this origin, where the attribute is honored.
+ */
+async function downloadMedia(url: string, baseName: string): Promise<void> {
+  const blob = await (await fetch(url)).blob()
+  const ext = blob.type.split('/')[1]?.split('+')[0] || 'png'
+  const objectUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objectUrl
+  a.download = `${baseName}.${ext}`
+  a.click()
+  URL.revokeObjectURL(objectUrl)
+}
+
+/** One small action in the share row — anchor or button, same face. */
+const SHARE_ITEM_CLASS =
+  'inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-violet-300'
+
 export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDetailProps) {
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  // What every share action shares: the canonical image page, absolute — the
+  // lightbox shares the same address the page itself lives at.
+  const pageUrl = `${window.location.origin}${imagePagePath(image.did, image.rkey)}`
+  const mediaUrl = image.videoUrl ?? image.imageUrl
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(pageUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
 
   const runDelete = async () => {
     if (!onDelete) return
@@ -153,6 +191,49 @@ export function ImageDetail({ image, canDelete, onDelete, permalinkTo }: ImageDe
               Open image page
             </Link>
           )}
+
+          {/* Sharing: every action hands off the canonical page URL. The
+              Bluesky door is an intent link — composing and sending stay in
+              the person's hands — and the whole row works signed out. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800/60 pt-3">
+            <a
+              href={blueskyComposeUrl(image.title ? `${image.title} ${pageUrl}` : pageUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={SHARE_ITEM_CLASS}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Post on Bluesky
+            </a>
+            {'share' in navigator && (
+              <button
+                type="button"
+                onClick={() => {
+                  // A dismissed share sheet rejects with AbortError; that is a
+                  // choice, not a failure, so it stays quiet.
+                  navigator.share({ title: image.title ?? 'Luminframe image', url: pageUrl }).catch(() => {})
+                }}
+                className={SHARE_ITEM_CLASS}
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
+            )}
+            <button type="button" onClick={copyLink} className={SHARE_ITEM_CLASS}>
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Link2 className="h-3.5 w-3.5" />}
+              {copied ? 'Copied' : 'Copy link'}
+            </button>
+            {mediaUrl && (
+              <button
+                type="button"
+                onClick={() => downloadMedia(mediaUrl, image.title || image.rkey).catch((err) => console.error('Download failed:', err))}
+                className={SHARE_ITEM_CLASS}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </button>
+            )}
+          </div>
 
           <a
             href={pdslsUrl(image)}

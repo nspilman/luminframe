@@ -43,6 +43,15 @@ export function toLuminframeUrl(uri: string): string | null {
   return `https://pdsls.dev/${uri}`
 }
 
+/**
+ * The compose-a-post door on bsky.app, pre-filled. An intent link rather than
+ * an authenticated post: it works signed out, needs no scope, and leaves the
+ * words and the sending in the person's hands.
+ */
+export function blueskyComposeUrl(text: string): string {
+  return `https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`
+}
+
 /** The public web URL for a created record, dispatched by its destination. */
 export function publicUrlFor(target: PublishTarget, uri: string, handle: string | null): string | null {
   switch (target) {
