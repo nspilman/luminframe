@@ -42,6 +42,9 @@ class RecordingRenderingPort implements RenderingPort {
   exportCanvas(): Promise<Blob> {
     return Promise.resolve(new Blob());
   }
+  exportAtSourceSize<T>(body: (canvas: HTMLCanvasElement) => Promise<T>): Promise<T> {
+    return body({} as HTMLCanvasElement);
+  }
   isAnimated(): boolean {
     return false;
   }

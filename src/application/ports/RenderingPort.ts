@@ -51,6 +51,16 @@ export interface RenderingPort {
   exportCanvas(format: ImageFormat): Promise<Blob>;
 
   /**
+   * Run `body` against the canvas while it holds the current edit rendered at
+   * the source's native resolution, then restore the display render. This is
+   * the one correct way to read the canvas for saving: the display buffer's
+   * size is a rendering detail (letterbox fit × devicePixelRatio, or a default
+   * before layout settles) and capturing it directly bakes that size — and any
+   * mismatch with the image's aspect — into the exported pixels.
+   */
+  exportAtSourceSize<T>(body: (canvas: HTMLCanvasElement) => Promise<T>): Promise<T>;
+
+  /**
    * Whether the current edit animates — it has a time- or feedback-driven effect,
    * so it redraws continuously and a single-frame export would freeze the motion.
    */

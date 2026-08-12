@@ -129,6 +129,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     saveCanvasAsInput,
     downloadImage,
     encodeAnimatedEdit,
+    exportAtSourceSize,
     updateDimensions,
     isInitialized,
   } = useRenderingEngine()
@@ -496,6 +497,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     handleUseRenderAsImageParam,
     handleDownload,
     encodeAnimatedEdit,
+    exportAtSourceSize,
     handleImageDrop,
     handleRemixLoad,
     applyRecipe,

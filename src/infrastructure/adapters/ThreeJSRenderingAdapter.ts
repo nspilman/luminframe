@@ -538,6 +538,17 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * With no chain to replay (no image loaded) it falls back to the current canvas.
    */
   async exportCanvas(format: ImageFormat): Promise<Blob> {
+    return this.exportAtSourceSize((canvas) => this.encodeCanvas(canvas, format));
+  }
+
+  /**
+   * Run `body` against the canvas while it holds the chain rendered at the
+   * source's native size (see exportBufferSize), then restore the display
+   * render. Both saving and downloading a still read the canvas through this —
+   * the display buffer is never captured directly, so its size (a rendering
+   * detail that can lag layout) can't leak into exported pixels.
+   */
+  async exportAtSourceSize<T>(body: (canvas: HTMLCanvasElement) => Promise<T>): Promise<T> {
     if (!this.renderer) {
       throw new Error('Renderer not initialized. Call setCanvas() first.');
     }
@@ -545,13 +556,13 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     const canvas = this.renderer.domElement;
     const params = this.lastChainParams;
     if (!params) {
-      return this.encodeCanvas(canvas, format);
+      return body(canvas);
     }
 
     const [nativeWidth, nativeHeight] = this.exportBufferSize(params.source);
     return this.withRenderSize(nativeWidth, nativeHeight, () => {
       this.drawChain();
-      return this.encodeCanvas(canvas, format);
+      return body(canvas);
     });
   }
 

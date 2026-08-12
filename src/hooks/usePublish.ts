@@ -1,4 +1,4 @@
-import { useState, useCallback, RefObject } from 'react'
+import { useState, useCallback } from 'react'
 import { AtprotoSession } from './useAtprotoSession'
 import { PublishPort } from '@/application/ports/PublishPort'
 import { BlueskyPublishAdapter } from '@/infrastructure/adapters/BlueskyPublishAdapter'
@@ -84,8 +84,13 @@ function shareAdapterFor(
  * The shares are secondary and best-effort — they run in parallel after the save
  * and each reports its own outcome, so a failed cross-post never loses the save.
  *
- * The canvas is exported once; every destination uploads those same bytes, which
- * (being content-addressed) the PDS stores as a single blob regardless.
+ * The pixels come from `exportAtSourceSize` — the edit re-rendered at the
+ * source's native resolution, the same door the download uses. Never the
+ * on-screen canvas directly: its buffer is a display detail (letterbox fit ×
+ * devicePixelRatio, or a stale default before layout settles), and encoding it
+ * once published a portrait image stretched into the 800×600 default. The
+ * export runs once; every destination uploads those same bytes, which (being
+ * content-addressed) the PDS stores as a single blob regardless.
  *
  * When `encodeAnimatedEdit` is provided and the edit animates, the save also
  * carries the looping MP4 (the same clip a download produces), so the record
@@ -94,7 +99,7 @@ function shareAdapterFor(
  */
 export function usePublish(
   session: AtprotoSession,
-  canvasRef: RefObject<HTMLCanvasElement>,
+  exportAtSourceSize: <T>(body: (canvas: HTMLCanvasElement) => Promise<T>) => Promise<T>,
   edit: PublishEdit = { effects: [] },
   encodeAnimatedEdit?: () => Promise<AnimationEncoding | null>
 ): Publisher {
@@ -102,11 +107,6 @@ export function usePublish(
 
   const publish = useCallback(
     async ({ alt, caption, shareTo }: PublishInput) => {
-      const canvas = canvasRef.current
-      if (!canvas) {
-        setState({ phase: 'error', outcomes: [], error: 'No rendered image to save.' })
-        return
-      }
       if (!session.agent) {
         setState({ phase: 'error', outcomes: [], error: 'Sign in first.' })
         return
@@ -144,7 +144,9 @@ export function usePublish(
       })
 
       try {
-        const { bytes, mimeType, aspectRatio } = await exportCanvasForUpload(canvas)
+        const { bytes, mimeType, aspectRatio } = await exportAtSourceSize((canvas) =>
+          exportCanvasForUpload(canvas)
+        )
         const animation = (await encodeAnimatedEdit?.()) ?? null
         const input = {
           bytes,
@@ -204,7 +206,7 @@ export function usePublish(
         })
       }
     },
-    [session.agent, session.handle, session.clearSession, canvasRef, edit]
+    [session.agent, session.handle, session.clearSession, exportAtSourceSize, edit]
   )
 
   const reset = useCallback(() => setState(IDLE), [])

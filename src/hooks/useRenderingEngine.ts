@@ -104,6 +104,20 @@ export function useRenderingEngine() {
     return contextRef.current.getExportCanvasUseCase().encodeAnimatedEdit();
   }, []);
 
+  /**
+   * Read the canvas with the edit rendered at the source's native size — the
+   * save path's door to the pixels, same native-size render as the download.
+   */
+  const exportAtSourceSize = useCallback(
+    async <T,>(body: (canvas: HTMLCanvasElement) => Promise<T>): Promise<T> => {
+      if (!contextRef.current) {
+        throw new Error('Rendering engine not initialized');
+      }
+      return contextRef.current.getRenderingAdapter().exportAtSourceSize(body);
+    },
+    []
+  );
+
   // No unmount cleanup: the ApplicationContext is a singleton, deliberately
   // reused across component re-mounts rather than disposed here.
 
@@ -113,6 +127,7 @@ export function useRenderingEngine() {
     saveCanvasAsInput,
     downloadImage,
     encodeAnimatedEdit,
+    exportAtSourceSize,
     updateDimensions,
     isInitialized,
   };
