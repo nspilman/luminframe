@@ -1,0 +1,16 @@
+{
+  "slug": "hue-rotate",
+  "name": "Hue Rotate",
+  "description": "Spin every hue around the wheel",
+  "params": [
+    {
+      "type": "range",
+      "name": "rotation",
+      "label": "Rotation",
+      "default": 3.14,
+      "min": 0,
+      "max": 6.283185307179586,
+      "step": 0.01
+    }
+  ]
+}

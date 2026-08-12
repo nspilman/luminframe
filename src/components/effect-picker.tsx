@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EffectKey, EffectRegistry, registeredShaders, ShaderType } from '@/types/shader'
-import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Type, Search, X, ChevronDown, ChevronRight, Play, FlaskConical } from 'lucide-react'
+import { Wand2, Grid, SplitSquareHorizontal, Circle, Waves, Flower2, Zap, Sparkles, Cloud, PaintBucket, ImagePlus, Move, Palette, Contrast, Lightbulb, PaintRollerIcon, Aperture, Film, PenTool, Droplets, Coffee, Blend, Sunrise, Sun, Flame, Sunset, Glasses, Orbit, ScanLine, Tornado, Grip, LayoutGrid, Tv, Pencil, Droplet, Gem, Layers, Infinity, Type, Search, X, ChevronDown, ChevronRight, Play, FlaskConical, SunMedium, Thermometer, Rainbow } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { motionOf, EffectMotion } from '@/lib/shaders/animation'
 import { blurbOf } from '@/lib/shaders/catalog'
@@ -86,6 +86,9 @@ const shaderIcons: Record<ShaderType, React.ReactNode> = {
   crystallize: <Gem className="h-5 w-5" />,
   displacement: <Layers className="h-5 w-5" />,
   echo: <Infinity className="h-5 w-5" />,
+  exposure: <SunMedium className="h-5 w-5" />,
+  temperature: <Thermometer className="h-5 w-5" />,
+  hueRotate: <Rainbow className="h-5 w-5" />,
 }
 
 type EffectPickerProps = {

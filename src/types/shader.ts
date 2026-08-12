@@ -131,7 +131,10 @@ export const registeredShaders = [
      'liquify',
      'crystallize',
      'displacement',
-     'echo'
+     'echo',
+     'exposure',
+     'temperature',
+     'hueRotate'
 ] as const;
 
 export type ShaderType = typeof registeredShaders[number]

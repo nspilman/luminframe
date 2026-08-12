@@ -1,0 +1,25 @@
+{
+  "slug": "swirl",
+  "name": "Swirl",
+  "description": "Twist around the center",
+  "params": [
+    {
+      "type": "range",
+      "name": "amount",
+      "label": "Amount",
+      "default": 3,
+      "min": -8,
+      "max": 8,
+      "step": 0.1
+    },
+    {
+      "type": "range",
+      "name": "radius",
+      "label": "Radius",
+      "default": 0.5,
+      "min": 0.1,
+      "max": 1,
+      "step": 0.01
+    }
+  ]
+}

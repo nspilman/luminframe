@@ -1,0 +1,12 @@
+{
+  "slug": "hue-swap",
+  "name": "Hue Swap",
+  "description": "Borrow another image's hues",
+  "params": [
+    {
+      "type": "image",
+      "name": "imageTextureTwo",
+      "label": "Hue Source Image"
+    }
+  ]
+}

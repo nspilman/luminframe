@@ -1,0 +1,43 @@
+{
+  "slug": "god-rays",
+  "name": "God Rays",
+  "description": "Cast light rays from a point",
+  "params": [
+    {
+      "type": "range",
+      "name": "lightX",
+      "label": "Light X",
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "range",
+      "name": "lightY",
+      "label": "Light Y",
+      "default": 0.2,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "range",
+      "name": "intensity",
+      "label": "Intensity",
+      "default": 0.8,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "type": "range",
+      "name": "threshold",
+      "label": "Threshold",
+      "default": 0.6,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    }
+  ]
+}

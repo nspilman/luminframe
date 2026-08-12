@@ -1,0 +1,31 @@
+{
+  "slug": "neon-glow",
+  "name": "Neon Glow",
+  "description": "Light up the bright areas",
+  "params": [
+    {
+      "type": "color",
+      "name": "glowColor",
+      "label": "Glow Color",
+      "default": [0, 1, 1]
+    },
+    {
+      "type": "range",
+      "name": "glowStrength",
+      "label": "Glow Strength",
+      "default": 0.3,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "range",
+      "name": "glowRadius",
+      "label": "Glow Radius",
+      "default": 0.4,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    }
+  ]
+}

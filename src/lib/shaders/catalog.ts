@@ -44,16 +44,18 @@ export interface EffectFamily {
  */
 export const effectFamilies: EffectFamily[] = [
   {
+    // The everyday hand tools lead: exposure first, because brightening a
+    // photo is the most-reached-for adjustment there is.
     id: 'tone',
     label: 'Tone',
-    effects: ['blackAndWhite', 'luminanceQuantize', 'lightThresholdSwap'],
+    effects: ['exposure', 'blackAndWhite', 'luminanceQuantize', 'lightThresholdSwap'],
   },
   {
-    // A grading suite ordered from subtle adjustment to full remap: boost, tint,
-    // grade, map to two colors, age, rotate, then reduce.
+    // A grading suite ordered from subtle adjustment to full remap: boost,
+    // balance, tint, grade, map to two colors, age, spin, borrow, then reduce.
     id: 'color',
     label: 'Color',
-    effects: ['vibrance', 'colorTint', 'splitTone', 'duotone', 'sepia', 'hueSwap', 'colorQuantize'],
+    effects: ['vibrance', 'temperature', 'colorTint', 'splitTone', 'duotone', 'sepia', 'hueRotate', 'hueSwap', 'colorQuantize'],
   },
   {
     // Everything that governs sharpness and where the eye rests — a sharp-to-soft
@@ -116,11 +118,14 @@ export const effectFamilies: EffectFamily[] = [
  * words. Kept short enough to sit under a thumbnail without crowding it.
  */
 export const effectBlurbs: Record<ShaderType, string> = {
+  exposure: 'Set the exposure and contrast',
   blackAndWhite: 'Drain to grayscale',
   luminanceQuantize: 'Flatten to tone bands',
   lightThresholdSwap: 'Split light from dark',
+  temperature: 'Warm or cool the light',
   colorTint: 'Wash in one hue',
-  hueSwap: 'Rotate the colors',
+  hueRotate: 'Spin every hue around the wheel',
+  hueSwap: "Borrow another image's hues",
   colorQuantize: 'Reduce to a few colors',
   vibrance: 'Boost the muted colors',
   sepia: 'Age to warm brown tones',

@@ -1,0 +1,26 @@
+{
+  "slug": "glitch",
+  "name": "Glitch",
+  "description": "Tear with digital noise",
+  "animatedBy": "speed",
+  "params": [
+    {
+      "type": "range",
+      "name": "intensity",
+      "label": "Intensity",
+      "default": 0.1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "range",
+      "name": "speed",
+      "label": "Speed",
+      "default": 1,
+      "min": 0,
+      "max": 5,
+      "step": 0.1
+    }
+  ]
+}
