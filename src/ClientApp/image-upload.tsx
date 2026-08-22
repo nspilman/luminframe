@@ -15,7 +15,7 @@ export function ImageUpload({ onChange, hasImage = false }: ImageUploadProps) {
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp']
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic', '.heif']
     },
     maxFiles: 1,
     onDrop: async (acceptedFiles) => {

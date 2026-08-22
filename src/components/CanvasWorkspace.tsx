@@ -80,7 +80,7 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
     // The whole workspace is a drop target. noClick keeps clicks free for the
     // action buttons; the empty state opens the file dialog via open().
     const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
-      accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+      accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic', '.heif'] },
       maxFiles: 1,
       noClick: true,
       noKeyboard: true,

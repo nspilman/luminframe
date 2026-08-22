@@ -3,6 +3,24 @@ import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { Image } from '@/domain/models/Image';
 
 /**
+ * Whether a file is HEIC/HEIF. Checked by MIME type and by extension: some
+ * platforms hand over iPhone photos with an empty `type`, so the name is the
+ * only signal there.
+ */
+export function isHeicFile(file: File): boolean {
+  if (file.type === 'image/heic' || file.type === 'image/heif') return true;
+  return file.type === '' && /\.(heic|heif)$/i.test(file.name);
+}
+
+/** Transcode a HEIC file to a JPEG one the browser's decoder can open. */
+async function convertHeicToJpeg(file: File): Promise<File> {
+  const { default: heic2any } = await import('heic2any');
+  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+}
+
+/**
  * Browser-based implementation of ImageLoaderPort and ImageExportPort.
  * Uses browser File API, URL API, and Canvas API.
  *
@@ -17,6 +35,8 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
     'image/gif',
     'image/bmp',
     'image/svg+xml',
+    'image/heic',
+    'image/heif',
   ];
 
   /**
@@ -30,16 +50,22 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
       );
     }
 
+    // HEIC (the iPhone camera default) can't be decoded by <img> outside
+    // Safari, so it's transcoded to JPEG here — the one door every upload
+    // walks through. The decoder is a wasm build of libheif, dynamically
+    // imported so only the first HEIC upload pays for it.
+    const toLoad = isHeicFile(file) ? await convertHeicToJpeg(file) : file;
+
     // Use domain model's factory method
     // This is acceptable as Image.fromFile is a factory method
-    return await Image.fromFile(file);
+    return await Image.fromFile(toLoad);
   }
 
   /**
    * Check if a file is a valid image
    */
   isValidImageFile(file: File): boolean {
-    return BrowserFileSystemAdapter.SUPPORTED_TYPES.includes(file.type);
+    return BrowserFileSystemAdapter.SUPPORTED_TYPES.includes(file.type) || isHeicFile(file);
   }
 
   /**
