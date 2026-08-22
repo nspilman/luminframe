@@ -14,8 +14,20 @@ export function isHeicFile(file: File): boolean {
 
 /** Transcode a HEIC file to a JPEG one the browser's decoder can open. */
 async function convertHeicToJpeg(file: File): Promise<File> {
+  // Loading the decoder and running it fail for unrelated reasons, so each
+  // gets its own sentence. The import breaks when a deploy has replaced the
+  // hashed chunk this page's (older) bundle asks for — the SPA fallback
+  // answers the 404 with index.html, which is not a module. Only a reload
+  // fixes that; no wording about the file would be true.
+  let heic2any: typeof import('heic2any').default;
   try {
-    const { default: heic2any } = await import('heic2any');
+    heic2any = (await import('heic2any')).default;
+  } catch (err) {
+    console.error('HEIC decoder chunk failed to load:', err);
+    throw new Error('Luminframe was updated since this page loaded — refresh the page and try again.');
+  }
+
+  try {
     const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
     const blob = Array.isArray(converted) ? converted[0] : converted;
     return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
