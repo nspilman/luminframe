@@ -14,10 +14,17 @@ export function isHeicFile(file: File): boolean {
 
 /** Transcode a HEIC file to a JPEG one the browser's decoder can open. */
 async function convertHeicToJpeg(file: File): Promise<File> {
-  const { default: heic2any } = await import('heic2any');
-  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
-  const blob = Array.isArray(converted) ? converted[0] : converted;
-  return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+  try {
+    const { default: heic2any } = await import('heic2any');
+    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+  } catch (err) {
+    // heic2any rejects with a plain {code, message} object, which would reach
+    // the user as "[object Object]" — rethrow as a sentence worth showing.
+    console.error('HEIC decode failed:', err);
+    throw new Error(`Couldn't read ${file.name} — this HEIC variant isn't supported. Exporting it as JPEG will work.`);
+  }
 }
 
 /**

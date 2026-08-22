@@ -489,6 +489,9 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     source,
     sourceUrl,
     isLoadingImage: loadImage.isPending,
+    // The most recent load failure, as a sentence for the canvas to show —
+    // null while idle/loading and cleared automatically when a new load starts.
+    imageLoadError: loadImage.status === 'error' ? loadImage.error?.message ?? 'Couldn\u2019t load that image.' : null,
     appliedEffects: pipeline.effects,
     editingIndex,
     editAppliedEffect,

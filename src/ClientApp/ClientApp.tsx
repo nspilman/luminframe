@@ -54,6 +54,7 @@ export function ClientApp(): JSX.Element {
     source,
     sourceUrl,
     isLoadingImage,
+    imageLoadError,
     appliedEffects,
     editingIndex,
     editAppliedEffect,
@@ -169,6 +170,7 @@ export function ClientApp(): JSX.Element {
               hasImage={hasImage}
               sourceUrl={sourceUrl}
               isLoadingImage={isLoadingImage}
+              loadError={imageLoadError}
               isSignedIn={session.status === 'signed-in'}
               publish={publish}
               onDownload={handleDownload}

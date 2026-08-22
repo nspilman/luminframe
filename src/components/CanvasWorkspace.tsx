@@ -20,6 +20,8 @@ interface CanvasWorkspaceProps {
   hasImage: boolean
   sourceUrl: string | null
   isLoadingImage: boolean
+  /** The most recent image-load failure, as a sentence — null when none. */
+  loadError?: string | null
   isSignedIn: boolean
   publish: Publisher
   onDownload: () => void
@@ -32,7 +34,7 @@ interface CanvasWorkspaceProps {
  * Handles the rendering area and save controls.
  */
 export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProps>(
-  ({ dimensions, hasImage, sourceUrl, isLoadingImage, isSignedIn, publish, onDownload, onImageDrop, onCanvasResize }, ref) => {
+  ({ dimensions, hasImage, sourceUrl, isLoadingImage, loadError = null, isSignedIn, publish, onDownload, onImageDrop, onCanvasResize }, ref) => {
     // Press-and-hold the compare button to swap the live render for the
     // untouched source — a glance back at where the edit started.
     const [isComparing, setIsComparing] = useState(false)
@@ -232,6 +234,16 @@ export const CanvasWorkspace = forwardRef<HTMLCanvasElement, CanvasWorkspaceProp
               <Send className="w-4 h-4 mr-2" />
               Save
             </Button>
+          </div>
+        )}
+        {/* A failed load must say so where the image would have appeared —
+            the silent alternative reads as "nothing happened". Clears itself
+            when the next load starts. */}
+        {loadError && !isLoadingImage && (
+          <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
+            <p role="alert" className="max-w-md rounded-lg border border-red-500/40 bg-red-950/80 px-4 py-2 text-center text-sm text-red-200 backdrop-blur-sm">
+              {loadError}
+            </p>
           </div>
         )}
         <PublishDialog
