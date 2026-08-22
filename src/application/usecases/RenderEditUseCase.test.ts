@@ -102,6 +102,20 @@ describe('RenderEditUseCase', () => {
       expect(passes[0].params).toEqual({ strength: 0.5 });
     });
 
+    it('skips hidden effects — muted, not removed', () => {
+      const rendering = new RecordingRenderingPort();
+      const pipeline = EditPipeline.empty()
+        .withSource(makeSource())
+        .append('colorTint' as ShaderType, { strength: 1 })
+        .append('vignette' as ShaderType, { radius: 0.4 })
+        .toggleHiddenAt(0);
+
+      makeUseCase(rendering).execute(pipeline, [], [4, 2]);
+
+      const { passes } = rendering.calls[0];
+      expect(passes.map((p) => p.effect.name)).toEqual(['effect:vignette']);
+    });
+
     it('assembles committed effects before the draft, in order', () => {
       const rendering = new RecordingRenderingPort();
       const source = makeSource();

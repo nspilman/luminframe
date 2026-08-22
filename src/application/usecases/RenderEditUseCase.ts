@@ -43,8 +43,12 @@ export class RenderEditUseCase {
       return;
     }
 
+    // Hidden effects stay in the pipeline (params, order, undo history) but
+    // contribute no pass — muted, not removed. Filtering here, at the one
+    // door every render walks through, keeps canvas, download, and save
+    // showing the same picture.
     const passes: RenderPass[] = [
-      ...pipeline.effects.map((effect) => ({
+      ...pipeline.effects.filter((effect) => !effect.hidden).map((effect) => ({
         effect: this.shaders.getShader(effect.type),
         params: effect.params,
       })),

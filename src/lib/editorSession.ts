@@ -47,6 +47,7 @@ interface SerializedImage {
 interface SerializedEffect {
   type: EffectKey
   params: SerializedVars
+  hidden?: boolean
 }
 
 export interface SerializedSession {
@@ -66,7 +67,7 @@ export interface EditorSessionState {
   source: Image
   selectedShader: EffectKey | null
   draftVars: ShaderInputVars
-  effects: ReadonlyArray<{ type: EffectKey; params: ShaderInputVars }>
+  effects: ReadonlyArray<{ type: EffectKey; params: ShaderInputVars; hidden?: boolean }>
 }
 
 // --- pure value (de)serialization -----------------------------------------
@@ -160,7 +161,7 @@ export async function serializeSession(state: EditorSessionState): Promise<Seria
     sourceId: state.source.id,
     selectedShader: state.selectedShader,
     draft: serializeVars(state.draftVars),
-    effects: state.effects.map((e) => ({ type: e.type, params: serializeVars(e.params) })),
+    effects: state.effects.map((e) => ({ type: e.type, params: serializeVars(e.params), hidden: e.hidden })),
     images,
   }
 }
@@ -185,7 +186,7 @@ export async function deserializeSession(s: SerializedSession): Promise<EditorSe
     source,
     selectedShader: s.selectedShader,
     draftVars: deserializeVars(s.draft, imagesById),
-    effects: s.effects.map((e) => ({ type: e.type, params: deserializeVars(e.params, imagesById) })),
+    effects: s.effects.map((e) => ({ type: e.type, params: deserializeVars(e.params, imagesById), hidden: e.hidden })),
   }
 }
 

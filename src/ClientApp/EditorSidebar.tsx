@@ -5,7 +5,7 @@ import { ShaderControls } from './shader-controls'
 import { EffectPicker } from '@/components/effect-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Check, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Check, Layers, ArrowUp, ArrowDown, X, Undo2, Redo2, Save, GitFork, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { MinimizeButton, PanelRail } from '@/components/ui/panel-chrome'
 import { AppliedEffect } from '@/domain/models/EditPipeline'
 import { CustomEffectEntry } from '@/hooks/useCustomEffects'
@@ -43,6 +43,8 @@ type EditorSidebarProps = {
   onUseRenderAsImageParam: (name: string) => void
   onRemoveEffect: (index: number) => void
   onMoveEffect: (from: number, to: number) => void
+  /** Mute/unmute the applied effect at `index` — skipped in the render, kept in the stack. */
+  onToggleEffectVisibility: (index: number) => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -91,6 +93,7 @@ export function EditorSidebar({
   onUseRenderAsImageParam,
   onRemoveEffect,
   onMoveEffect,
+  onToggleEffectVisibility,
   onUndo,
   onRedo,
   canUndo,
@@ -189,7 +192,9 @@ export function EditorSidebar({
                   type="button"
                   onClick={() => onEditEffect(index)}
                   aria-label={`Edit ${nameOf(applied.type)}`}
-                  className="flex-1 truncate text-left transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                  className={`flex-1 truncate text-left transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none ${
+                    applied.hidden ? 'text-zinc-600 line-through decoration-zinc-700' : ''
+                  }`}
                 >
                   {nameOf(applied.type)}
                 </button>
@@ -201,6 +206,17 @@ export function EditorSidebar({
                       needs an image
                     </span>
                   )}
+                {/* Mute, don't remove: the step keeps its knobs and its place,
+                    it just stops contributing to the render until shown again. */}
+                <button
+                  type="button"
+                  onClick={() => onToggleEffectVisibility(index)}
+                  aria-pressed={!applied.hidden}
+                  aria-label={applied.hidden ? `Show ${nameOf(applied.type)}` : `Hide ${nameOf(applied.type)}`}
+                  className="rounded p-1 text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
+                >
+                  {applied.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
                 <button
                   type="button"
                   onClick={() => onMoveEffect(index, index - 1)}

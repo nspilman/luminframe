@@ -89,6 +89,39 @@ describe('EditPipeline', () => {
     });
   });
 
+  describe('toggleHiddenAt', () => {
+    const one = () => EditPipeline.empty().append('colorTint' as ShaderType, { a: 1 });
+
+    it('hides a shown effect', () => {
+      expect(one().toggleHiddenAt(0).effects[0].hidden).toBe(true);
+    });
+
+    it('shows a hidden effect again', () => {
+      expect(one().toggleHiddenAt(0).toggleHiddenAt(0).effects[0].hidden).toBe(false);
+    });
+
+    it('keeps the effect\'s params and place', () => {
+      const toggled = one().append('vignette' as ShaderType, {}).toggleHiddenAt(0);
+      expect(toggled.effects.map((e) => e.type)).toEqual(['colorTint', 'vignette']);
+      expect(toggled.effects[0].params).toEqual({ a: 1 });
+    });
+
+    it('leaves the pipeline unchanged for an out-of-range index', () => {
+      const pipeline = one();
+      expect(pipeline.toggleHiddenAt(5)).toBe(pipeline);
+    });
+  });
+
+  describe('replaceAt on a hidden effect', () => {
+    it('clears hidden — retuning a step is the gesture that reveals it', () => {
+      const revised = EditPipeline.empty()
+        .append('colorTint' as ShaderType, { a: 1 })
+        .toggleHiddenAt(0)
+        .replaceAt(0, { a: 2 });
+      expect(revised.effects[0].hidden).toBeUndefined();
+    });
+  });
+
   describe('removeAt', () => {
     const threeEffects = () =>
       EditPipeline.empty()

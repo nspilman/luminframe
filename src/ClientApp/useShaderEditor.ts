@@ -199,7 +199,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
         setVarValues(draftVars)
         setHistory(
           initHistory(
-            kept.reduce((p, e) => p.append(e.type, e.params), EditPipeline.empty())
+            kept.reduce((p, e) => p.append(e.type, e.params, e.hidden), EditPipeline.empty())
           )
         )
       })
@@ -349,6 +349,12 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     }
   }, [editingIndex])
 
+  // Mute or unmute a committed effect. A history-level action like remove and
+  // reorder: the toggle is undoable, and the effect keeps its params and place.
+  const handleToggleEffectVisibility = useCallback((index: number) => {
+    setHistory(h => pushHistory(h, h.present.toggleHiddenAt(index)))
+  }, [])
+
   const handleMoveEffect = useCallback((from: number, to: number) => {
     setHistory(h => pushHistory(h, h.present.move(from, to)))
     if (editingIndex === null) return
@@ -490,6 +496,7 @@ export function useShaderEditor(registry: EffectRegistry, registryReady: boolean
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,
+    handleToggleEffectVisibility,
     handleUndo,
     handleRedo,
     canUndo: canUndo(history),

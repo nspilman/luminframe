@@ -8,6 +8,8 @@ import { EffectKey, ShaderInputVars } from '@/types/shader';
 export interface AppliedEffect {
   readonly type: EffectKey;
   readonly params: ShaderInputVars;
+  /** Muted: the effect keeps its place and params but is skipped when rendering. */
+  readonly hidden?: boolean;
 }
 
 /**
@@ -41,14 +43,19 @@ export class EditPipeline {
   }
 
   /** Commit an effect on top of the pipeline. */
-  append(type: EffectKey, params: ShaderInputVars): EditPipeline {
-    return new EditPipeline(this.source, [...this.effects, { type, params }]);
+  append(type: EffectKey, params: ShaderInputVars, hidden?: boolean): EditPipeline {
+    return new EditPipeline(this.source, [
+      ...this.effects,
+      hidden ? { type, params, hidden } : { type, params },
+    ]);
   }
 
   /**
    * Retune the effect at `index` — same effect, same place in the order, new
    * parameter values. The counterpart to `append`: that one adds a step, this
    * one revises a step already standing. An out-of-range index is a no-op.
+   * Revising also clears `hidden`: retuning a step you cannot see is
+   * meaningless, so touching its knobs is the gesture that reveals it.
    */
   replaceAt(index: number, params: ShaderInputVars): EditPipeline {
     if (index < 0 || index >= this.effects.length) {
@@ -57,6 +64,23 @@ export class EditPipeline {
     return new EditPipeline(
       this.source,
       this.effects.map((e, i) => (i === index ? { type: e.type, params } : e))
+    );
+  }
+
+  /**
+   * Flip the effect at `index` between shown and hidden — muted, not removed:
+   * it keeps its params and its place in the order. An out-of-range index is a
+   * no-op.
+   */
+  toggleHiddenAt(index: number): EditPipeline {
+    if (index < 0 || index >= this.effects.length) {
+      return this;
+    }
+    return new EditPipeline(
+      this.source,
+      this.effects.map((e, i) =>
+        i === index ? { type: e.type, params: e.params, hidden: !e.hidden } : e
+      )
     );
   }
 

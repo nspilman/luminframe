@@ -61,6 +61,7 @@ export function ClientApp(): JSX.Element {
     handleApply,
     handleRemoveEffect,
     handleMoveEffect,
+    handleToggleEffectVisibility,
     handleUndo,
     handleRedo,
     canUndo,
@@ -82,14 +83,16 @@ export function ClientApp(): JSX.Element {
   // `recipe` is the executable stack with params, serialized to plain JSON (source
   // images dropped). The live draft is excluded — it's what the user applied, not
   // what they're mid-tuning.
-  const publishEdit = useMemo(
-    () => ({
-      effects: appliedEffects.map((e) => e.type),
-      recipe: serializeRecipe(appliedEffects),
+  const publishEdit = useMemo(() => {
+    // The record describes the pixels: hidden effects contributed nothing to
+    // the render, so they appear in neither the name list nor the recipe.
+    const visible = appliedEffects.filter((e) => !e.hidden)
+    return {
+      effects: visible.map((e) => e.type),
+      recipe: serializeRecipe(visible),
       remixOf: remixParent ?? undefined,
-    }),
-    [appliedEffects, remixParent]
-  )
+    }
+  }, [appliedEffects, remixParent])
   const publish = usePublish(session, exportAtSourceSize, publishEdit, encodeAnimatedEdit)
 
   // "Open in editor" from the gallery is the address /?remix=<at-uri>: this loads
@@ -147,6 +150,7 @@ export function ClientApp(): JSX.Element {
           onUseRenderAsImageParam={handleUseRenderAsImageParam}
           onRemoveEffect={handleRemoveEffect}
           onMoveEffect={handleMoveEffect}
+          onToggleEffectVisibility={handleToggleEffectVisibility}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
