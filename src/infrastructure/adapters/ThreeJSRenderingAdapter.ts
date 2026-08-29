@@ -25,6 +25,13 @@ const PASSTHROUGH_EFFECT: ShaderEffect = createShaderRecord({
 });
 const NO_PARAMS = {} as ShaderInputVars;
 
+// Canvases whose context loss is deliberate teardown (dispose's
+// forceContextLoss), so the contextlost listener warns only about real
+// evictions. A WeakSet because the async loss event outlives any instance
+// flag — and a rebound canvas (setCanvas re-init on a fresh element) is a
+// different key, so its future losses still warn.
+const deliberatelyLostCanvases = new WeakSet<HTMLCanvasElement>();
+
 /**
  * Three.js implementation of the RenderingPort.
  * Handles WebGL rendering using Three.js library.
@@ -69,9 +76,6 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   // so they can feed back on themselves (trails, tunnels). Written after each
   // frame that uses feedback; read at the top of the next. null until first use.
   private feedbackTexture: THREE.FramebufferTexture | null = null;
-  // True only while dispose() force-releases the context — that loss is
-  // deliberate teardown, not the eviction the contextlost listener warns about.
-  private releasingContext = false;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -105,7 +109,10 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // loudly — the debug log is often read precisely to find this.
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault(); // signal willingness to restore
-      if (!this.releasingContext) {
+      // A dispose()'d canvas loses its context on purpose; the loss event
+      // arrives a tick later, so membership — not a flag — has to carry the
+      // "this one was deliberate" signal across the async gap.
+      if (!deliberatelyLostCanvases.has(canvas)) {
         console.error('[gl] CONTEXT LOST — canvas will render black until restored');
       }
     });
@@ -751,9 +758,8 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // small live-context budget; on iOS that budget exhausting is what evicts
     // the editor's own context.
     if (this.renderer) {
-      this.releasingContext = true;
+      deliberatelyLostCanvases.add(this.renderer.domElement);
       this.renderer.forceContextLoss();
-      this.releasingContext = false;
       this.renderer.dispose();
       this.renderer = null;
     }
