@@ -1,6 +1,65 @@
 import { ImageLoaderPort } from '@/application/ports/ImageLoaderPort';
 import { ImageExportPort } from '@/application/ports/ImageExportPort';
 import { Image } from '@/domain/models/Image';
+import { scaleToLongestSide } from '@/lib/exportCanvasForUpload';
+
+// The most pixels a loaded source may have on its longest side. 4096 is the
+// floor of the constraints a source must fit under everywhere the app runs:
+// iOS WebKit refuses canvases past ~16.7M pixels (4096² exactly), the lowest
+// common WebGL max texture size is 4096, and a phone decoding beyond it spikes
+// enough memory that Safari jettisons the WebGL context — the canvas goes
+// permanently black while <img> keeps working. Bigger sources are downscaled
+// once, at the load door, so no later surface has to defend itself.
+// ponytail: fixed floor — query the real GPU cap per device if 4K-native
+// editing is ever asked for.
+const MAX_SOURCE_EDGE = 4096;
+
+/**
+ * Draw a decoded frame at capped size and re-encode it as a File. The frame
+ * arrives as an ImageBitmap so no full-size canvas ever exists — drawImage
+ * scales straight onto the capped one.
+ */
+async function encodeScaled(
+  bitmap: ImageBitmap,
+  name: string,
+  mimeType: string
+): Promise<File> {
+  const { width, height } = scaleToLongestSide(bitmap.width, bitmap.height, MAX_SOURCE_EDGE);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('no 2d context');
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('image encode failed'))), mimeType, 0.92)
+  );
+  const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+  return new File([blob], name.replace(/\.[a-z0-9]+$/i, '') + '.' + ext, { type: mimeType });
+}
+
+/**
+ * Downscale a raster file to MAX_SOURCE_EDGE if it exceeds it; smaller files
+ * (and vectors, and files this browser can't decode — the load path reports
+ * those) pass through untouched. PNG keeps alpha; everything else re-encodes
+ * as JPEG.
+ */
+async function capToMaxEdge(file: File): Promise<File> {
+  if (file.type === 'image/svg+xml') return file;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+  try {
+    if (Math.max(bitmap.width, bitmap.height) <= MAX_SOURCE_EDGE) return file;
+    const keepAlpha = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif';
+    return await encodeScaled(bitmap, file.name, keepAlpha ? 'image/png' : 'image/jpeg');
+  } finally {
+    bitmap.close();
+  }
+}
 
 /**
  * Whether a file is HEIC/HEIF. Checked by MIME type and by extension: some
@@ -49,16 +108,15 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     });
     image.free();
 
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('no 2d context');
-    ctx.putImageData(decoded, 0, 0);
-    const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('JPEG encode failed'))), 'image/jpeg', 0.92)
-    );
-    return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+    // Through an ImageBitmap, capped: a 24MP iPhone frame drawn onto a
+    // same-size canvas is past iOS's canvas ceiling, and the untouched
+    // full-size pixels would blow the texture/memory limits next anyway.
+    const bitmap = await createImageBitmap(decoded);
+    try {
+      return await encodeScaled(bitmap, file.name, 'image/jpeg');
+    } finally {
+      bitmap.close();
+    }
   } catch (err) {
     console.error('HEIC decode failed:', err);
     throw new Error(`Couldn't read ${file.name} — this HEIC variant isn't supported. Exporting it as JPEG will work.`);
@@ -93,7 +151,9 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
     // Safari, so it's transcoded to JPEG here — the one door every upload
     // walks through. The decoder is a wasm build of libheif, dynamically
     // imported so only the first HEIC upload pays for it.
-    const toLoad = isHeicFile(file) ? await convertHeicToJpeg(file) : file;
+    // Every source funnels through the size cap; HEIC caps inside its own
+    // conversion, so it skips the second decode.
+    const toLoad = isHeicFile(file) ? await convertHeicToJpeg(file) : await capToMaxEdge(file);
 
     // Use domain model's factory method
     // This is acceptable as Image.fromFile is a factory method
