@@ -41,7 +41,9 @@ export class TextureAdapter {
     const texture = this.textureLoader.load(
       image.data.url,
       // onLoad
-      () => {
+      (tex) => {
+        const img = tex.image as { width?: number; height?: number } | undefined;
+        console.log(`[texture] loaded ${img?.width ?? '?'}x${img?.height ?? '?'} for image ${image.id}`);
         // Trigger re-render callback
         if (this.onTextureLoadCallback) {
           this.onTextureLoadCallback();

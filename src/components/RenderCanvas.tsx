@@ -60,6 +60,7 @@ export const RenderCanvas = forwardRef<HTMLCanvasElement, RenderCanvasProps>(
           return;
         }
         lastBufferRef.current = { width: bufferWidth, height: bufferHeight };
+        console.log(`[canvas] buffer ${bufferWidth}x${bufferHeight} (css ${fit.width}x${fit.height} @${dpr}x, image ${imageWidth}x${imageHeight})`);
         canvas.width = bufferWidth;
         canvas.height = bufferHeight;
         onCanvasResizeRef.current?.(new Dimensions(bufferWidth, bufferHeight));

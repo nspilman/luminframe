@@ -96,12 +96,28 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
    * Initialize the Three.js renderer with a canvas element
    */
   private initializeRenderer(canvas: HTMLCanvasElement): void {
+    // Context loss is the one render failure that looks like nothing: the
+    // canvas silently goes (and stays) black while the rest of the page works.
+    // iOS Safari sheds WebGL contexts under memory pressure, so name the event
+    // loudly — the debug log is often read precisely to find this.
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault(); // signal willingness to restore
+      console.error('[gl] CONTEXT LOST — canvas will render black until restored');
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      console.log('[gl] context restored — redrawing');
+      this.drawChain();
+    });
+
     // Create renderer
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
       preserveDrawingBuffer: true, // Required for canvas export
     });
+    console.log(
+      `[gl] renderer initialized, maxTextureSize=${this.renderer.capabilities.maxTextureSize}, buffer ${this.currentDimensions.width}x${this.currentDimensions.height}`
+    );
 
     // Set size with updateStyle=false to prevent Three.js from overriding our CSS
     this.renderer.setSize(

@@ -49,11 +49,16 @@ async function capToMaxEdge(file: File): Promise<File> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
-  } catch {
+  } catch (err) {
+    console.warn(`[cap] createImageBitmap failed for "${file.name}" — passing through:`, err);
     return file;
   }
   try {
-    if (Math.max(bitmap.width, bitmap.height) <= MAX_SOURCE_EDGE) return file;
+    if (Math.max(bitmap.width, bitmap.height) <= MAX_SOURCE_EDGE) {
+      console.log(`[cap] ${bitmap.width}x${bitmap.height} under ${MAX_SOURCE_EDGE} — passthrough`);
+      return file;
+    }
+    console.log(`[cap] ${bitmap.width}x${bitmap.height} over ${MAX_SOURCE_EDGE} — downscaling`);
     const keepAlpha = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif';
     return await encodeScaled(bitmap, file.name, keepAlpha ? 'image/png' : 'image/jpeg');
   } finally {
@@ -89,6 +94,7 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     const mod = (await import('libheif-js/wasm-bundle')) as unknown as
       typeof import('libheif-js/wasm-bundle') & { default?: typeof import('libheif-js/wasm-bundle') };
     libheif = mod.default ?? mod;
+    console.log('[heic] decoder chunk loaded');
   } catch (err) {
     console.error('HEIC decoder chunk failed to load:', err);
     throw new Error('Luminframe was updated since this page loaded — refresh the page and try again.');
@@ -101,6 +107,7 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     if (!image) throw new Error('container holds no image');
     const width = image.get_width();
     const height = image.get_height();
+    console.log(`[heic] decoded: ${images.length} image(s), primary ${width}x${height}`);
     const decoded = await new Promise<ImageData>((resolve, reject) => {
       image.display(new ImageData(width, height), (result) =>
         result ? resolve(result) : reject(new Error('libheif could not render the image'))
@@ -113,7 +120,9 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     // full-size pixels would blow the texture/memory limits next anyway.
     const bitmap = await createImageBitmap(decoded);
     try {
-      return await encodeScaled(bitmap, file.name, 'image/jpeg');
+      const out = await encodeScaled(bitmap, file.name, 'image/jpeg');
+      console.log(`[heic] transcoded to "${out.name}" ${out.size}b`);
+      return out;
     } finally {
       bitmap.close();
     }
@@ -151,13 +160,17 @@ export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPor
     // Safari, so it's transcoded to JPEG here — the one door every upload
     // walks through. The decoder is a wasm build of libheif, dynamically
     // imported so only the first HEIC upload pays for it.
+    console.log(`[load] "${file.name}" type=${file.type || '(none)'} ${file.size}b heic=${isHeicFile(file)}`);
     // Every source funnels through the size cap; HEIC caps inside its own
     // conversion, so it skips the second decode.
     const toLoad = isHeicFile(file) ? await convertHeicToJpeg(file) : await capToMaxEdge(file);
 
     // Use domain model's factory method
     // This is acceptable as Image.fromFile is a factory method
-    return await Image.fromFile(toLoad);
+    const image = await Image.fromFile(toLoad);
+    const dims = image.getDimensions();
+    console.log(`[load] ready ${dims.width}x${dims.height} from "${toLoad.name}" ${toLoad.size}b`);
+    return image;
   }
 
   /**

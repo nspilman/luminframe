@@ -17,6 +17,7 @@ import { serializeRecipe } from '@/lib/shaders/serializeRecipe'
 import { useEffectRegistry } from '@/hooks/useEffectRegistry'
 import { isCreatePath, isGalleryPath, isImagePath } from '@/lib/galleryRoute'
 import { CreatorPage } from '@/components/CreatorPage'
+import { CopyDebugLog } from '@/components/CopyDebugLog'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { staticPageMeta } from '@/lib/pageMeta'
 
@@ -126,6 +127,7 @@ export function ClientApp(): JSX.Element {
     // subject present by sticking the canvas to the top instead.
     <div className={`flex min-h-screen flex-col bg-[#030305] ${onEditor || onCreate ? 'md:h-screen md:overflow-hidden' : ''}`}>
       <HeaderBar session={headerSession} />
+      <CopyDebugLog />
       {/* The editor stays mounted (so the WebGL canvas isn't torn down and re-init
           on every visit) — it's just hidden while another view is shown. Which
           view is visible is read from the URL, not local state, so every place is
