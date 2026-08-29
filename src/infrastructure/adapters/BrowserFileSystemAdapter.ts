@@ -19,32 +19,52 @@ async function convertHeicToJpeg(file: File): Promise<File> {
   // hashed chunk this page's (older) bundle asks for — the SPA fallback
   // answers the 404 with index.html, which is not a module. Only a reload
   // fixes that; no wording about the file would be true.
-  let heic2any: typeof import('heic2any').default;
+  //
+  // libheif-js, not heic2any: heic2any bundles a libheif old enough that it
+  // rejects every modern iPhone photo with ERR_LIBHEIF (verified against real
+  // captures) — fine on 2017-era samples, useless for the camera default this
+  // path exists for.
+  let libheif: typeof import('libheif-js/wasm-bundle');
   try {
-    heic2any = (await import('heic2any')).default;
+    // CJS module: vite may present the exports directly or under .default.
+    const mod = (await import('libheif-js/wasm-bundle')) as unknown as
+      typeof import('libheif-js/wasm-bundle') & { default?: typeof import('libheif-js/wasm-bundle') };
+    libheif = mod.default ?? mod;
   } catch (err) {
     console.error('HEIC decoder chunk failed to load:', err);
     throw new Error('Luminframe was updated since this page loaded — refresh the page and try again.');
   }
 
   try {
-    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
-    const blob = Array.isArray(converted) ? converted[0] : converted;
+    const decoder = new libheif.HeifDecoder();
+    const images = decoder.decode(await file.arrayBuffer());
+    const image = images[0];
+    if (!image) throw new Error('container holds no image');
+    const width = image.get_width();
+    const height = image.get_height();
+    const decoded = await new Promise<ImageData>((resolve, reject) => {
+      image.display(new ImageData(width, height), (result) =>
+        result ? resolve(result) : reject(new Error('libheif could not render the image'))
+      );
+    });
+    image.free();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    ctx.putImageData(decoded, 0, 0);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('JPEG encode failed'))), 'image/jpeg', 0.92)
+    );
     return new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
   } catch (err) {
-    // heic2any rejects with a plain {code, message} object, which would reach
-    // the user as "[object Object]" — rethrow as a sentence worth showing.
     console.error('HEIC decode failed:', err);
     throw new Error(`Couldn't read ${file.name} — this HEIC variant isn't supported. Exporting it as JPEG will work.`);
   }
 }
 
-/**
- * Browser-based implementation of ImageLoaderPort and ImageExportPort.
- * Uses browser File API, URL API, and Canvas API.
- *
- * This adapter isolates browser-specific file operations from the application layer.
- */
 export class BrowserFileSystemAdapter implements ImageLoaderPort, ImageExportPort {
   private static readonly SUPPORTED_TYPES = [
     'image/png',
