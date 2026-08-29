@@ -69,6 +69,9 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
   // so they can feed back on themselves (trails, tunnels). Written after each
   // frame that uses feedback; read at the top of the next. null until first use.
   private feedbackTexture: THREE.FramebufferTexture | null = null;
+  // True only while dispose() force-releases the context — that loss is
+  // deliberate teardown, not the eviction the contextlost listener warns about.
+  private releasingContext = false;
 
   constructor(
     canvas?: HTMLCanvasElement,
@@ -102,7 +105,9 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // loudly — the debug log is often read precisely to find this.
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault(); // signal willingness to restore
-      console.error('[gl] CONTEXT LOST — canvas will render black until restored');
+      if (!this.releasingContext) {
+        console.error('[gl] CONTEXT LOST — canvas will render black until restored');
+      }
     });
     canvas.addEventListener('webglcontextrestored', () => {
       console.log('[gl] context restored — redrawing');
@@ -740,8 +745,15 @@ export class ThreeJSRenderingAdapter implements RenderingPort {
     // Dispose scene
     this.scene = null;
 
-    // Dispose renderer
+    // Dispose renderer — and release its WebGL context outright. dispose()
+    // alone leaves the context live until GC, and short-lived offscreen
+    // adapters (thumbnails, previews) would each hold a slot of the browser's
+    // small live-context budget; on iOS that budget exhausting is what evicts
+    // the editor's own context.
     if (this.renderer) {
+      this.releasingContext = true;
+      this.renderer.forceContextLoss();
+      this.releasingContext = false;
       this.renderer.dispose();
       this.renderer = null;
     }

@@ -18,12 +18,26 @@ export type CompileCheck =
   | { status: 'failed'; log: string }
   | { status: 'unavailable' }
 
-export function checkEffectCompiles(effect: ShaderEffect): CompileCheck {
-  const canvas = document.createElement('canvas')
+// One context for every check, created lazily and kept. A context per call
+// looked tidy — each was lose-context'd in a finally — but iOS WebKit caps
+// LIVE WebGL contexts at around a dozen and evicts the oldest when the cap
+// hits: gating a 39-effect library at startup executed the editor's own
+// renderer ("[gl] CONTEXT LOST" at 0.9s on an iPhone, canvas black for the
+// life of the page). Compiling every shader in one shared context costs the
+// cap exactly one slot, once.
+let sharedGl: WebGL2RenderingContext | null = null
+
+function compileContext(): WebGL2RenderingContext | null {
+  if (sharedGl && !sharedGl.isContextLost()) return sharedGl
   // webgl2, because that is the context the app renders on (three r163+
   // dropped WebGL1). A WebGL1 gate is stricter than the runtime — it rejects
   // uniform-bounded loops the renderer compiles fine — so it lied both ways.
-  const gl = canvas.getContext('webgl2')
+  sharedGl = document.createElement('canvas').getContext('webgl2')
+  return sharedGl
+}
+
+export function checkEffectCompiles(effect: ShaderEffect): CompileCheck {
+  const gl = compileContext()
   if (!gl) return { status: 'unavailable' }
 
   // The same GLSL1 → GLSL3 shim three's WebGLProgram applies when it
@@ -50,6 +64,5 @@ export function checkEffectCompiles(effect: ShaderEffect): CompileCheck {
     return { status: 'failed', log: gl.getShaderInfoLog(shader) ?? 'unknown compile error' }
   } finally {
     gl.deleteShader(shader)
-    gl.getExtension('WEBGL_lose_context')?.loseContext()
   }
 }
